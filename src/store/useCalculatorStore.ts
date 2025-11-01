@@ -19,6 +19,7 @@ import { calculateChatbotCost, calculatePromptCost } from '@/utils/costCalculato
 import {
   generateRecommendations,
   generateModelComparison,
+  generatePromptRecommendations,
 } from '@/utils/optimizationEngine';
 
 interface CalculatorState {
@@ -34,6 +35,7 @@ interface CalculatorState {
   // Prompt Calculator State
   promptConfig: PromptCalculatorConfig;
   promptResults: PromptCostBreakdown | null;
+  promptRecommendations: Recommendation[];
 
   // UI State
   isCalculating: boolean;
@@ -82,6 +84,7 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
   comparison: null,
   promptConfig: DEFAULT_PROMPT_CONFIG,
   promptResults: null,
+  promptRecommendations: [],
   isCalculating: false,
   error: null,
 
@@ -151,6 +154,7 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
       if (!promptConfig.promptText || promptConfig.promptText.trim().length === 0) {
         set({
           promptResults: null,
+          promptRecommendations: [],
           isCalculating: false,
         });
         return;
@@ -159,8 +163,12 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
       // Calculate prompt cost
       const promptResults = calculatePromptCost(promptConfig);
 
+      // Generate recommendations
+      const promptRecommendations = generatePromptRecommendations(promptConfig, promptResults);
+
       set({
         promptResults,
+        promptRecommendations,
         isCalculating: false,
       });
     } catch (error) {
@@ -179,7 +187,7 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
 
   // Reset prompt configuration to defaults
   resetPromptConfig: () => {
-    set({ promptConfig: DEFAULT_PROMPT_CONFIG, promptResults: null });
+    set({ promptConfig: DEFAULT_PROMPT_CONFIG, promptResults: null, promptRecommendations: [] });
   },
 }));
 

@@ -2,6 +2,14 @@ import React from 'react';
 import { PromptInput } from './PromptInput';
 import { ResponsePresets } from './ResponsePresets';
 import { BatchConfig } from './BatchConfig';
+import { PromptCostDisplay } from './PromptCostDisplay';
+import { PromptCostBreakdown } from './PromptCostBreakdown';
+import { PromptModelComparison } from './PromptModelComparison';
+import { PromptOptimizationRecommendations } from './PromptOptimizationRecommendations';
+import { useCalculatorStore } from '@/store/useCalculatorStore';
+import { getModelsByProvider, LLM_PRICING } from '@/config/pricingData';
+import { exportAndDownloadPromptPDF } from '@/utils/pdfExporter';
+import { exportAndDownloadPromptCSV } from '@/utils/csvExporter';
 import type { ResponsePreset, ContextStrategy } from '../types';
 
 interface PromptCalculatorProps {
@@ -39,6 +47,34 @@ export const PromptCalculator: React.FC<PromptCalculatorProps> = ({
   onCacheHitRateChange,
   supportsCache,
 }) => {
+  const { promptResults, promptConfig, promptRecommendations, setPromptConfig } = useCalculatorStore();
+
+  const handleExportPDF = () => {
+    if (promptResults) {
+      exportAndDownloadPromptPDF(promptConfig, promptResults, promptRecommendations);
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (promptResults) {
+      exportAndDownloadPromptCSV(promptConfig, promptResults, promptRecommendations);
+    }
+  };
+
+  // Get model IDs by provider and map to full model objects
+  const openaiIds = getModelsByProvider('openai');
+  const claudeIds = getModelsByProvider('anthropic');
+
+  const openai = openaiIds.map(id => ({
+    id,
+    name: LLM_PRICING[id]?.modelFamily || id,
+  }));
+
+  const claude = claudeIds.map(id => ({
+    id,
+    name: LLM_PRICING[id]?.modelFamily || id,
+  }));
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
       <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
@@ -50,6 +86,33 @@ export const PromptCalculator: React.FC<PromptCalculatorProps> = ({
         </div>
 
         <div className="border-t border-gray-200 pt-6 space-y-6">
+          {/* Model Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Model Selection
+            </label>
+            <select
+              className="input-field"
+              value={promptConfig.modelId}
+              onChange={(e) => setPromptConfig({ modelId: e.target.value })}
+            >
+              <optgroup label="OpenAI">
+                {openai.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Claude (Anthropic)">
+                {claude.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+
           {/* Prompt Input */}
           <PromptInput
             value={promptText}
@@ -79,12 +142,28 @@ export const PromptCalculator: React.FC<PromptCalculatorProps> = ({
         </div>
       </div>
 
-      {/* Cost Display Placeholder - Will be connected to store later */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <p className="text-sm text-blue-800">
-          Cost calculation will be displayed here once connected to the Zustand store
-        </p>
-      </div>
+      {/* Cost Display */}
+      {promptResults && (
+        <>
+          <PromptCostDisplay />
+          <PromptCostBreakdown />
+          <PromptModelComparison />
+          <PromptOptimizationRecommendations />
+
+          {/* Export Buttons */}
+          <div className="card">
+            <h2 className="text-xl font-semibold mb-4">Export Reports</h2>
+            <div className="flex gap-4">
+              <button onClick={handleExportPDF} className="btn-primary">
+                Download PDF Report
+              </button>
+              <button onClick={handleExportCSV} className="btn-secondary">
+                Download CSV Data
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
