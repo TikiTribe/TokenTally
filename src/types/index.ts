@@ -156,6 +156,105 @@ export interface ValidationResult {
 }
 
 /**
+ * Response preset categories for prompt calculator
+ */
+export type ResponsePreset = 'short' | 'medium' | 'long';
+
+/**
+ * Response preset configuration with token ranges
+ */
+export interface ResponsePresetConfig {
+  min: number;
+  max: number;
+  average: number;
+  description: string;
+}
+
+/**
+ * Response preset token mappings
+ */
+export const RESPONSE_PRESETS: Record<ResponsePreset, ResponsePresetConfig> = {
+  short: {
+    min: 100,
+    max: 300,
+    average: 200,
+    description: 'Brief answers, simple confirmations, yes/no responses'
+  },
+  medium: {
+    min: 300,
+    max: 800,
+    average: 550,
+    description: 'Standard responses, short explanations, basic code examples'
+  },
+  long: {
+    min: 800,
+    max: 2000,
+    average: 1400,
+    description: 'Detailed answers, comprehensive code examples, essays, tutorials'
+  }
+};
+
+/**
+ * User configuration for prompt calculator
+ */
+export interface PromptCalculatorConfig {
+  /** Full prompt text */
+  promptText: string;
+  /** Response size preset */
+  responsePreset: ResponsePreset;
+  /** Number of batch operations per month */
+  batchOperations: number;
+  /** Whether to model multi-turn conversation */
+  multiTurnEnabled: boolean;
+  /** Number of conversation turns (if multiTurnEnabled) */
+  turns?: number;
+  /** Context accumulation strategy (if multiTurnEnabled) */
+  contextStrategy?: ContextStrategy;
+  /** Selected model ID */
+  modelId: string;
+  /** Cache hit rate for Claude models (0-100, default 90) */
+  cacheHitRate?: number;
+}
+
+/**
+ * Detailed cost breakdown for prompt calculator
+ */
+export interface PromptCostBreakdown {
+  /** Cost per individual API call */
+  perCallCost: number;
+  /** Total monthly cost (perCallCost × batchOperations) */
+  monthlyCost: number;
+  /** Input tokens count (from prompt) */
+  inputTokens: number;
+  /** Output tokens count (from response preset) */
+  outputTokens: number;
+  /** Input token cost component */
+  inputCost: number;
+  /** Output token cost component */
+  outputCost: number;
+  /** Cache savings (if applicable) */
+  cacheSavings?: number;
+  /** Context accumulation cost (if multi-turn) */
+  contextCost?: number;
+  /** Detailed breakdown for multi-turn calculations */
+  breakdown?: {
+    /** First turn cost (no caching) */
+    firstTurn?: number;
+    /** Later turns cost (with caching if applicable) */
+    laterTurns?: number;
+    /** Total cache hit savings across all turns */
+    cacheHitSavings?: number;
+    /** Context accumulation cost across turns */
+    contextAccumulation?: number;
+  };
+}
+
+/**
+ * Calculator mode type
+ */
+export type CalculatorMode = 'chatbot' | 'prompt';
+
+/**
  * Context strategy token mappings
  */
 export const CONTEXT_STRATEGY_TOKENS: Record<ContextStrategy, number> = {
@@ -174,4 +273,8 @@ export const VALIDATION_CONSTRAINTS = {
   conversationTurns: { min: 1, max: 50 },
   conversationsPerMonth: { min: 1, max: 10_000_000 },
   cacheHitRate: { min: 0.0, max: 1.0 },
+  // Prompt calculator constraints
+  promptText: { min: 1, max: 100_000 },
+  batchOperations: { min: 1, max: 10_000_000 },
+  promptCacheHitRate: { min: 0, max: 100 },
 } as const;

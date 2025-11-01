@@ -1,20 +1,19 @@
 /**
- * Chatbot Cost Calculator Engine
+ * Cost Calculator Engine
  *
- * Implements precision cost forecasting for LLM chatbots with ±5% accuracy target.
+ * Implements precision cost forecasting for LLM chatbots and prompt operations with ±5% accuracy target.
  * Handles both OpenAI (no caching) and Claude (with prompt caching) models.
  *
  * Key Formulas:
- * - firstTurnCost = (systemPrompt + userMsg) × inputPrice + response × outputPrice
- * - For Claude: laterTurnsCost includes cache read savings
- * - For OpenAI: laterTurnsCost = full system prompt every turn
- * - conversationCost = firstTurn + (laterTurns × (turns - 1))
- * - monthlyCost = conversationCost × conversationsPerMonth
+ * - Chatbot: conversationCost = firstTurn + (laterTurns × (turns - 1))
+ * - Prompt: perCallCost = (inputTokens + outputTokens) × prices (with optional multi-turn & caching)
+ * - monthlyCost = perCallCost × batchOperations
  */
 
-import type { ChatbotConfig, CostBreakdown } from '@/types';
-import { CONTEXT_STRATEGY_TOKENS } from '@/types';
+import type { ChatbotConfig, CostBreakdown, PromptCalculatorConfig, PromptCostBreakdown } from '@/types';
+import { CONTEXT_STRATEGY_TOKENS, RESPONSE_PRESETS } from '@/types';
 import { getPricingModel } from '@/config/pricingData';
+import { estimateTokensFromChars } from './tokenEstimator';
 
 /**
  * Calculate chatbot operating costs for given configuration
@@ -119,7 +118,7 @@ export function calculateChatbotCost(config: ChatbotConfig): CostBreakdown {
     avgContextTokensForLaterTurns * inputPricePerToken * laterTurnsCount;
 
   return {
-    model: model.name,
+    model: model.modelFamily,
     monthlyCost,
     perConversationCost,
     breakdown: {
@@ -171,4 +170,106 @@ export function findCheapestModel(
   return costs.reduce((cheapest, current) =>
     current.monthlyCost < cheapest.monthlyCost ? current : cheapest,
   );
+}
+
+/**
+ * Calculate prompt cost for batch API operations
+ *
+ * @param config - Prompt calculator configuration
+ * @returns Detailed cost breakdown with per-call and monthly costs
+ * @throws Error if model not found in pricing data
+ */
+export function calculatePromptCost(config: PromptCalculatorConfig): PromptCostBreakdown {
+  // Get pricing model
+  const model = getPricingModel(config.modelId);
+  if (!model) {
+    throw new Error(`Model not found: ${config.modelId}`);
+  }
+
+  // Estimate input tokens from prompt text
+  const inputTokens = estimateTokensFromChars(config.promptText);
+
+  // Get output tokens from response preset
+  const outputTokens = RESPONSE_PRESETS[config.responsePreset].average;
+
+  // Calculate base costs
+  const inputCost = (inputTokens / 1_000_000) * model.inputPerMToken;
+  const outputCost = (outputTokens / 1_000_000) * model.outputPerMToken;
+
+  // Single-turn calculation
+  if (!config.multiTurnEnabled || !config.turns || config.turns === 1) {
+    const perCallCost = inputCost + outputCost;
+    const monthlyCost = perCallCost * config.batchOperations;
+
+    return {
+      perCallCost,
+      monthlyCost,
+      inputTokens,
+      outputTokens,
+      inputCost,
+      outputCost,
+    };
+  }
+
+  // Multi-turn calculation with context accumulation
+  const contextTokensPerTurn = config.contextStrategy
+    ? CONTEXT_STRATEGY_TOKENS[config.contextStrategy]
+    : CONTEXT_STRATEGY_TOKENS.moderate;
+
+  // First turn cost (no caching benefit)
+  const firstTurnCost = inputCost + outputCost;
+
+  // Later turns (turns 2+)
+  const turns = config.turns || 5;
+  let cacheSavings = 0;
+  let laterTurnsInputCost = 0;
+
+  if (model.supportsCache && config.cacheHitRate) {
+    // Claude: Cache hit rate reduces input cost
+    const cacheHitRate = config.cacheHitRate / 100; // Convert from percentage
+    const cachedInputCost = (inputTokens / 1_000_000) * model.cacheReadPerMToken!;
+    const uncachedInputCost = (inputTokens / 1_000_000) * model.inputPerMToken;
+
+    // Effective input cost per turn with caching
+    const effectiveInputCost = cachedInputCost * cacheHitRate + uncachedInputCost * (1 - cacheHitRate);
+
+    // Context accumulation cost
+    const contextCost = ((contextTokensPerTurn * (turns - 1)) / 1_000_000) * model.inputPerMToken;
+
+    laterTurnsInputCost = effectiveInputCost + contextCost;
+
+    // Calculate cache savings
+    const fullInputCost = uncachedInputCost + contextCost;
+    cacheSavings = (fullInputCost - laterTurnsInputCost) * (turns - 1);
+  } else {
+    // No caching: full input cost + context every turn
+    const contextCost = ((contextTokensPerTurn * (turns - 1)) / 1_000_000) * model.inputPerMToken;
+    laterTurnsInputCost = inputCost + contextCost;
+  }
+
+  const laterTurnCost = laterTurnsInputCost + outputCost;
+  const conversationCost = firstTurnCost + laterTurnCost * (turns - 1);
+  const perCallCost = conversationCost;
+  const monthlyCost = perCallCost * config.batchOperations;
+
+  return {
+    perCallCost,
+    monthlyCost,
+    inputTokens,
+    outputTokens,
+    inputCost,
+    outputCost,
+    cacheSavings: cacheSavings > 0 ? cacheSavings : undefined,
+    contextCost: config.contextStrategy
+      ? ((contextTokensPerTurn * (turns - 1)) / 1_000_000) * model.inputPerMToken
+      : undefined,
+    breakdown: {
+      firstTurn: firstTurnCost,
+      laterTurns: laterTurnCost,
+      cacheHitSavings: cacheSavings > 0 ? cacheSavings : undefined,
+      contextAccumulation: config.contextStrategy
+        ? ((contextTokensPerTurn * (turns - 1)) / 1_000_000) * model.inputPerMToken
+        : undefined,
+    },
+  };
 }

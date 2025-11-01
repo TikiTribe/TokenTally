@@ -11,35 +11,47 @@ import type {
   CostBreakdown,
   Recommendation,
   ModelComparison,
+  CalculatorMode,
+  PromptCalculatorConfig,
+  PromptCostBreakdown,
 } from '@/types';
-import { calculateChatbotCost } from '@/utils/costCalculator';
+import { calculateChatbotCost, calculatePromptCost } from '@/utils/costCalculator';
 import {
   generateRecommendations,
   generateModelComparison,
 } from '@/utils/optimizationEngine';
 
 interface CalculatorState {
-  // Configuration
-  config: ChatbotConfig;
+  // Calculator Mode
+  mode: CalculatorMode;
 
-  // Results
+  // Chatbot Calculator State
+  config: ChatbotConfig;
   results: CostBreakdown | null;
   recommendations: Recommendation[];
   comparison: ModelComparison | null;
+
+  // Prompt Calculator State
+  promptConfig: PromptCalculatorConfig;
+  promptResults: PromptCostBreakdown | null;
 
   // UI State
   isCalculating: boolean;
   error: string | null;
 
   // Actions
+  setMode: (mode: CalculatorMode) => void;
   setConfig: (updates: Partial<ChatbotConfig>) => void;
+  setPromptConfig: (updates: Partial<PromptCalculatorConfig>) => void;
   calculate: () => void;
+  calculatePrompt: () => void;
   resetConfig: () => void;
+  resetPromptConfig: () => void;
 }
 
-// Default configuration
+// Default chatbot configuration
 const DEFAULT_CONFIG: ChatbotConfig = {
-  modelId: 'claude-3-5-sonnet',
+  modelId: 'claude-3-5-sonnet-20241022',
   systemPromptTokens: 1000,
   avgUserMessageTokens: 100,
   avgResponseTokens: 200,
@@ -49,16 +61,36 @@ const DEFAULT_CONFIG: ChatbotConfig = {
   cacheHitRate: 0.9,
 };
 
+// Default prompt calculator configuration
+const DEFAULT_PROMPT_CONFIG: PromptCalculatorConfig = {
+  promptText: '',
+  responsePreset: 'medium',
+  batchOperations: 1000,
+  multiTurnEnabled: false,
+  modelId: 'claude-3-5-sonnet-20241022',
+  turns: 5,
+  contextStrategy: 'moderate',
+  cacheHitRate: 90,
+};
+
 export const useCalculatorStore = create<CalculatorState>((set, get) => ({
   // Initial state
+  mode: 'chatbot',
   config: DEFAULT_CONFIG,
   results: null,
   recommendations: [],
   comparison: null,
+  promptConfig: DEFAULT_PROMPT_CONFIG,
+  promptResults: null,
   isCalculating: false,
   error: null,
 
-  // Update configuration
+  // Set calculator mode
+  setMode: (mode: CalculatorMode) => {
+    set({ mode });
+  },
+
+  // Update chatbot configuration
   setConfig: (updates: Partial<ChatbotConfig>) => {
     set((state) => ({
       config: { ...state.config, ...updates },
@@ -68,7 +100,17 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
     setTimeout(() => get().calculate(), 100);
   },
 
-  // Calculate costs and recommendations
+  // Update prompt calculator configuration
+  setPromptConfig: (updates: Partial<PromptCalculatorConfig>) => {
+    set((state) => ({
+      promptConfig: { ...state.promptConfig, ...updates },
+    }));
+
+    // Auto-calculate on config change
+    setTimeout(() => get().calculatePrompt(), 100);
+  },
+
+  // Calculate chatbot costs and recommendations
   calculate: () => {
     const { config } = get();
 
@@ -98,10 +140,46 @@ export const useCalculatorStore = create<CalculatorState>((set, get) => ({
     }
   },
 
-  // Reset to default configuration
+  // Calculate prompt costs
+  calculatePrompt: () => {
+    const { promptConfig } = get();
+
+    set({ isCalculating: true, error: null });
+
+    try {
+      // Skip calculation if prompt text is empty
+      if (!promptConfig.promptText || promptConfig.promptText.trim().length === 0) {
+        set({
+          promptResults: null,
+          isCalculating: false,
+        });
+        return;
+      }
+
+      // Calculate prompt cost
+      const promptResults = calculatePromptCost(promptConfig);
+
+      set({
+        promptResults,
+        isCalculating: false,
+      });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Calculation failed',
+        isCalculating: false,
+      });
+    }
+  },
+
+  // Reset chatbot configuration to defaults
   resetConfig: () => {
     set({ config: DEFAULT_CONFIG });
     setTimeout(() => get().calculate(), 100);
+  },
+
+  // Reset prompt configuration to defaults
+  resetPromptConfig: () => {
+    set({ promptConfig: DEFAULT_PROMPT_CONFIG, promptResults: null });
   },
 }));
 

@@ -5,7 +5,7 @@
  */
 
 import { useCalculatorStore } from '@/store/useCalculatorStore';
-import { getModelsByProvider } from '@/config/pricingData';
+import { getModelsByProvider, LLM_PRICING } from '@/config/pricingData';
 import { exportAndDownloadPDF } from '@/utils/pdfExporter';
 import { exportAndDownloadCSV } from '@/utils/csvExporter';
 import type { ContextStrategy } from '@/types';
@@ -20,7 +20,19 @@ export function Calculator() {
     resetConfig,
   } = useCalculatorStore();
 
-  const { openai, claude } = getModelsByProvider();
+  // Get model IDs by provider and map to full model objects
+  const openaiIds = getModelsByProvider('openai');
+  const claudeIds = getModelsByProvider('anthropic');
+
+  const openai = openaiIds.map(id => ({
+    id,
+    name: LLM_PRICING[id]?.modelFamily || id,
+  }));
+
+  const claude = claudeIds.map(id => ({
+    id,
+    name: LLM_PRICING[id]?.modelFamily || id,
+  }));
 
   const handleExportPDF = () => {
     if (results) {
