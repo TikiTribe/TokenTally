@@ -53,7 +53,7 @@ interface CalculatorState {
 
 // Default chatbot configuration
 const DEFAULT_CONFIG: ChatbotConfig = {
-  modelId: 'claude-3-5-sonnet-20241022',
+  modelId: 'claude-sonnet-4-5-20250929',
   systemPromptTokens: 1000,
   avgUserMessageTokens: 100,
   avgResponseTokens: 200,
@@ -69,7 +69,7 @@ const DEFAULT_PROMPT_CONFIG: PromptCalculatorConfig = {
   responsePreset: 'medium',
   batchOperations: 1000,
   multiTurnEnabled: false,
-  modelId: 'claude-3-5-sonnet-20241022',
+  modelId: 'claude-sonnet-4-5-20250929',
   turns: 5,
   contextStrategy: 'moderate',
   cacheHitRate: 90,

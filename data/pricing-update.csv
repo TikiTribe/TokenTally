@@ -1,0 +1,17 @@
+model_id,provider,model_name,input_price,output_price,cache_write_price,cache_read_price,supports_cache,is_deprecated,release_date,notes
+gpt-5,openai,GPT-5,1.25,10.00,,,false,false,2025-08,Pricing and availability per OpenAI API pricing and GPT-5 launch pages; verified 2025-11-01
+gpt-5-mini,openai,GPT-5 Mini,0.25,2.00,,,false,false,2025-08,Pricing and availability per OpenAI API pricing and GPT-5 launch pages; verified 2025-11-01
+gpt-5-nano,openai,GPT-5 Nano,0.05,0.40,,,false,false,2025-08,Pricing and availability per OpenAI API pricing and GPT-5 launch pages; verified 2025-11-01
+gpt-5-pro,openai,GPT-5 Pro,15.00,120.00,,,false,false,2025-08,Pricing and availability per OpenAI API pricing; verified 2025-11-01
+gpt-4.1,openai,GPT-4.1,2.00,8.00,,,false,false,2025-04,Pricing from GPT-4.1 launch page table; verified 2025-11-01
+gpt-4.1-mini,openai,GPT-4.1 Mini,0.40,1.60,,,false,false,2025-04,Pricing from GPT-4.1 launch page table; verified 2025-11-01
+gpt-4.1-nano,openai,GPT-4.1 Nano,0.10,0.40,,,false,false,2025-04,Pricing from GPT-4.1 launch page table; verified 2025-11-01
+gpt-4o,openai,GPT-4o,5.00,15.00,,,false,false,2024-05,Pricing per OpenAI docs/blog; verified 2025-11-01
+gpt-4o-mini,openai,GPT-4o Mini,0.15,0.60,,,false,false,2024-07,Pricing per OpenAI GPT-4o mini launch post; verified 2025-11-01
+claude-sonnet-4-5-20250929,anthropic,Claude Sonnet 4.5,3.00,15.00,3.75,0.30,true,false,2025-09,Pricing per Claude pricing docs; release snapshot from Models Overview; verified 2025-11-01
+claude-haiku-4-5-20251001,anthropic,Claude Haiku 4.5,1.00,5.00,1.25,0.10,true,false,2025-10,Pricing per Claude pricing docs; release snapshot from Models Overview; verified 2025-11-01
+claude-opus-4-1-20250805,anthropic,Claude Opus 4.1,15.00,75.00,18.75,1.50,true,false,2025-08,Pricing per Claude pricing docs; release snapshot from Models Overview; verified 2025-11-01
+claude-sonnet-4-20250514,anthropic,Claude Sonnet 4,3.00,15.00,3.75,0.30,true,false,2025-05,Pricing per Claude pricing docs; release snapshot from Models Overview; verified 2025-11-01
+claude-opus-4-20250514,anthropic,Claude Opus 4,15.00,75.00,18.75,1.50,true,false,2025-05,Pricing per Claude pricing docs; release snapshot from Models Overview; verified 2025-11-01
+claude-3-5-haiku-20241022,anthropic,Claude 3.5 Haiku,0.80,4.00,1.00,0.08,true,false,2024-10,Pricing per Claude pricing docs; release snapshot from Models Overview; verified 2025-11-01
+claude-3-haiku-20240307,anthropic,Claude 3 Haiku,0.25,1.25,0.30,0.03,true,false,2024-03,Pricing per Claude pricing docs; release snapshot from Models Overview; verified 2025-11-01
