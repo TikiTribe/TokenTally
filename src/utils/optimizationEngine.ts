@@ -15,8 +15,10 @@ import type {
   CostBreakdown,
   Recommendation,
   ModelComparison,
+  PromptCalculatorConfig,
+  PromptCostBreakdown,
 } from '@/types';
-import { calculateChatbotCost, findCheapestModel } from './costCalculator';
+import { calculateChatbotCost, calculatePromptCost, findCheapestModel } from './costCalculator';
 import { getAllModelIds } from '@/config/pricingData';
 
 /**
@@ -294,4 +296,100 @@ export function generateModelComparison(
         100,
     },
   };
+}
+
+/**
+ * Generate prompt calculator optimization recommendations
+ *
+ * @param promptConfig - Current prompt calculator configuration
+ * @param promptResults - Current prompt cost breakdown
+ * @returns Array of recommendations sorted by priority and savings
+ */
+export function generatePromptRecommendations(
+  promptConfig: PromptCalculatorConfig,
+  promptResults: PromptCostBreakdown,
+): Recommendation[] {
+  const recommendations: Recommendation[] = [];
+
+  // 1. Check for cheaper model alternatives
+  const allModelIds = getAllModelIds();
+  let bestAlternative: { modelId: string; monthlyCost: number; savings: number } | null = null;
+
+  for (const modelId of allModelIds) {
+    if (modelId === promptConfig.modelId) continue;
+
+    const testConfig = { ...promptConfig, modelId };
+    const testResult = calculatePromptCost(testConfig);
+
+    const savings = promptResults.monthlyCost - testResult.monthlyCost;
+    if (!bestAlternative || savings > bestAlternative.savings) {
+      bestAlternative = { modelId, monthlyCost: testResult.monthlyCost, savings };
+    }
+  }
+
+  if (bestAlternative && bestAlternative.savings > 0) {
+    const savingsPercentage = (bestAlternative.savings / promptResults.monthlyCost) * 100;
+
+    if (savingsPercentage >= 20) {
+      recommendations.push({
+        priority: 'HIGH',
+        title: `Switch to ${bestAlternative.modelId}`,
+        description: `Switching models could reduce costs by ${savingsPercentage.toFixed(1)}%. Test to ensure output quality meets requirements.`,
+        potentialSavings: bestAlternative.savings,
+        savingsPercentage,
+        action: `Update model selection and validate output quality`,
+        alternativeModel: bestAlternative.modelId,
+      });
+    }
+  }
+
+  // 2. Reduce batch operations if feasible
+  if (promptConfig.batchOperations > 100) {
+    const reducedOps = Math.floor(promptConfig.batchOperations * 0.8);
+    const testConfig = { ...promptConfig, batchOperations: reducedOps };
+    const testResult = calculatePromptCost(testConfig);
+    const savings = promptResults.monthlyCost - testResult.monthlyCost;
+    const savingsPercentage = (savings / promptResults.monthlyCost) * 100;
+
+    if (savingsPercentage >= 10) {
+      recommendations.push({
+        priority: 'MEDIUM',
+        title: 'Reduce batch operations',
+        description: `Reducing batch operations by 20% could save ${savingsPercentage.toFixed(1)}%. Review if all operations are necessary.`,
+        potentialSavings: savings,
+        savingsPercentage,
+        action: 'Audit batch operations for optimization opportunities',
+      });
+    }
+  }
+
+  // 3. Optimize multi-turn settings
+  if (promptConfig.multiTurnEnabled && promptConfig.turns && promptConfig.turns > 3) {
+    const reducedTurns = Math.max(3, promptConfig.turns - 2);
+    const testConfig = { ...promptConfig, turns: reducedTurns };
+    const testResult = calculatePromptCost(testConfig);
+    const savings = promptResults.monthlyCost - testResult.monthlyCost;
+    const savingsPercentage = (savings / promptResults.monthlyCost) * 100;
+
+    if (savingsPercentage >= 5) {
+      recommendations.push({
+        priority: 'LOW',
+        title: 'Reduce conversation turns',
+        description: `Reducing turns from ${promptConfig.turns} to ${reducedTurns} could save ${savingsPercentage.toFixed(1)}%. Consider if all turns are necessary.`,
+        potentialSavings: savings,
+        savingsPercentage,
+        action: 'Review conversation flow for optimization',
+      });
+    }
+  }
+
+  // Sort and return top recommendations
+  return recommendations
+    .sort((a, b) => {
+      const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+      if (priorityDiff !== 0) return priorityDiff;
+      return b.potentialSavings - a.potentialSavings;
+    })
+    .slice(0, 5);
 }

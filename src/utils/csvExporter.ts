@@ -8,7 +8,13 @@
  * - Uses single quote prefix to force text interpretation
  */
 
-import type { ChatbotConfig, CostBreakdown, Recommendation } from '@/types';
+import type {
+  ChatbotConfig,
+  CostBreakdown,
+  Recommendation,
+  PromptCalculatorConfig,
+  PromptCostBreakdown,
+} from '@/types';
 
 /**
  * Sanitize CSV value to prevent formula injection
@@ -186,6 +192,113 @@ export function exportToCSV(
 }
 
 /**
+ * Export prompt cost breakdown to CSV format
+ *
+ * SECURITY: All user-provided fields (especially promptText) are sanitized
+ * to prevent formula injection attacks in Excel/Google Sheets.
+ *
+ * @param config - Prompt calculator configuration
+ * @param breakdown - Prompt cost breakdown results
+ * @param recommendations - Optional recommendations array
+ * @returns CSV string ready for download
+ */
+export function exportPromptCSV(
+  config: PromptCalculatorConfig,
+  breakdown: PromptCostBreakdown,
+  recommendations?: Recommendation[],
+): string {
+  const rows: string[] = [];
+
+  // Header
+  rows.push('TokenTally - Prompt Calculator Report');
+  rows.push(`Generated: ${new Date().toISOString()}`);
+  rows.push(''); // Empty row
+
+  // Configuration section
+  rows.push('Configuration');
+  rows.push(formatCSVRow(['Model', config.modelId]));
+
+  // CRITICAL SECURITY: Sanitize promptText to prevent formula injection
+  // The promptText field is user-controlled and could contain malicious formulas
+  rows.push(formatCSVRow(['Prompt Text', config.promptText]));
+
+  rows.push(formatCSVRow(['Batch Operations', config.batchOperations]));
+  rows.push(formatCSVRow(['Response Preset', config.responsePreset]));
+
+  if (config.multiTurnEnabled && config.turns) {
+    rows.push(formatCSVRow(['Multi-Turn Enabled', 'Yes']));
+    rows.push(formatCSVRow(['Conversation Turns', config.turns]));
+    rows.push(formatCSVRow(['Context Strategy', config.contextStrategy || 'moderate']));
+    if (config.cacheHitRate !== undefined) {
+      rows.push(formatCSVRow(['Cache Hit Rate', `${config.cacheHitRate}%`]));
+    }
+  } else {
+    rows.push(formatCSVRow(['Multi-Turn Enabled', 'No']));
+  }
+  rows.push(''); // Empty row
+
+  // Cost Summary section
+  rows.push('Cost Summary');
+  rows.push(formatCSVRow(['Per-Operation Cost', `$${breakdown.perCallCost.toFixed(4)}`]));
+  rows.push(formatCSVRow(['Monthly Cost', `$${breakdown.monthlyCost.toFixed(2)}`]));
+  rows.push(''); // Empty row
+
+  // Token Breakdown section
+  rows.push('Token Breakdown');
+  rows.push(formatCSVRow(['Input Tokens', breakdown.inputTokens]));
+  rows.push(formatCSVRow(['Output Tokens', breakdown.outputTokens]));
+  rows.push(formatCSVRow(['Input Cost', `$${breakdown.inputCost.toFixed(4)}`]));
+  rows.push(formatCSVRow(['Output Cost', `$${breakdown.outputCost.toFixed(4)}`]));
+
+  if (breakdown.cacheSavings !== undefined && breakdown.cacheSavings !== 0) {
+    rows.push(formatCSVRow(['Cache Savings', `$${breakdown.cacheSavings.toFixed(4)}`]));
+  }
+
+  if (breakdown.contextCost !== undefined && breakdown.contextCost !== 0) {
+    rows.push(formatCSVRow(['Context Accumulation Cost', `$${breakdown.contextCost.toFixed(4)}`]));
+  }
+  rows.push(''); // Empty row
+
+  // Multi-turn breakdown (if applicable)
+  if (config.multiTurnEnabled && breakdown.breakdown) {
+    rows.push('Multi-Turn Breakdown');
+    if (breakdown.breakdown.firstTurn !== undefined) {
+      rows.push(formatCSVRow(['First Turn Cost', `$${breakdown.breakdown.firstTurn.toFixed(4)}`]));
+    }
+    if (breakdown.breakdown.laterTurns !== undefined) {
+      rows.push(formatCSVRow(['Later Turns Cost (each)', `$${breakdown.breakdown.laterTurns.toFixed(4)}`]));
+    }
+    if (breakdown.breakdown.cacheHitSavings !== undefined) {
+      rows.push(formatCSVRow(['Total Cache Savings', `$${breakdown.breakdown.cacheHitSavings.toFixed(4)}`]));
+    }
+    if (breakdown.breakdown.contextAccumulation !== undefined) {
+      rows.push(formatCSVRow(['Context Accumulation', `$${breakdown.breakdown.contextAccumulation.toFixed(4)}`]));
+    }
+    rows.push(''); // Empty row
+  }
+
+  // Recommendations section (if provided)
+  if (recommendations && recommendations.length > 0) {
+    rows.push('Optimization Recommendations');
+    rows.push(formatCSVRow(['Priority', 'Title', 'Savings', 'Percentage', 'Action']));
+    recommendations.forEach((rec) => {
+      rows.push(
+        formatCSVRow([
+          rec.priority,
+          rec.title,
+          `$${rec.potentialSavings.toFixed(2)}`,
+          `${rec.savingsPercentage.toFixed(1)}%`,
+          rec.action,
+        ]),
+      );
+    });
+    rows.push(''); // Empty row
+  }
+
+  return rows.join('\n');
+}
+
+/**
  * Trigger CSV download in browser
  *
  * @param csvContent - CSV string content
@@ -230,5 +343,36 @@ export function exportAndDownloadCSV(
   filename?: string,
 ): void {
   const csvContent = exportToCSV(config, breakdown, recommendations);
+  downloadCSV(csvContent, filename);
+}
+
+/**
+ * Export and download prompt cost breakdown as CSV
+ *
+ * Generates timestamped filename and triggers browser download.
+ *
+ * @param config - Prompt calculator configuration
+ * @param breakdown - Prompt cost breakdown results
+ * @param recommendations - Optional recommendations
+ * @param filename - Optional custom filename (auto-generated if not provided)
+ */
+export function exportAndDownloadPromptCSV(
+  config: PromptCalculatorConfig,
+  breakdown: PromptCostBreakdown,
+  recommendations?: Recommendation[],
+  filename?: string,
+): void {
+  const csvContent = exportPromptCSV(config, breakdown, recommendations);
+
+  // Generate timestamped filename if not provided
+  if (!filename) {
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, '-')
+      .replace('T', '-')
+      .split('.')[0];
+    filename = `tokentally-prompt-export-${timestamp}.csv`;
+  }
+
   downloadCSV(csvContent, filename);
 }
