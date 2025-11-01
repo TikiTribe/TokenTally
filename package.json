@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "scrape-pricing": "npx tsx scripts/scrape-pricing.ts"
+    "scrape-pricing": "npx tsx scripts/scrape-pricing.ts",
+    "update-pricing": "npx tsx scripts/update-pricing-from-csv.ts"
   },
   "dependencies": {
     "jspdf": "3.0.3",
@@ -28,6 +29,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "10.4.20",
     "cheerio": "^1.0.0-rc.12",
+    "csv-parse": "^5.5.6",
     "eslint": "9.39.0",
     "eslint-plugin-react": "7.37.2",
     "eslint-plugin-react-hooks": "5.0.0",

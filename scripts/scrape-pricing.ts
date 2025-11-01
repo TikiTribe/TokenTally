@@ -13,22 +13,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { generatePricingFileContent, type ScrapedModel } from './utils/pricingHelpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-interface ScrapedModel {
-  id: string;
-  name: string;
-  provider: 'openai' | 'anthropic';
-  inputPerMToken: number;
-  outputPerMToken: number;
-  cacheWritePerMToken?: number;
-  cacheReadPerMToken?: number;
-  supportsCache: boolean;
-  isDeprecated: boolean;
-  releaseDate?: string;
-}
 
 /**
  * Scrapes OpenAI pricing page for model pricing data
@@ -212,84 +200,23 @@ async function scrapeClaudePricing(): Promise<ScrapedModel[]> {
 
 /**
  * Generates TypeScript pricing data file
+ * Uses extracted utility function for code generation
  */
 async function generatePricingDataFile(models: ScrapedModel[]): Promise<void> {
   console.log('Generating pricing data file...');
 
   const outputPath = path.join(__dirname, '..', 'src', 'config', 'pricingData.ts');
-
-  // Group models by provider
-  const openaiModels = models.filter(m => m.provider === 'openai');
-  const claudeModels = models.filter(m => m.provider === 'anthropic');
-
-  // Generate TypeScript file content
-  const content = `/**
- * LLM Pricing Data
- *
- * IMPORTANT: This file contains pricing information for LLM models.
- * Pricing data was last scraped on ${new Date().toISOString().split('T')[0]}.
- *
- * Update Strategy:
- * 1. Run \`npm run scrape-pricing\` to scrape latest pricing
- * 2. Manually review generated data for accuracy
- * 3. Update PRICING_METADATA.lastUpdated timestamp
- * 4. Verify pricing against official provider documentation
- *
- * Data Sources:
- * - OpenAI: https://openai.com/api/pricing/
- * - Claude: https://www.anthropic.com/pricing
- */
-
-export interface LLMPricing {
-  inputPerMToken: number;        // Cost per 1M input tokens (USD)
-  outputPerMToken: number;       // Cost per 1M output tokens (USD)
-  cacheWritePerMToken?: number;  // Cost per 1M cache write tokens (Claude only)
-  cacheReadPerMToken?: number;   // Cost per 1M cache read tokens (Claude only)
-  supportsCache: boolean;        // Whether model supports prompt caching
-  provider: 'openai' | 'anthropic';
-  modelFamily: string;
-  isDeprecated: boolean;
-  releaseDate?: string;
-}
-
-export const LLM_PRICING: Record<string, LLMPricing> = {
-${models.map(model => `  '${model.id}': {
-    inputPerMToken: ${model.inputPerMToken.toFixed(2)},
-    outputPerMToken: ${model.outputPerMToken.toFixed(2)},${model.cacheWritePerMToken ? `
-    cacheWritePerMToken: ${model.cacheWritePerMToken.toFixed(2)},` : ''}${model.cacheReadPerMToken ? `
-    cacheReadPerMToken: ${model.cacheReadPerMToken.toFixed(2)},` : ''}
-    supportsCache: ${model.supportsCache},
-    provider: '${model.provider}',
-    modelFamily: '${model.name}',
-    isDeprecated: ${model.isDeprecated},${model.releaseDate ? `
-    releaseDate: '${model.releaseDate}',` : ''}
-  }`).join(',\n')},
-};
-
-export const PRICING_METADATA = {
-  lastUpdated: '${new Date().toISOString().split('T')[0]}',
-  totalModels: ${models.length},
-  openaiModels: ${openaiModels.length},
-  claudeModels: ${claudeModels.length},
-  sources: {
-    openai: 'https://openai.com/api/pricing/',
-    claude: 'https://www.anthropic.com/pricing'
-  },
-  notes: [
-    'Pricing shown is in USD per 1 million tokens',
-    'Claude models support prompt caching (90% cost reduction on cached tokens)',
-    'OpenAI models do not currently support prompt caching',
-    'Deprecated models may have limited availability',
-    'Pricing subject to change - verify with official sources'
-  ]
-};
-`;
+  const content = generatePricingFileContent(models);
 
   fs.writeFileSync(outputPath, content, 'utf-8');
+
+  const openaiCount = models.filter(m => m.provider === 'openai').length;
+  const claudeCount = models.filter(m => m.provider === 'anthropic').length;
+
   console.log(`✓ Generated ${outputPath}`);
   console.log(`  Total models: ${models.length}`);
-  console.log(`  OpenAI: ${openaiModels.length}`);
-  console.log(`  Claude: ${claudeModels.length}`);
+  console.log(`  OpenAI: ${openaiCount}`);
+  console.log(`  Claude: ${claudeCount}`);
 }
 
 /**

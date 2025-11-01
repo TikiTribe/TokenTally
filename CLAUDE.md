@@ -67,18 +67,51 @@ export const LLM_PRICING = {
     cacheReadPerMToken: 0.30,  // 90% savings
     ...
   },
-  // ... 6 total models
+  // ... 16 total models (as of Nov 2025)
 };
 ```
 
-**Update Strategy**: Manual edits when providers change pricing (typically quarterly). Always include `lastUpdated` field and document source.
+**Update Strategy**: CSV-driven pricing updates via `data/pricing-update.csv` + automated utility.
+
+#### Updating Pricing Data
+
+**Quarterly Update Process** (recommended when providers announce pricing changes):
+
+1. **Update CSV File**: Edit `data/pricing-update.csv` with new model pricing
+   - 11 columns: model_id, provider, model_name, input_price, output_price, cache_write_price, cache_read_price, supports_cache, is_deprecated, release_date, notes
+   - Must include verification date in notes (e.g., "verified 2025-11-01")
+   - See existing rows for format examples
+
+2. **Run Update Utility**:
+   ```bash
+   npm run update-pricing
+   ```
+
+3. **Validation**: Utility performs comprehensive validation:
+   - 11 field-level validators (types, formats, ranges)
+   - 4 business rule validators (uniqueness, consistency, reasonability)
+   - Errors reported with row/column/value context
+   - <100ms execution time (6ms typical for 16 models)
+
+4. **Verify Output**: Check `src/config/pricingData.ts` was updated correctly
+   - All model IDs present in dropdown selectors
+   - Pricing matches official provider documentation
+   - `PRICING_METADATA.lastUpdated` reflects current date
+
+**Security**: CSV update utility is OWASP A03:2021 compliant with injection prevention, file size limits (1MB), and atomic writes.
+
+**Technical Details**: See `scripts/update-pricing-from-csv.ts` for implementation. The utility uses:
+- `csv-parse` for parsing with strict validation
+- Parallel field validation (11 validators)
+- Business rule validation (4 validators)
+- Code generation via `scripts/utils/pricingHelpers.ts`
 
 ### Component Responsibilities
 
 **Dual Calculator Application** with tab-based navigation:
 
 #### Chatbot Calculator (Tab 1)
-- `ModelSelector`: Dropdown for 6 models (OpenAI: 3, Claude: 3)
+- `ModelSelector`: Dropdown for 16 models (OpenAI: 9, Claude: 7)
 - `ChatbotConfig`: All user inputs (system prompt, messages, turns, context, volume)
 - `CostDisplay`: Primary monthly cost + per-conversation cost (large, prominent)
 - `CostBreakdown`: Detailed 5-line breakdown (system/cache/input/output/context)
@@ -87,7 +120,7 @@ export const LLM_PRICING = {
 - `ExportButtons`: PDF report + CSV download
 
 #### Prompt Calculator (Tab 2)
-- `ModelSelector`: Same 6 models with framework detection
+- `ModelSelector`: Same 16 models with framework detection
 - `PromptInput`: Multi-line text area with character/token count
 - `ResponsePresets`: Small/Medium/Large/XLarge response size selection
 - `BatchConfig`: Batch operations volume with multi-turn toggle
@@ -104,10 +137,11 @@ export const LLM_PRICING = {
 ### Project Setup
 ```bash
 npm install
-npm run dev          # Start dev server (http://localhost:5173)
-npm run build        # TypeScript compile + Vite production build
-npm run preview      # Test production build locally
-npm run lint         # ESLint with TypeScript rules
+npm run dev              # Start dev server (http://localhost:5173)
+npm run build            # TypeScript compile + Vite production build
+npm run preview          # Test production build locally
+npm run lint             # ESLint with TypeScript rules
+npm run update-pricing   # Update pricing from CSV (quarterly)
 ```
 
 ### Key Development Patterns
@@ -125,7 +159,7 @@ const totalCacheSavings = cacheSavings × (turns - 1)
 ```
 
 **Optimization Engine** (`src/utils/optimizationEngine.ts`):
-1. Compare current config against all 6 models
+1. Compare current config against all 16 models
 2. Identify 20%+ savings opportunities (HIGH priority)
 3. Check context strategy alternatives (MEDIUM if >15% savings)
 4. Response length optimization (LOW if >10% savings)
@@ -264,7 +298,7 @@ npm run build  # Creates dist/ folder
 **Current Phase**: ✅ **PRODUCTION READY** (All MVP features complete, deployment authorized)
 **Completion**: 11 of 12 tasks (91.7% - awaiting user deployment to Vercel)
 **MVP Features**:
-- ✅ 6 models (OpenAI: GPT-4o, GPT-4o-mini, GPT-3.5-turbo | Claude: 3.5 Sonnet, 3.5 Haiku, 3 Haiku)
+- ✅ 16 models (OpenAI: GPT-5 series, GPT-4.1 series, GPT-4o series | Claude: 4.5, 4.1, 4, 3 series)
 - ✅ Chatbot Calculator (conversation-specific cost modeling)
 - ✅ Prompt Calculator (batch API operations with multi-turn support)
 - ✅ PDF/CSV export (both calculators with security)

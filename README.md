@@ -11,11 +11,12 @@ Predict monthly operating costs within ±5% accuracy for chatbots and batch API 
 - **Prompt Calculator**: Batch API operations with optional multi-turn simulation
 
 ### Core Capabilities
-- **6 LLM Models**: OpenAI (GPT-4o, GPT-4o-mini, GPT-3.5-turbo) + Claude (3.5 Sonnet, 3.5 Haiku, 3 Haiku)
+- **16 LLM Models**: OpenAI (GPT-5 series, GPT-4.1 series, GPT-4o series) + Claude (4.5, 4.1, 4, and 3 series)
 - **Prompt Caching Support**: Claude models with 90% cost savings on cached system prompts
 - **Cost Optimization**: AI-generated recommendations for $500-$5,000/month savings
 - **Professional Reports**: PDF and CSV export for both calculators
 - **Real-Time Calculations**: <100ms updates as you adjust configuration
+- **CSV-Driven Pricing Updates**: Quarterly pricing updates via automated utility (<100ms execution)
 - **Security-First**: OWASP A03:2021 compliant, 0 vulnerabilities, privacy-by-design
 
 ### Quality Metrics ✅
@@ -39,6 +40,9 @@ npm run build
 
 # Preview production build
 npm run preview
+
+# Update pricing data (quarterly maintenance)
+npm run update-pricing
 ```
 
 Visit `http://localhost:5173` to see the application.
@@ -63,7 +67,7 @@ src/
 │   ├── PromptInput.tsx          # Multi-line prompt input
 │   └── ...                      # Other UI components
 ├── config/
-│   └── pricingData.ts           # LLM pricing configuration (6 models)
+│   └── pricingData.ts           # LLM pricing configuration (16 models, auto-generated)
 ├── store/
 │   └── useCalculatorStore.ts    # Zustand state (both calculators)
 ├── types/
@@ -76,6 +80,22 @@ src/
 │   └── pdfExporter.ts           # PDF report generation
 ├── App.tsx                      # Main application with tab navigation
 └── main.tsx                     # Application entry point
+
+scripts/
+├── types/
+│   └── csvSchema.ts             # CSV validation types
+├── validators/
+│   └── csvValidator.ts          # Field and business validators (15 rules)
+├── parsers/
+│   └── csvParser.ts             # CSV parsing with validation
+├── transformers/
+│   └── dataTransformer.ts       # Data transformation utilities
+├── utils/
+│   └── pricingHelpers.ts        # Code generation utilities
+└── update-pricing-from-csv.ts   # CSV-driven pricing updates (<100ms)
+
+data/
+└── pricing-update.csv           # Quarterly pricing maintenance (11 columns)
 ```
 
 ## Cost Calculation Formula
@@ -122,12 +142,20 @@ TokenTally is a client-side only application with no backend, authentication, or
 
 See `SECURITY.md` for complete security documentation.
 
-## Pricing Data Sources
+## Pricing Data Updates
 
+TokenTally uses a **CSV-driven pricing update system** for quarterly maintenance:
+
+1. **Edit CSV**: Update `data/pricing-update.csv` with new model pricing (11 columns)
+2. **Run Utility**: Execute `npm run update-pricing` for validation and code generation
+3. **Validation**: 15 validation rules ensure data quality (11 field + 4 business rules)
+4. **Auto-Generate**: Creates `src/config/pricingData.ts` with type-safe TypeScript code
+
+**Data Sources**:
 - **OpenAI**: https://openai.com/api/pricing/ (as of Jan 2025)
 - **Claude**: https://www.anthropic.com/pricing (as of Jan 2025)
 
-Pricing last updated: **January 31, 2025**
+Pricing last updated: **November 1, 2025** (16 models)
 
 ## Known Limitations
 
@@ -161,7 +189,7 @@ Run these 5 test scenarios to validate accuracy:
 2. **Single-Turn**: 1 turn → No caching benefit for Claude
 3. **High-Volume Caching**: 1000t system prompt, 10K conversations/month, Claude → Verify 90% cache savings
 4. **Context Accumulation**: Full vs Minimal strategy → Validate cost difference
-5. **Model Comparison**: Same config across all 6 models → Verify cheapest model identified
+5. **Model Comparison**: Same config across all 16 models → Verify cheapest model identified
 
 Hand-calculate at least 2 scenarios and compare to tool output (must be within 1%).
 
@@ -185,7 +213,7 @@ MIT License - See LICENSE file for details
 For issues, feature requests, or questions:
 1. Check `CLAUDE.md` for architecture and development patterns
 2. Review `SECURITY.md` for security guidelines
-3. See pricing data update process in `src/config/pricingData.ts`
+3. See pricing data update process in `data/pricing-update.csv` and `scripts/update-pricing-from-csv.ts`
 
 ---
 
