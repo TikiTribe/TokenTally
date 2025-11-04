@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import type { ResponsePreset } from '../types';
 import { RESPONSE_PRESETS } from '../types';
+import { Tooltip } from './Tooltip';
+import { InfoIcon } from './InfoIcon';
+import { TOOLTIP_CONTENT } from '@/config/tooltipContent';
 
 interface ResponsePresetsProps {
   value: ResponsePreset;
@@ -20,6 +23,9 @@ export const ResponsePresets: React.FC<ResponsePresetsProps> = ({
     <div className="space-y-2">
       <label htmlFor="response-preset" className="block text-sm font-medium text-gray-700">
         {label}
+        <Tooltip content={TOOLTIP_CONTENT.prompt.responsePreset}>
+          <InfoIcon />
+        </Tooltip>
       </label>
       <div className="relative">
         <select

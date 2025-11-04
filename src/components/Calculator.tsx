@@ -9,6 +9,9 @@ import { getModelsByProvider, LLM_PRICING } from '@/config/pricingData';
 import { exportAndDownloadPDF } from '@/utils/pdfExporter';
 import { exportAndDownloadCSV } from '@/utils/csvExporter';
 import type { ContextStrategy } from '@/types';
+import { Tooltip } from './Tooltip';
+import { InfoIcon } from './InfoIcon';
+import { TOOLTIP_CONTENT } from '@/config/tooltipContent';
 
 export function Calculator() {
   const {
@@ -50,7 +53,12 @@ export function Calculator() {
     <div className="space-y-6">
       {/* Model Selector */}
       <div className="card">
-        <h2 className="text-xl font-semibold mb-4">Model Selection</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          Model Selection
+          <Tooltip content={TOOLTIP_CONTENT.chatbot.modelSelection}>
+            <InfoIcon />
+          </Tooltip>
+        </h2>
         <select
           className="input-field"
           value={config.modelId}
@@ -80,6 +88,9 @@ export function Calculator() {
           <div>
             <label className="block text-sm font-medium mb-2">
               System Prompt Tokens
+              <Tooltip content={TOOLTIP_CONTENT.chatbot.systemPromptTokens}>
+                <InfoIcon />
+              </Tooltip>
             </label>
             <input
               type="number"
@@ -96,6 +107,9 @@ export function Calculator() {
           <div>
             <label className="block text-sm font-medium mb-2">
               Avg User Message Tokens
+              <Tooltip content={TOOLTIP_CONTENT.chatbot.avgUserMessageTokens}>
+                <InfoIcon />
+              </Tooltip>
             </label>
             <input
               type="number"
@@ -112,6 +126,9 @@ export function Calculator() {
           <div>
             <label className="block text-sm font-medium mb-2">
               Avg Response Tokens
+              <Tooltip content={TOOLTIP_CONTENT.chatbot.avgResponseTokens}>
+                <InfoIcon />
+              </Tooltip>
             </label>
             <input
               type="number"
@@ -128,6 +145,9 @@ export function Calculator() {
           <div>
             <label className="block text-sm font-medium mb-2">
               Conversation Turns
+              <Tooltip content={TOOLTIP_CONTENT.chatbot.conversationTurns}>
+                <InfoIcon />
+              </Tooltip>
             </label>
             <input
               type="number"
@@ -144,6 +164,9 @@ export function Calculator() {
           <div>
             <label className="block text-sm font-medium mb-2">
               Conversations Per Month
+              <Tooltip content={TOOLTIP_CONTENT.chatbot.conversationsPerMonth}>
+                <InfoIcon />
+              </Tooltip>
             </label>
             <input
               type="number"
@@ -162,6 +185,9 @@ export function Calculator() {
           <div>
             <label className="block text-sm font-medium mb-2">
               Context Strategy
+              <Tooltip content={TOOLTIP_CONTENT.chatbot.contextStrategy}>
+                <InfoIcon />
+              </Tooltip>
             </label>
             <select
               className="input-field"
@@ -182,6 +208,9 @@ export function Calculator() {
             <div>
               <label className="block text-sm font-medium mb-2">
                 Cache Hit Rate (%)
+                <Tooltip content={TOOLTIP_CONTENT.chatbot.cacheHitRate}>
+                  <InfoIcon />
+                </Tooltip>
               </label>
               <input
                 type="number"
