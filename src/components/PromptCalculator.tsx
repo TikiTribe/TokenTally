@@ -11,6 +11,9 @@ import { getModelsByProvider, LLM_PRICING } from '@/config/pricingData';
 import { exportAndDownloadPromptPDF } from '@/utils/pdfExporter';
 import { exportAndDownloadPromptCSV } from '@/utils/csvExporter';
 import type { ResponsePreset, ContextStrategy } from '../types';
+import { Tooltip } from './Tooltip';
+import { InfoIcon } from './InfoIcon';
+import { TOOLTIP_CONTENT } from '@/config/tooltipContent';
 
 interface PromptCalculatorProps {
   promptText: string;
@@ -90,6 +93,9 @@ export const PromptCalculator: React.FC<PromptCalculatorProps> = ({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Model Selection
+              <Tooltip content={TOOLTIP_CONTENT.prompt.modelSelection}>
+                <InfoIcon />
+              </Tooltip>
             </label>
             <select
               className="input-field"

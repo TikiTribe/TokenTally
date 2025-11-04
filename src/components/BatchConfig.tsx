@@ -1,6 +1,9 @@
 import React from 'react';
 import type { ContextStrategy } from '../types';
 import { CONTEXT_STRATEGY_TOKENS, VALIDATION_CONSTRAINTS } from '../types';
+import { Tooltip } from './Tooltip';
+import { InfoIcon } from './InfoIcon';
+import { TOOLTIP_CONTENT } from '@/config/tooltipContent';
 
 interface BatchConfigProps {
   batchOperations: number;
@@ -35,6 +38,9 @@ export const BatchConfig: React.FC<BatchConfigProps> = ({
       <div className="space-y-2">
         <label htmlFor="batch-operations" className="block text-sm font-medium text-gray-700">
           Batch Operations per Month
+          <Tooltip content={TOOLTIP_CONTENT.prompt.batchOperations}>
+            <InfoIcon />
+          </Tooltip>
         </label>
         <input
           id="batch-operations"
@@ -66,6 +72,9 @@ export const BatchConfig: React.FC<BatchConfigProps> = ({
           <div className="flex-1">
             <span className="text-sm font-medium text-gray-700">
               Model multi-turn conversation
+              <Tooltip content={TOOLTIP_CONTENT.prompt.multiTurnToggle}>
+                <InfoIcon />
+              </Tooltip>
             </span>
             <p className="text-sm text-gray-500 mt-1">
               Enable if your prompt involves back-and-forth dialogue with context accumulation
@@ -81,6 +90,9 @@ export const BatchConfig: React.FC<BatchConfigProps> = ({
           <div className="space-y-2">
             <label htmlFor="turns" className="block text-sm font-medium text-gray-700">
               Conversation Turns
+              <Tooltip content={TOOLTIP_CONTENT.prompt.conversationTurns}>
+                <InfoIcon />
+              </Tooltip>
             </label>
             <div className="flex items-center space-x-4">
               <input
@@ -103,6 +115,9 @@ export const BatchConfig: React.FC<BatchConfigProps> = ({
           <div className="space-y-2">
             <label htmlFor="context-strategy" className="block text-sm font-medium text-gray-700">
               Context Accumulation Strategy
+              <Tooltip content={TOOLTIP_CONTENT.prompt.contextStrategy}>
+                <InfoIcon />
+              </Tooltip>
             </label>
             <select
               id="context-strategy"
@@ -125,6 +140,9 @@ export const BatchConfig: React.FC<BatchConfigProps> = ({
             <div className="space-y-2 bg-blue-50 p-4 rounded-md">
               <label htmlFor="cache-hit-rate" className="block text-sm font-medium text-blue-900">
                 Cache Hit Rate (%)
+                <Tooltip content={TOOLTIP_CONTENT.prompt.cacheHitRate}>
+                  <InfoIcon />
+                </Tooltip>
               </label>
               <div className="flex items-center space-x-4">
                 <input

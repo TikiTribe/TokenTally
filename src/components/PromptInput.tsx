@@ -1,4 +1,7 @@
 import React from 'react';
+import { Tooltip } from './Tooltip';
+import { InfoIcon } from './InfoIcon';
+import { TOOLTIP_CONTENT } from '@/config/tooltipContent';
 import { estimateTokensFromChars } from '../utils/tokenEstimator';
 import { VALIDATION_CONSTRAINTS } from '../types';
 
@@ -29,6 +32,9 @@ Assistant:`,
     <div className="space-y-2">
       <label htmlFor="prompt-input" className="block text-sm font-medium text-gray-700">
         {label}
+        <Tooltip content={TOOLTIP_CONTENT.prompt.promptInput}>
+          <InfoIcon />
+        </Tooltip>
       </label>
       <textarea
         id="prompt-input"
