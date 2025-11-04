@@ -12,6 +12,7 @@ import type { ContextStrategy } from '@/types';
 import { Tooltip } from './Tooltip';
 import { InfoIcon } from './InfoIcon';
 import { TOOLTIP_CONTENT } from '@/config/tooltipContent';
+import { TokenConversionHelper } from './TokenConversionHelper';
 
 export function Calculator() {
   const {
@@ -51,6 +52,9 @@ export function Calculator() {
 
   return (
     <div className="space-y-6">
+      {/* Token Conversion Helper */}
+      <TokenConversionHelper />
+
       {/* Model Selector */}
       <div className="card">
         <h2 className="text-xl font-semibold mb-4">
@@ -101,7 +105,11 @@ export function Calculator() {
               }
               min="1"
               max="100000"
+              placeholder="2000"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              e.g., ~1,540 words or ~8,000 characters
+            </p>
           </div>
 
           <div>
@@ -120,7 +128,11 @@ export function Calculator() {
               }
               min="1"
               max="10000"
+              placeholder="50"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              e.g., ~38 words or ~200 characters
+            </p>
           </div>
 
           <div>
@@ -139,7 +151,11 @@ export function Calculator() {
               }
               min="1"
               max="10000"
+              placeholder="150"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              e.g., ~115 words or ~600 characters
+            </p>
           </div>
 
           <div>
