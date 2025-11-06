@@ -2,7 +2,7 @@ import React from 'react';
 import { Tooltip } from './Tooltip';
 import { InfoIcon } from './InfoIcon';
 import { TOOLTIP_CONTENT } from '@/config/tooltipContent';
-import { estimateTokensFromChars } from '../utils/tokenEstimator';
+import { estimateTokensFromChars, countWords } from '../utils/tokenEstimator';
 import { VALIDATION_CONSTRAINTS } from '../types';
 
 interface PromptInputProps {
@@ -24,6 +24,7 @@ Assistant:`,
   maxLength = VALIDATION_CONSTRAINTS.promptText.max,
 }) => {
   const charCount = value.length;
+  const wordCount = countWords(value);
   const tokenCount = estimateTokensFromChars(value);
   const isNearLimit = charCount > maxLength * 0.9;
   const isAtLimit = charCount >= maxLength;
@@ -51,9 +52,13 @@ Assistant:`,
         placeholder={placeholder}
         aria-describedby="char-count token-count"
       />
-      <div className="flex justify-between text-sm">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <div className="text-gray-600">
+          Words: <span className="font-semibold">{wordCount.toLocaleString()}</span>
+        </div>
         <div id="token-count" className="text-gray-600">
-          Estimated tokens: <span className="font-semibold">{tokenCount.toLocaleString()}</span>
+          Tokens: <span className="font-semibold">{tokenCount.toLocaleString()}</span>
+          <span className="text-xs text-gray-500 ml-1">(~1.3 tokens/word)</span>
         </div>
         <div
           id="char-count"
@@ -61,7 +66,7 @@ Assistant:`,
             ${isAtLimit ? 'text-red-600 font-semibold' : isNearLimit ? 'text-yellow-600' : 'text-gray-500'}
           `}
         >
-          {charCount.toLocaleString()} / {maxLength.toLocaleString()} characters
+          Characters: {charCount.toLocaleString()} / {maxLength.toLocaleString()}
         </div>
       </div>
       {value.length === 0 && (

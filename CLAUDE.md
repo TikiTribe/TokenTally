@@ -111,8 +111,9 @@ export const LLM_PRICING = {
 **Dual Calculator Application** with tab-based navigation:
 
 #### Chatbot Calculator (Tab 1)
+- `TokenConversionHelper`: Collapsible educational section explaining conversion rates (1.3 tokens/word, 4 chars/token)
 - `ModelSelector`: Dropdown for 16 models (OpenAI: 9, Claude: 7)
-- `ChatbotConfig`: All user inputs (system prompt, messages, turns, context, volume)
+- `ChatbotConfig`: All user inputs (system prompt, messages, turns, context, volume) with helper text showing word/character equivalents
 - `CostDisplay`: Primary monthly cost + per-conversation cost (large, prominent)
 - `CostBreakdown`: Detailed 5-line breakdown (system/cache/input/output/context)
 - `OptimizationRecommendations`: AI-generated savings opportunities (sorted by priority)
@@ -120,9 +121,10 @@ export const LLM_PRICING = {
 - `ExportButtons`: PDF report + CSV download
 
 #### Prompt Calculator (Tab 2)
+- `TokenConversionHelper`: Collapsible educational section explaining conversion rates (1.3 tokens/word, 4 chars/token)
 - `ModelSelector`: Same 16 models with framework detection
-- `PromptInput`: Multi-line text area with character/token count
-- `ResponsePresets`: Small/Medium/Large/XLarge response size selection
+- `PromptInput`: Multi-line text area with real-time word count, token count (~1.3 tokens/word hint), and character count
+- `ResponsePresets`: Small/Medium/Large/XLarge response size selection with word equivalents in tooltips
 - `BatchConfig`: Batch operations volume with multi-turn toggle
 - `PromptCostDisplay`: Per-call cost + monthly batch costs
 - `PromptCostBreakdown`: Input/output token breakdown
@@ -147,9 +149,20 @@ npm run update-pricing   # Update pricing from CSV (quarterly)
 ### Key Development Patterns
 
 **Token Estimation Helpers** (`src/utils/tokenEstimator.ts`):
-- Character-to-token: ~4 chars = 1 token
-- Word-to-token: ~1.3 tokens per word
-- Use these for user-friendly inputs (convert words/chars to tokens)
+- **Conversion Rates** (English language, clearly displayed to users):
+  - ~1.3 tokens per word (primary conversion rate)
+  - ~4 characters per token (secondary conversion)
+  - ~0.77 words per token (inverse)
+- **User-Facing Transparency**:
+  - `TokenConversionHelper` component displays conversion rates with examples
+  - All tooltips include conversion rate hints: "(~1.3 tokens/word, ~4 chars/token)"
+  - Input field helper text shows practical examples: "e.g., ~1,540 words or ~8,000 characters"
+  - `PromptInput` shows real-time word count alongside tokens and characters
+- **Developer Functions**:
+  - `estimateTokensFromChars(text)`: Converts characters to tokens (~4 chars/token)
+  - `estimateTokensFromWords(words)`: Converts words to tokens (~1.3 tokens/word)
+  - `countWords(text)`: Counts whitespace-separated words
+  - All functions include comprehensive JSDoc with examples
 
 **Caching Calculations** (Claude-specific):
 ```typescript

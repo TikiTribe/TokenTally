@@ -6,6 +6,7 @@ import { PromptCostDisplay } from './PromptCostDisplay';
 import { PromptCostBreakdown } from './PromptCostBreakdown';
 import { PromptModelComparison } from './PromptModelComparison';
 import { PromptOptimizationRecommendations } from './PromptOptimizationRecommendations';
+import { TokenConversionHelper } from './TokenConversionHelper';
 import { useCalculatorStore } from '@/store/useCalculatorStore';
 import { getModelsByProvider, LLM_PRICING } from '@/config/pricingData';
 import { exportAndDownloadPromptPDF } from '@/utils/pdfExporter';
@@ -87,6 +88,9 @@ export const PromptCalculator: React.FC<PromptCalculatorProps> = ({
             Estimate costs for batch API operations with optional multi-turn conversation modeling
           </p>
         </div>
+
+        {/* Token Conversion Helper */}
+        <TokenConversionHelper />
 
         <div className="border-t border-gray-200 pt-6 space-y-6">
           {/* Model Selection */}
