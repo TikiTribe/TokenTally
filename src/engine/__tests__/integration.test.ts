@@ -110,6 +110,62 @@ describe('monthlyWarmCost integration (§8 hand-verified, C10/C12/C13)', () => {
     expect(r.warmth).toBeNull();
   });
 
+  const baseScn = (over: Partial<WarmScenario>): WarmScenario => ({
+    model: claudeSonnet(breakpointCache),
+    prefixTokens: 2000,
+    perArrivalInputTokens: 500,
+    perArrivalOutputTokens: 300,
+    perArrivalReasoningTokens: 0,
+    arrivalsPerMonth: 43_200,
+    distinctPrefixes: 1,
+    ttl: 'min5',
+    profile: 'steady',
+    ...over,
+  });
+
+  it('review-fix (finding 3/4): a 1-hr TTL scenario bills the cache write at 2x base (not the 5-min rate)', () => {
+    // hr1 conservative write portion = 43200*2000*6.0/1e6 = 518.4; +input 64.8 +output 194.4 = 777.6
+    const hr1 = monthlyWarmCost(baseScn({ ttl: 'hr1' }));
+    const min5 = monthlyWarmCost(baseScn({ ttl: 'min5' }));
+    expect(within1pct(hr1.conservativeTotal, 777.6)).toBe(true);
+    expect(hr1.conservativeTotal).toBeGreaterThan(min5.conservativeTotal); // 6.0 > 3.75 write rate
+    expect(hr1.warmth).toBeGreaterThan(min5.warmth as number); // T=3600 warms more than T=300
+  });
+
+  it('review-fix (finding 10): confidence.high === conservativeTotal and low === centralTotal (no tokenizer band)', () => {
+    const r = monthlyWarmCost(baseScn({}));
+    expect(r.confidence.high).toBeCloseTo(r.conservativeTotal, 6);
+    expect(r.confidence.low).toBeCloseTo(r.centralTotal, 6);
+  });
+
+  it('review-fix (finding 8): a readUnavailable cache has no break-even and no free read discount', () => {
+    const cache: CacheSpec = { archetype: 'breakpoint_ttl', cacheWritePerMToken: 3.75, rateUnavailable: false, readUnavailable: true };
+    const r = monthlyWarmCost(baseScn({ model: claudeSonnet(cache) }));
+    expect(r.applicable).toBe(true);
+    expect(r.breakEvenArrivals).toBeNull();
+  });
+
+  it('review-fix (finding 11): a storage-archetype cache is modeled breakpoint-like (point warmth + write cost)', () => {
+    const storage: CacheSpec = { archetype: 'storage', cacheReadPerMToken: 0.3, cacheWritePerMToken: 3.75, rateUnavailable: false, readUnavailable: false };
+    const r = monthlyWarmCost(baseScn({ model: claudeSonnet(storage) }));
+    expect(r.applicable).toBe(true);
+    expect(typeof r.warmth).toBe('number'); // point warmth, not a range
+    expect(r.breakEvenArrivals).not.toBeNull();
+  });
+
+  it('review-fix (finding 1/2): bursty central total never exceeds the conservative (no negative "up to")', () => {
+    const r = monthlyWarmCost(baseScn({ profile: 'bursty', activeFraction: 0.25, burstsPerMonth: 300, arrivalsPerMonth: 720 }));
+    expect(r.centralTotal).toBeLessThanOrEqual(r.conservativeTotal);
+    expect(r.savingsUpTo.central).toBeGreaterThanOrEqual(0);
+    expect(r.writesPerMonth).toBeLessThanOrEqual(720); // writes never exceed arrivals
+  });
+
+  it('review-fix (finding 6): negative scenario magnitudes never produce a negative total', () => {
+    const r = monthlyWarmCost(baseScn({ arrivalsPerMonth: -100, prefixTokens: -50 }));
+    expect(r.centralTotal).toBeGreaterThanOrEqual(0);
+    expect(Number.isFinite(r.centralTotal)).toBe(true);
+  });
+
   it('C5: NaN scenario inputs never produce a NaN total', () => {
     const scn: WarmScenario = {
       model: claudeSonnet(breakpointCache),

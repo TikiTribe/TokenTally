@@ -31,12 +31,19 @@ describe('warm cache closed form (§5.3, C2/C5/C7)', () => {
     expect(r.lower).toBe(0);
     expect(r.upper).toBeCloseTo(0.9932621, 6);
   });
-  it('C2: writes/month adds onset*K cold writes and exceeds the steady count', () => {
+  it('C2/review: writes add capped cold onsets, exceed steady, and NEVER exceed arrivals', () => {
     const steady = writesPerMonth(720, 1, 0.2834687, 0);
     expect(steady).toBeCloseTo(720 * (1 - 0.2834687), 4);
+    // onsets(30) are guaranteed cold; the remaining 690 within-burst arrivals warm at p_warm.
     const bursty = writesPerMonth(720, 1, 0.2834687, 30);
-    expect(bursty).toBeCloseTo(720 * (1 - 0.2834687) + 30, 4); // + onsets*K (K=1)
+    expect(bursty).toBeCloseTo(30 + 690 * (1 - 0.2834687), 4);
     expect(bursty).toBeGreaterThan(steady);
+    // a cache write happens at most once per arrival: onsets*K can never push writes above arrivals.
+    expect(writesPerMonth(720, 1, 0.05, 10_000)).toBeLessThanOrEqual(720);
+  });
+  it('review-fix: negative scenario magnitudes are clamped to 0 (no negative writes)', () => {
+    expect(writesPerMonth(-720, 1, 0.5, 0)).toBe(0);
+    expect(perPrefixRate(-1000, 4)).toBe(0);
   });
   it('C5: NaN / Infinity / non-positive inputs never leak NaN', () => {
     expect(steadyWarmth(0, 300)).toBe(0);

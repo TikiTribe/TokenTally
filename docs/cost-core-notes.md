@@ -40,6 +40,14 @@ carries the best-effort uncertainty, and it widens the cost confidence interval 
   additionally needs a busy-period count `B` to price the cold onset writes (C2) — with `B` absent, report
   bursty warmth/writes as a range, never a false point.
 
+## Archetype C (explicit storage) — per-time storage component is unmodeled
+
+A `storage`-archetype cache (Gemini explicit) is modeled breakpoint-like (it has real write + read rates,
+so those costs are priced), but its additional per-token-hour STORAGE component is NOT modeled in 0C —
+so a sparse-traffic storage cache that is a net loss is not yet flagged. This is a known deferral; the
+storage-time term lands with the workload modeling. The write cost uses the same TTL-aware rate as
+breakpoint (`writeRateForTtl`, hr1 = base*2.0).
+
 ## Honesty framing (W6 / §6)
 
 - The warm figure is a **central estimate**; the `p_warm=0` **conservative total** is the labeled reference;

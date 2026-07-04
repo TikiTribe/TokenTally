@@ -11,8 +11,9 @@ const PER_MILLION = 1_000_000;
 
 export function componentCost(rate: number, quantity: number, unit: BillingUnit): number | null {
   if (!Number.isFinite(rate) || !Number.isFinite(quantity)) return null;
-  if (unit === 'per_token' || unit === 'per_character') return (rate * quantity) / PER_MILLION;
-  return null; // C9: per_second / dbu are not token-denominated dollars
+  if (unit !== 'per_token' && unit !== 'per_character') return null; // C9: per_second/dbu not a token dollar
+  const v = (rate * quantity) / PER_MILLION;
+  return Number.isFinite(v) ? v : null; // guard the PRODUCT: an overflow surfaces as null, not $Infinity
 }
 
 export function buildWaterfall(bars: readonly WaterfallBarInput[]): CostWaterfall {

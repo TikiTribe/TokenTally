@@ -34,6 +34,16 @@ describe('effective rates + tiers + readUnavailable (C8)', () => {
     expect(tierFor(250_000, tiers)?.thresholdTokens).toBe(200000);
   });
 
+  it('review-fix (finding 9): tierFor uses an EXCLUSIVE boundary (strictly exceed the threshold)', () => {
+    const tiers: PriceTier[] = [
+      { thresholdTokens: 128000, inputPrice: 4, outputPrice: 20 },
+      { thresholdTokens: 200000, inputPrice: 6, outputPrice: 30 },
+    ];
+    expect(tierFor(128000, tiers)).toBeNull(); // exactly at the threshold is NOT above it
+    expect(tierFor(200000, tiers)?.thresholdTokens).toBe(128000); // 200000 exceeds only 128k
+    expect(tierFor(200001, tiers)?.thresholdTokens).toBe(200000);
+  });
+
   it('uses the base input rate below the tier and the tier rate above it', () => {
     const m = model({ tiers: [{ thresholdTokens: 200000, inputPrice: 6, outputPrice: null }] });
     expect(effectiveInputRate(m, 10_000)).toBe(3.0);

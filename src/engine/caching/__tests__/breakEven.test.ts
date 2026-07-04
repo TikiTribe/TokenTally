@@ -17,6 +17,12 @@ describe('break-even (§5.3 W2, CORRECTED per C1 — incremental write penalty)'
     expect(breakEvenWarmth(0.3, 0.3, 3.75)).toBeNull();
     expect(breakEvenArrivals(0.3, 0.5, 3.75, 300, 1)).toBeNull();
   });
+  it('review-fix: a bursty break-even scales by the active fraction f (not overstated by 1/f)', () => {
+    const steady = breakEvenArrivals(3.0, 0.3, 3.75, 300, 1); // f defaults to 1
+    const bursty = breakEvenArrivals(3.0, 0.3, 3.75, 300, 1, 0.25)!;
+    expect(bursty).toBeCloseTo(steady! * 0.25, 6);
+  });
+
   it('C5: non-finite inputs never leak NaN', () => {
     expect(breakEvenWarmth(NaN, 0.3, 3.75)).toBeNull();
     expect(breakEvenArrivals(3.0, 0.3, 3.75, NaN, 1)).toBeNull();

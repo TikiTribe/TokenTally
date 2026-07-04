@@ -25,11 +25,16 @@ export function breakEvenArrivals(
   cacheWriteRate: number,
   ttlS: number,
   k: number,
+  activeFraction = 1,
 ): number | null {
   const pStar = breakEvenWarmth(inputRate, cacheReadRate, cacheWriteRate);
   if (pStar === null || pStar >= 1 || !Number.isFinite(ttlS) || ttlS <= 0) return null;
   if (pStar === 0) return 0; // caching always pays -> break-even at zero volume
-  const rateS = -Math.log(1 - pStar) / ttlS; // invert p = 1 - e^(-rate*T)
+  // Bursty warmth uses the within-busy rate (total/f), so the within-busy rate needed to hit p* is
+  // -ln(1-p*)/T and the TOTAL monthly volume is that times f (fewer total arrivals reach p* when they
+  // cluster). f=1 is the steady case. Mirrors burstyWarmth (finding 5).
+  const f = activeFraction > 0 && activeFraction <= 1 ? activeFraction : 1;
+  const rateSWithin = -Math.log(1 - pStar) / ttlS;
   const kk = Number.isFinite(k) && k >= 1 ? k : 1;
-  return rateS * SECONDS_PER_MONTH * kk;
+  return rateSWithin * f * SECONDS_PER_MONTH * kk;
 }

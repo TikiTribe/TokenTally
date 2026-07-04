@@ -6,16 +6,17 @@
 import { SECONDS_PER_MONTH } from '@/engine/caching/policy';
 import type { WarmthRange } from '@/types/engine';
 
-const finite = (x: number, d = 0): number => (Number.isFinite(x) ? x : d);
+// Non-negative finite magnitude (arrivals, prefix counts, onsets): NaN/Infinity/negative -> default.
+const nonNeg = (x: number, d = 0): number => (Number.isFinite(x) && x >= 0 ? x : d);
 const clamp01 = (p: number): number => (Number.isFinite(p) ? (p < 0 ? 0 : p > 1 ? 1 : p) : 0);
 
 export function perPrefixRate(lambdaPerMonth: number, k: number): number {
-  const kk = finite(k, 1) >= 1 ? finite(k, 1) : 1; // K defaults to >= 1 (W4)
-  return finite(lambdaPerMonth, 0) / kk;
+  const kk = nonNeg(k, 1) >= 1 ? nonNeg(k, 1) : 1; // K defaults to >= 1 (W4)
+  return nonNeg(lambdaPerMonth, 0) / kk;
 }
 
 export function ratePerSecondFromMonthly(perMonth: number): number {
-  return finite(perMonth, 0) / SECONDS_PER_MONTH;
+  return nonNeg(perMonth, 0) / SECONDS_PER_MONTH;
 }
 
 export function steadyWarmth(rateS: number, ttlS: number): number {
@@ -34,9 +35,15 @@ export function archetypeARange(rateS: number, tEffS: number): WarmthRange {
   return { lower: 0, upper: steadyWarmth(rateS, tEffS) };
 }
 
-// C2: writes = arrivals·(1 - p_warm) + onset cold writes (one per prefix per busy period, bursty only).
+// C2 (corrected per review): the burst onsets are GUARANTEED-cold arrivals (each starts a burst after
+// an idle gap ≫ TTL); the remaining within-burst arrivals warm at p_warm. A cache write happens at most
+// once per arrival, so total writes are capped at arrivals — the earlier `arrivals·(1-p) + onsets·K`
+// both double-counted the onsets and could exceed arrivals (making the central cost exceed the
+// conservative p_warm=0 reference and the "up to" saving go negative).
 export function writesPerMonth(lambdaPerMonth: number, k: number, pWarm: number, onsets = 0): number {
-  const arrivals = finite(lambdaPerMonth, 0);
-  const kk = finite(k, 1) >= 1 ? finite(k, 1) : 1;
-  return arrivals * (1 - clamp01(pWarm)) + finite(onsets, 0) * kk;
+  const arrivals = nonNeg(lambdaPerMonth, 0);
+  const kk = nonNeg(k, 1) >= 1 ? nonNeg(k, 1) : 1;
+  const onsetWrites = Math.min(nonNeg(onsets, 0) * kk, arrivals); // capped: onsets can't exceed arrivals
+  const withinBurst = arrivals - onsetWrites;
+  return onsetWrites + withinBurst * (1 - clamp01(pWarm)); // <= arrivals by construction
 }
