@@ -29,4 +29,11 @@ describe('App shell (Phase 2A)', () => {
     // P2-A22: the price-provenance disclaimer is present (prices not verified against provider billing).
     expect(screen.getByText(/not independently verified against/i)).toBeInTheDocument();
   });
+
+  it('computes a real forecast end-to-end (registry -> recompute -> a $/month headline)', async () => {
+    render(<App />);
+    // the default chatbot config on gpt-4o@openai should produce a positive monthly cost.
+    await waitFor(() => expect(screen.getByText(/\$[\d,.]+ /)).toBeInTheDocument(), { timeout: 6000 });
+    expect(screen.getByText(/\/ month/)).toBeInTheDocument();
+  });
 });

@@ -7,6 +7,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { applyTheme, persistTheme } from '@/shell/ThemeController';
 import { ModeNav } from '@/shell/ModeNav';
 import { SnapshotStamp } from '@/shell/SnapshotStamp';
+import { ResultDisplay } from '@/ui/ResultDisplay';
 import type { Mode, ThemeMode } from '@/store/types';
 
 const PANELS: Record<Mode, React.LazyExoticComponent<() => JSX.Element>> = {
@@ -24,6 +25,10 @@ function App(): JSX.Element {
   const mode = useAppStore((s) => s.mode);
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
+  const inputs = useAppStore((s) => s.inputs);
+  const selection = useAppStore((s) => s.selection);
+  const tokenCounts = useAppStore((s) => s.tokenCounts);
+  const registryStatus = useAppStore((s) => s.registryStatus);
   const Panel = PANELS[mode];
 
   // Load the pricing registry once (dynamic import keeps it out of first-paint).
@@ -36,6 +41,13 @@ function App(): JSX.Element {
     applyTheme(theme);
     persistTheme(theme);
   }, [theme]);
+
+  // Real-time recompute: debounce any relevant change, then run the forecast (dynamic-imports the engine).
+  useEffect(() => {
+    if (registryStatus !== 'ready') return;
+    const t = setTimeout(() => void useAppStore.getState().recompute(), 150);
+    return () => clearTimeout(t);
+  }, [mode, inputs, selection, tokenCounts, registryStatus]);
 
   return (
     <>
@@ -59,12 +71,11 @@ function App(): JSX.Element {
       </nav>
 
       <main id="main" style={{ padding: '1rem', maxWidth: 720, margin: '0 auto' }}>
-        {/* aria-live cost headline region — populated in Phase 2C */}
-        <div aria-live="polite" id="cost-headline" />
         <section role="tabpanel" id={`panel-${mode}`} aria-labelledby={`tab-${mode}`}>
           <Suspense fallback={<div className="card">Loading…</div>}>
             <Panel />
           </Suspense>
+          <ResultDisplay />
         </section>
       </main>
 

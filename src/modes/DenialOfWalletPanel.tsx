@@ -43,9 +43,6 @@ export default function DenialOfWalletPanel(): JSX.Element {
           <NumberField label="Retry ceiling (forced-retry multiplier)" value={i.retryCeiling} min={1} onChange={(v) => patch('denial_of_wallet', { retryCeiling: v })} />
           <NumberField label="Fallback input cap (tokens, if model exposes none)" value={i.fallbackInputTokens} onChange={(v) => patch('denial_of_wallet', { fallbackInputTokens: v })} />
           <NumberField label="Fallback output cap (tokens, if model exposes none)" value={i.fallbackOutputTokens} onChange={(v) => patch('denial_of_wallet', { fallbackOutputTokens: v })} />
-          <div className="card" style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>
-            Bounded worst-case exposure + defensive mitigations arrive in the next build stage.
-          </div>
         </>
       ) : (
         <p style={{ color: 'var(--text-muted)' }}>Enable both checkboxes above to model exposure.</p>

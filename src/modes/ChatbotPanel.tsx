@@ -3,7 +3,6 @@ import { useAppStore } from '@/store/useAppStore';
 import { NumberField } from '@/ui/NumberField';
 import { ModelSelector } from '@/ui/ModelSelector';
 import { TokenizedTextArea } from '@/ui/TokenizedTextArea';
-import { ResultsPending } from '@/ui/ResultsPending';
 import type { ContextStrategy } from '@/store/types';
 
 export default function ChatbotPanel(): JSX.Element {
@@ -26,8 +25,6 @@ export default function ChatbotPanel(): JSX.Element {
           <option value="moderate">Moderate (150 tok/turn)</option>
           <option value="full">Full (300 tok/turn)</option>
         </select>
-      </div>
-      <ResultsPending />
-    </div>
+      </div>    </div>
   );
 }

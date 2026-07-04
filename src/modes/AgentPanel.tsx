@@ -2,7 +2,6 @@
 import { useAppStore } from '@/store/useAppStore';
 import { NumberField } from '@/ui/NumberField';
 import { ModelSelector } from '@/ui/ModelSelector';
-import { ResultsPending } from '@/ui/ResultsPending';
 import type { PresetName } from '@/workloads'; // type-only: erased; the seeds apply in 2C
 
 const PRESETS: { value: PresetName; label: string }[] = [
@@ -30,8 +29,6 @@ export default function AgentPanel(): JSX.Element {
       <NumberField label="Steps per run" value={i.stepsPerRun} onChange={(v) => patch('agent', { stepsPerRun: v })} />
       <NumberField label="Observation growth per step (tokens)" value={i.observationGrowthPerStep} onChange={(v) => patch('agent', { observationGrowthPerStep: v })} hint="Super-linear re-sent context" />
       <NumberField label="Action output per step (tokens)" value={i.actionOutputTokens} onChange={(v) => patch('agent', { actionOutputTokens: v })} />
-      <NumberField label="Runs per month" value={i.runsPerMonth} onChange={(v) => patch('agent', { runsPerMonth: v })} />
-      <ResultsPending />
-    </div>
+      <NumberField label="Runs per month" value={i.runsPerMonth} onChange={(v) => patch('agent', { runsPerMonth: v })} />    </div>
   );
 }

@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import type {
   Mode, ThemeMode, RegistryStatus, ModelSelection, SnapshotMeta, ModeInputs, FieldTokenCount,
 } from '@/store/types';
+import type { EngineResult } from '@/store/engineClient'; // type-only: erased, no engine edge in first-paint
 
 const DEFAULT_INPUTS: ModeInputs = {
   chatbot: {
@@ -41,6 +42,7 @@ export interface AppState {
   selection: Record<Mode, ModelSelection>;
   inputs: ModeInputs;
   tokenCounts: Record<string, FieldTokenCount>; // keyed by fieldId (e.g. 'chatbot.systemPrompt')
+  result: EngineResult | null; // forecast for the active mode; null until first recompute
   status: 'idle' | 'computing' | 'ready' | 'error';
   error: string | null;
 
@@ -51,6 +53,7 @@ export interface AppState {
   patchInputs<M extends Mode>(m: M, patch: Partial<ModeInputs[M]>): void;
   reportTokenCount(fieldId: string, tc: FieldTokenCount): void;
   ensureRegistry(): Promise<void>;
+  recompute(): Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -62,6 +65,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selection: DEFAULT_SELECTION,
   inputs: DEFAULT_INPUTS,
   tokenCounts: {},
+  result: null,
   status: 'idle',
   error: null,
 
@@ -84,6 +88,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ registryStatus: 'ready', snapshotMeta: bootstrapRegistry() });
     } catch (e) {
       set({ registryStatus: 'error', error: e instanceof Error ? e.message : 'registry load failed' });
+    }
+  },
+
+  recompute: async () => {
+    const s = get();
+    if (s.registryStatus !== 'ready' || !s.snapshotMeta) return; // guard: no forecast before the catalog loads
+    set({ status: 'computing' });
+    try {
+      // Dynamic import keeps the engine graph OUT of first-paint (P2-A7).
+      const { runForecast } = await import('@/store/engineClient');
+      const cur = get(); // re-read: inputs may have changed while the engine chunk loaded
+      const result = runForecast(cur.mode, cur.inputs, cur.selection[cur.mode], cur.tokenCounts, cur.snapshotMeta!.snapshotVersion);
+      set({ result, status: 'ready', error: null });
+    } catch (e) {
+      set({ status: 'error', error: e instanceof Error ? e.message : 'forecast failed' });
     }
   },
 }));
