@@ -72,7 +72,7 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 |-------|-------|------|-----------|------|--------|-------|
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
-| 0B | Tokenizer Engine | written+amended (B1-B15) | done (6-perspective, 31 findings) | Tasks 1-10 green (137 tests) | no | IN PROGRESS ~90% (review running) |
+| 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | PR open | CLOSE-OUT (PR -> integration) |
 | 0C | Caching + Cost Core | not written | - | - | - | QUEUED |
 | 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
@@ -156,6 +156,22 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
   high/critical vulns at release). Handle in 0D (or a dedicated dependency-hardening pass) before go-live; audit via
   `npm audit` + the Dependabot dashboard. Do NOT bump deps on `main` directly (main is frozen); fix on the integration
   line and carry through the go-live PR.
+
+## Lessons from the 0B close-out code review (2026-07-04, 3 lenses x verify, 6 confirmed / 8 rejected)
+
+- A "sanity bound" that compares an EXACT engine to a ROUGH heuristic is unsound: on whitespace/repetitive
+  input the two legitimately diverge >4x, so the guard discarded the correct tiktoken count and returned the
+  worse estimate ('-'x80: exact 1 -> 20; whitespace -> 0 with a false [0,0] band). Replaced B12 with an
+  estimator-INDEPENDENT absolute upper bound (count <= chars*4). A too-low positive count cannot be caught at
+  the dispatcher (repetitive text merges to few tokens) — that is the spot-check's job. Don't let a rough
+  estimator veto an exact one.
+- Whitespace-only input is NOT empty: collapsing /\s+/->'' produced a false-precise 0 with a zero-width band.
+  Only truly-empty text is a certain 0; non-empty is >= 1 token with a real band.
+- The reviewers correctly REJECTED 8 findings (a flagged id reading exact_unverified is fine — it is not
+  exact; the surrogate-clamp only fires when already-flagged truncated; markFamilyExact empty-set is guarded
+  by spotCheckFamily.passed). The adversarial-verify step earns its keep by killing plausible-but-wrong ones.
+- Strengthen a "did it register?" test to actually INVOKE the registered callback and assert the emitted
+  payload — a boolean-only assertion passes on broken glue wiring.
 
 ## Lessons from the 0B plan premortem (2026-07-04, 6 perspectives, 31 findings)
 
