@@ -71,7 +71,7 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | Phase | Scope | Plan | Premortem | Impl | Merged | State |
 |-------|-------|------|-----------|------|--------|-------|
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
-| 0A | Test harness + types + Registry | written | pending | not started | no | PLAN READY |
+| 0A | Test harness + types + Registry | written+amended | done (A1-A12) | Tasks 1-6 green | no | IN PROGRESS ~50% |
 | 0B | Tokenizer Engine | not written | - | - | - | QUEUED |
 | 0C | Caching + Cost Core | not written | - | - | - | QUEUED |
 | 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action) | not written | - | - | - | QUEUED |
@@ -98,11 +98,30 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 - `js-tiktoken` and Transformers.js *tokenization* are pure JS (no WASM), so a strict CSP without
   `wasm-unsafe-eval` is achievable IF the build is proven WASM-free (grep dist). Verify in 0B/0D.
 - A CSP cannot be validated in jsdom; it needs a Playwright test under the served header. [C2]
+- Real TokenCost tier field names are ABBREVIATED: `input_cost_per_token_above_128k_tokens` / `_above_200k_tokens`
+  (and per-character variants), not the numeric `128000`. Plan Task 6 mismatched test (`128k`) vs impl (`128000`);
+  fixed in parseTiers. When planning, keep test fixtures and impl field-name construction consistent with the real schema.
+- A dispatched implementation subagent committed a task while its tests were RED (parseTiers). ALWAYS run the full
+  suite + `tsc --noEmit` after a subagent implementation and BEFORE trusting/merging its commits. Add a mandatory
+  green-verification gate after every subagent implementation phase.
 
-## Next action
+## RESUME HERE (clean checkpoint, 2026-07-03)
 
-1. Focused adversarial premortem on Plan 0A (docs/superpowers/plans/2026-07-03-phase0a-registry-foundation.md); fix findings on the integration branch.
-2. Create `feat/phase-0a-registry` off the integration branch; implement 0A test-first.
-3. Lint + typecheck + tests green; security + code review; PR into integration branch; merge; delete branch.
-4. Update this log; proceed to Plan 0B.
-(main is NOT touched until final go-live.)
+State at handoff: on branch `feat/phase-0a-registry`. Plan 0A premortem DONE (amendments A1-A12 at commit 5d4694d).
+Implementation is ~50% done and GREEN: Tasks 1-6 committed (harness, types, resolveFamily, unit-aware billing/price
+with sanity guard, provider-aware parseKey, unit-aware tiers) plus a field-name fix (2df0189). Verified: `npx vitest run`
+= 26/26 pass, `npx tsc --noEmit` = 0 errors. Working tree is clean except pre-existing untracked clutter
+(.serena/*, claudedocs/*, *.docx, investigate-failures.ts, test-execution.ts) and `.serena/project.yml` (not ours).
+The background implementation subagent was STOPPED for a clean session handoff (do not expect it to be running).
+The session-scoped ScheduleWakeup died with the session.
+
+REMAINING for Phase 0A (finish these on the branch, test-first, applying the amendments):
+- Task 7: `resolveCacheSpec` (A2: Gemini defaults `automatic`, add `readUnavailable`) + `classifyRow` (A6: whitelist mode to chat|completion|responses|embedding).
+- Task 8: `normalizeEntry`/`normalizeCatalog` (A7: drop+count ids failing `/^[A-Za-z0-9._:@/-]+$/`; derive displayName from sanitized id; reasoning ×1e6; embedding output null).
+- Task 9: `dedupeRecords` (A3: key `(canonicalId, deployment)` only; count price conflicts).
+- Task 10: `buildSnapshot` + build script (A4: schema validation, `/^[0-9a-f]{40}$/` SHA assert, sha256 body hash vs EXPECTED_SNAPSHOT_SHA256, atomic write; A11: expand golden fixture to ~20 rows incl per_second/dbu/free/both-units/128k/200k-cache/reasoning/deepseek-cache-hit/supports-no-rate/dup/aggregator/image_generation-drops/sample_spec-ignored; deterministic sort by (canonicalId, deployment)). Do NOT run the network fetch; leave PINNED_COMMIT + EXPECTED_SNAPSHOT_SHA256 as placeholders; test buildSnapshot via the golden fixture only; do NOT generate registry.generated.json.
+- Task 11: query API (A3: `loadRegistry` throws on a `byKey` collision).
+- Task 12: `typecheck` + `test:ci` scripts (A9: `tsc --noEmit && vitest run --coverage`); A10: strip ALL remaining `^`/`~` in package.json to exact (read package-lock), `grep -E '"\^|"~' package.json` returns nothing, use `npm ci`; A12: verify single `PER_MILLION`; write docs/registry-coverage.md (projection, not measured).
+
+THEN (0A close-out): run full `npm run test:ci` + eslint new files + `npm run build` green; security review + code review of the 0A diff; fix findings; PR `feat/phase-0a-registry` -> `feat/realtime-determinism-engine`; merge; delete the phase branch; update this log (mark 0A DONE). Proceed to write Plan 0B (Tokenizer Engine), premortem it (full 6-perspective for a sub-spec; focused for the plan), fix, implement, and continue the loop through 0C, 0D, then Phases 1-4, ending with headed Playwright E2E over every function, an appsec pass, and the single final integration->main go-live PR, then delete all phase branches.
+(main is NOT touched until that final go-live. Push the integration branch at phase boundaries for preview deploys.)
