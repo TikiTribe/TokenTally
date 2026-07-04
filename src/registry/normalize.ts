@@ -108,26 +108,33 @@ export function parseKey(
 // scaled by PER_MILLION only for token/char units; per_second/dbu tiers (none observed) stay raw.
 // Cache tiers (`cache_*_input_token_cost_above_*`) are always token rates, so always ×PER_MILLION.
 // A12: uses the single PER_MILLION constant.
+// The real TokenCost field names use abbreviated thresholds (`_above_128k_tokens`,
+// `_above_200k_tokens`), so `thresholdTokens` stays numeric while the field key uses the label.
+const TIER_THRESHOLDS: ReadonlyArray<readonly [number, string]> = [
+  [128000, '128k'],
+  [200000, '200k'],
+];
+
 export function parseTiers(e: RawEntry, unit: BillingUnit): PriceTier[] {
   const perUnitScale = unit === 'per_token' || unit === 'per_character' ? PER_MILLION : 1;
-  const inputField = (t: number): string =>
+  const inputField = (label: string): string =>
     unit === 'per_character'
-      ? `input_cost_per_character_above_${t}_tokens`
-      : `input_cost_per_token_above_${t}_tokens`;
-  const outputField = (t: number): string =>
+      ? `input_cost_per_character_above_${label}_tokens`
+      : `input_cost_per_token_above_${label}_tokens`;
+  const outputField = (label: string): string =>
     unit === 'per_character'
-      ? `output_cost_per_character_above_${t}_tokens`
-      : `output_cost_per_token_above_${t}_tokens`;
+      ? `output_cost_per_character_above_${label}_tokens`
+      : `output_cost_per_token_above_${label}_tokens`;
   const tiers: PriceTier[] = [];
-  for (const t of [128000, 200000] as const) {
+  for (const [threshold, label] of TIER_THRESHOLDS) {
     // Keys are derived from the hardcoded threshold list, not user input; the reads are safe.
-    const inp = num(e[inputField(t)]);
-    const out = num(e[outputField(t)]);
-    const cr = num(e[`cache_read_input_token_cost_above_${t}_tokens`]);
-    const cw = num(e[`cache_creation_input_token_cost_above_${t}_tokens`]);
+    const inp = num(e[inputField(label)]);
+    const out = num(e[outputField(label)]);
+    const cr = num(e[`cache_read_input_token_cost_above_${label}_tokens`]);
+    const cw = num(e[`cache_creation_input_token_cost_above_${label}_tokens`]);
     if (inp === null && out === null && cr === null && cw === null) continue;
     tiers.push({
-      thresholdTokens: t,
+      thresholdTokens: threshold,
       inputPrice: inp === null ? 0 : inp * perUnitScale,
       outputPrice: out === null ? null : out * perUnitScale,
       ...(cr !== null ? { cacheReadPerMToken: cr * PER_MILLION } : {}),
