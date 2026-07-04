@@ -1,0 +1,8 @@
+[
+  {
+    "name": "first-paint entry (main app chunk, gzipped)",
+    "path": "dist/assets/index-*.js",
+    "limit": "220 KB",
+    "gzip": true
+  }
+]

@@ -1,7 +1,7 @@
-# CI gate (spec §5.9, premortem D6/D8/D13). Blocks a PR on ANY failing OR skipped/only/todo test, a lint
-# or typecheck failure, a build break, a WASM/honest-claims/policy-staleness violation, or a high/critical
-# vulnerability in the SHIPPED deps. Branch protection making this a required check is an owner runbook step
-# (settings are not code — see the BUILD-LOG runbook); this workflow provides the signal. No untrusted
+# CI gate (spec §5.9, premortem D6/D8/D9/D13). Blocks a PR on ANY failing OR skipped/only/todo test, a lint
+# or typecheck failure, a build break, a bundle-size regression, a WASM/honest-claims/policy-staleness
+# violation, or a high/critical vulnerability in the SHIPPED deps. Branch protection making this a required
+# check is an owner runbook step (settings are not code — see the BUILD-LOG runbook). No untrusted
 # github.event.* input is ever interpolated into a run: command (injection-safe).
 name: CI
 
@@ -37,6 +37,8 @@ jobs:
       - run: npm run test:ci
       - run: npm run build
 
+      - name: Bundle size budget (D9)
+        run: npm run size
       - name: WASM-free dist (D4)
         run: npm run wasm-check
       - name: Honest accuracy claims (D15)

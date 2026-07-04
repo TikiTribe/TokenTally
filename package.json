@@ -18,7 +18,8 @@
     "wasm-check": "node scripts/ci/assert-wasm-free.mjs dist",
     "claims-check": "node scripts/ci/assert-honest-claims.mjs",
     "policy-fresh": "node scripts/ci/assert-policy-fresh.mjs",
-    "typecheck:scripts": "tsc -p tsconfig.scripts.json"
+    "typecheck:scripts": "tsc -p tsconfig.scripts.json",
+    "size": "size-limit"
   },
   "dependencies": {
     "js-tiktoken": "1.0.21",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.0",
+    "@size-limit/preset-app": "11.2.0",
     "@types/cheerio": "0.22.35",
     "@types/node-fetch": "2.6.11",
     "@types/react": "18.3.12",
@@ -49,6 +51,7 @@
     "globals": "14.0.0",
     "node-fetch": "3.3.2",
     "postcss": "8.5.16",
+    "size-limit": "11.2.0",
     "tailwindcss": "3.4.15",
     "tsx": "4.19.2",
     "typescript": "5.6.3",
