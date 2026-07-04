@@ -1,7 +1,7 @@
 /**
  * Cost Calculator Engine
  *
- * Implements precision cost forecasting for LLM chatbots and prompt operations with ±5% accuracy target.
+ * Implements cost forecasting for LLM chatbots and prompt operations with per-model scoped precision.
  * Handles both OpenAI (no caching) and Claude (with prompt caching) models.
  *
  * Key Formulas:

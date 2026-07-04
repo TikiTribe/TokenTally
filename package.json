@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit",
     "test:ci": "tsc --noEmit && vitest run --reporter=dot --coverage",
     "build-registry": "tsx scripts/registry/buildRegistry.ts",
-    "wasm-check": "node scripts/ci/assert-wasm-free.mjs dist"
+    "wasm-check": "node scripts/ci/assert-wasm-free.mjs dist",
+    "claims-check": "node scripts/ci/assert-honest-claims.mjs",
+    "policy-fresh": "node scripts/ci/assert-policy-fresh.mjs"
   },
   "dependencies": {
     "js-tiktoken": "1.0.21",
