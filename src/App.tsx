@@ -7,7 +7,9 @@ import { useAppStore } from '@/store/useAppStore';
 import { applyTheme, persistTheme } from '@/shell/ThemeController';
 import { ModeNav } from '@/shell/ModeNav';
 import { SnapshotStamp } from '@/shell/SnapshotStamp';
+import { WorkflowBar } from '@/shell/WorkflowBar';
 import { ResultDisplay } from '@/ui/ResultDisplay';
+import { decodePermalink } from '@/store/permalink';
 import type { Mode, ThemeMode } from '@/store/types';
 
 const PANELS: Record<Mode, React.LazyExoticComponent<() => JSX.Element>> = {
@@ -34,6 +36,14 @@ function App(): JSX.Element {
   // Load the pricing registry once (dynamic import keeps it out of first-paint).
   useEffect(() => {
     void useAppStore.getState().ensureRegistry();
+  }, []);
+
+  // §5.8: apply a config permalink from the URL hash on first load (strictly validated in decodePermalink).
+  useEffect(() => {
+    const m = /[#&]c=([^&]+)/.exec(window.location.hash);
+    if (!m) return;
+    const decoded = decodePermalink(m[1]!);
+    if (decoded) useAppStore.getState().applyConfig(decoded.mode, decoded.selection, decoded.inputs as Record<string, unknown>);
   }, []);
 
   // Apply + persist the theme whenever it changes ('system' defers to prefers-color-scheme via CSS).
@@ -68,6 +78,9 @@ function App(): JSX.Element {
 
       <nav aria-label="Calculator mode" style={{ padding: '0 1rem' }}>
         <ModeNav />
+        <div style={{ padding: '0.5rem 0' }}>
+          <WorkflowBar />
+        </div>
       </nav>
 
       <main id="main" style={{ padding: '1rem', maxWidth: 720, margin: '0 auto' }}>
