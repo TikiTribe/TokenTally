@@ -94,12 +94,31 @@ describe('countTokens (dispatcher, B2/B3/B10/B11/B12)', () => {
     expect(r.awaitingAdapter).toBe(true);
   });
 
-  it('B12: degrades when an adapter count is wildly out of sanity vs the heuristic', () => {
+  it('B12: degrades when an adapter count exceeds the char-based upper bound (garbage)', () => {
     const rogue: TokenizerAdapter = { engine: 'tiktoken', available: true, count: () => 1_000_000 };
     registerAdapter(rogue);
     const r = countTokens('gpt-4o', 'the quick brown fox');
-    expect(r.engine).toBe('heuristic'); // 1e6 tokens for 4 words is insane -> degrade
+    expect(r.engine).toBe('heuristic'); // 1e6 tokens for 19 chars exceeds chars*4 -> degrade
     expect(r.badge).toBe('estimate');
+  });
+
+  it('review-fix: keeps the exact count for a repeated-char divider (no false degrade)', () => {
+    const divider = '-'.repeat(80); // tiktoken merges this to very few tokens
+    const r = countTokens('gpt-4o', divider);
+    expect(r.engine).toBe('tiktoken');
+    expect(r.badge).toBe('exact_unverified');
+    expect(r.count).toBe(tiktokenCount(divider, 'o200k_base'));
+    expect(r.errorBand).toBeNull();
+  });
+
+  it('review-fix: whitespace-only input keeps the exact non-zero count, not a false zero', () => {
+    const ws = '\n\t   \n';
+    const r = countTokens('gpt-4o', ws);
+    expect(r.engine).toBe('tiktoken');
+    expect(r.count).toBe(tiktokenCount(ws, 'o200k_base'));
+    expect(r.count).toBeGreaterThan(0);
+    expect(r.badge).toBe('exact_unverified');
+    expect(r.awaitingAdapter).toBe(false);
   });
 
   it('B12: forceHeuristic routes an OpenAI model through the heuristic', () => {

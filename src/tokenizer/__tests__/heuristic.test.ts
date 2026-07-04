@@ -2,14 +2,19 @@ import { describe, it, expect } from 'vitest';
 import { heuristicEstimate, HEURISTIC_VERSION } from '@/tokenizer/heuristic';
 
 describe('heuristicEstimate (B5: error band + char-class awareness)', () => {
-  it('returns a zero estimate with a zero band for empty text', () => {
+  it('returns a zero estimate with a zero band ONLY for truly-empty text', () => {
     expect(heuristicEstimate('', 'unknown')).toEqual({
       count: 0,
       relLow: 0,
       relHigh: 0,
       degradedNonLatin: false,
     });
-    expect(heuristicEstimate('   ', 'unknown').count).toBe(0);
+  });
+
+  it('review-fix: whitespace-only (non-empty) text has a non-zero count and a real band, not [0,0]', () => {
+    const e = heuristicEstimate('\n\t   \n', 'unknown');
+    expect(e.count).toBeGreaterThanOrEqual(1); // whitespace tokenizes to > 0
+    expect(e.relHigh).toBeGreaterThan(0); // never a false-precise zero-width band
   });
 
   it('estimates Latin prose near chars/4 with a symmetric band, not degraded', () => {

@@ -31,14 +31,17 @@ export interface HeuristicEstimate {
 }
 
 export function heuristicEstimate(text: string, family: TokenizerFamily): HeuristicEstimate {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  if (normalized.length === 0) {
+  // Only truly-empty text is a certain zero. Whitespace-only text still tokenizes to > 0 tokens, so
+  // it must NOT collapse to a false-precise zero with a [0,0] band. Count the raw text (whitespace
+  // runs are real ASCII characters at ~chars/4); a code review found the earlier /\s+/->'' collapse
+  // produced a wrong 0 for whitespace-only prompts.
+  if (text.length === 0) {
     return { count: 0, relLow: 0, relHigh: 0, degradedNonLatin: false };
   }
   // Count by code point (for...of is surrogate-pair aware, so an emoji counts once).
   let ascii = 0;
   let nonAscii = 0;
-  for (const ch of normalized) {
+  for (const ch of text) {
     if ((ch.codePointAt(0) ?? 0) < 128) ascii += 1;
     else nonAscii += 1;
   }
@@ -48,5 +51,6 @@ export function heuristicEstimate(text: string, family: TokenizerFamily): Heuris
   const relLow = degradedNonLatin ? NON_LATIN_REL_LOW : BASE_REL_LOW;
   let relHigh = degradedNonLatin ? NON_LATIN_REL_HIGH : BASE_REL_HIGH;
   if (family === 'claude') relHigh += CLAUDE_EXTRA_UPSIDE;
-  return { count: Math.ceil(midpoint), relLow, relHigh, degradedNonLatin };
+  // Non-empty text is at least 1 token.
+  return { count: Math.max(1, Math.ceil(midpoint)), relLow, relHigh, degradedNonLatin };
 }

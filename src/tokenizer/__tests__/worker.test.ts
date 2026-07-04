@@ -65,19 +65,30 @@ describe('B4: the worker installs a handler ONLY in a real worker global', () =>
     expect(fakeWindow.onmessage).toBeNull();
   });
 
-  it('DOES register a handler when self is a real WorkerGlobalScope', async () => {
+  it('DOES register a handler in a real worker global, and the handler posts the dispatcher response', async () => {
     class FakeWorkerGlobalScope {}
-    let registered = false;
+    type Req = { id: number; modelId: string; text: string };
+    type Resp = { id: number; count: number };
+    let cb: ((e: { data: Req }) => void) | null = null;
+    let posted: Resp | null = null;
     const workerSelf = Object.assign(new FakeWorkerGlobalScope(), {
-      postMessage: (): void => {},
-      addEventListener: (type: string): void => {
-        if (type === 'message') registered = true;
+      postMessage: (m: Resp): void => {
+        posted = m;
+      },
+      addEventListener: (type: string, handler: (e: { data: Req }) => void): void => {
+        if (type === 'message') cb = handler;
       },
     });
     g.WorkerGlobalScope = FakeWorkerGlobalScope;
     g.self = workerSelf; // instanceof FakeWorkerGlobalScope -> true
     vi.resetModules();
-    await import('@/tokenizer/worker');
-    expect(registered).toBe(true);
+    const mod = (await import('@/tokenizer/worker')) as typeof import('@/tokenizer/worker');
+    expect(cb).not.toBeNull();
+    // Deliver a message; the wiring must pass e.data to handleTokenizeMessage and post its result.
+    const req: Req = { id: 42, modelId: 'gpt-4o', text: 'hi' };
+    cb!({ data: req });
+    expect(posted).not.toBeNull();
+    expect(posted!.id).toBe(42);
+    expect(posted).toEqual(mod.handleTokenizeMessage(req));
   });
 });

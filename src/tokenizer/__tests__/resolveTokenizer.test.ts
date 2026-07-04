@@ -80,4 +80,14 @@ describe('resolveTokenizer (B2 oracle-driven)', () => {
     expect(openaiEncoding('gpt-6')).toBeNull();
     expect(openaiEncoding('gpt-4o')).toBe('o200k_base');
   });
+
+  it('B2: narrows an unsupported oracle encoding (p50k_edit for the edit model) to a flag', () => {
+    // getEncodingNameForModel('text-davinci-edit-001') returns p50k_edit, which is NOT one of our
+    // four supported encodings, so it is treated as an oracle-miss: flagged, best-effort o200k.
+    expect(openaiEncoding('text-davinci-edit-001')).toBeNull();
+    const r = resolveTokenizer('text-davinci-edit-001');
+    expect(r.family).toBe('openai');
+    expect(r.encoding).toBe('o200k_base');
+    expect(r.flagForReview).toBe(true);
+  });
 });
