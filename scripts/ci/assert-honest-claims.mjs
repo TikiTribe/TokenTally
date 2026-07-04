@@ -12,6 +12,10 @@ const BANNED = [
   { re: /\+\s?\/?\s?-\s?5(?:\.\d)?\s?(%|percent)/i, why: 'unqualified "+/-5%" accuracy claim' },
   { re: /100\s*%[^.]{0,30}(test|cover)/i, why: '"100%" test-coverage claim (the scenarios were manual)' },
   { re: /(test|cover)[^.]{0,30}100\s*%/i, why: '"100%" test-coverage claim (the scenarios were manual)' },
+  // P2-A17: catch accuracy claims WITHOUT the ± glyph ("accurate to within 5%", "5% accuracy"). The
+  // accura/precision anchor keeps this from firing on a legitimate "a 5% cache hit rate".
+  { re: /(accura|precision|margin of error)[^.]{0,20}\d+(?:\.\d)?\s?(%|percent)/i, why: 'unqualified numeric accuracy claim (scope it per badge)' },
+  { re: /\d+(?:\.\d)?\s?(%|percent)[^.]{0,20}(accura|precision)/i, why: 'unqualified numeric accuracy claim (scope it per badge)' },
 ];
 
 export function scanText(name, text) {
@@ -24,7 +28,11 @@ export function scanText(name, text) {
 // Only scan + exit as a CLI, not when imported by a test.
 if (import.meta.url === `file://${process.argv[1]}`) {
   const offenders = [];
-  if (existsSync('index.html')) offenders.push(...scanText('index.html', readFileSync('index.html', 'utf8')));
+  // P2-A17: also scan the launch-facing docs (explicit allowlist — NOT every *.md, which would pull in stale
+  // internal notes and flood the gate).
+  for (const doc of ['index.html', 'README.md', 'DEPLOYMENT.md']) {
+    if (existsSync(doc)) offenders.push(...scanText(doc, readFileSync(doc, 'utf8')));
+  }
   const dir = 'dist';
   if (existsSync(dir)) {
     const walk = (d) => {

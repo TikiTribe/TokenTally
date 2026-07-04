@@ -298,10 +298,10 @@ Complete testing checklist after successful deployment.
 
 **Core Functionality:**
 - [ ] Application loads without errors
-- [ ] All 6 models appear in model selector dropdown
+- [ ] The model selector is populated from the pricing snapshot (1,300+ models)
 - [ ] Calculator displays default configuration
 - [ ] Real-time updates work (<100ms on input change)
-- [ ] Cost calculations match expected values (±5% accuracy)
+- [ ] Cost calculations match the engine's hand-verified scenarios (within 1% of hand math)
 
 **User Interactions:**
 - [ ] Model selection updates calculations

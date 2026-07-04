@@ -29,6 +29,26 @@ describe('permalink (§5.8)', () => {
     expect((d?.inputs as Record<string, unknown>)['systemPromptText']).toBeUndefined(); // text not carried
   });
 
+  it('never round-trips the DoW consent gates, even from a link that pre-affirms them (appsec F1)', () => {
+    // a crafted link asserting BOTH consent gates true...
+    const hostile = btoa(JSON.stringify({
+      v: 1, mode: 'denial_of_wallet',
+      selection: { denial_of_wallet: { canonicalId: 'gpt-4o', deployment: 'openai' } },
+      inputs: { denial_of_wallet: { enabled: true, acknowledgedAuthorizedUse: true, attackerRequestsPerMonth: 5000000 } },
+    })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const d = decodePermalink(hostile);
+    const di = d?.inputs as Record<string, unknown>;
+    // ...decodes to consent OFF (recipient must re-affirm), while structural inputs still carry.
+    expect(di['enabled']).toBe(false);
+    expect(di['acknowledgedAuthorizedUse']).toBe(false);
+    expect(di['attackerRequestsPerMonth']).toBe(5000000);
+    // and the encoder never emits the consent flags in the first place
+    const enc = encodePermalink('denial_of_wallet', selection, { ...inputs, denial_of_wallet: { ...inputs.denial_of_wallet, enabled: true, acknowledgedAuthorizedUse: true } });
+    const decoded = atob(enc.replace(/-/g, '+').replace(/_/g, '/'));
+    expect(decoded).not.toContain('acknowledgedAuthorizedUse');
+    expect(decoded).not.toContain('enabled');
+  });
+
   it('rejects garbage / oversized / wrong-version hashes', () => {
     expect(decodePermalink('')).toBeNull();
     expect(decodePermalink('not-base64!!!')).toBeNull();

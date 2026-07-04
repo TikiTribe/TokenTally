@@ -11,7 +11,8 @@ const ID_PATTERN = /^[A-Za-z0-9._:@/-]+$/; // mirrors the registry A7 filter —
 
 const str = (v: unknown, max = 128): string => (typeof v === 'string' && v.length <= max && ID_PATTERN.test(v) ? v : '');
 const num = (v: unknown, def = 0): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.min(v, 1e12) : def);
-const bool = (v: unknown): boolean => v === true;
+// NOTE: no bool() helper — the only booleans in scope were the DoW consent gates, and those are now forced
+// off on decode (appsec F1) rather than read from the untrusted payload.
 const oneOf = <T extends string>(v: unknown, allowed: readonly T[], def: T): T => (typeof v === 'string' && (allowed as readonly string[]).includes(v) ? (v as T) : def);
 
 export interface DecodedPermalink {
@@ -47,7 +48,10 @@ export function encodePermalink(mode: Mode, selection: Record<Mode, ModelSelecti
     if (m === 'chatbot') { out['contextStrategy'] = src['contextStrategy']; out['ttl'] = src['ttl']; }
     if (m === 'prompt') out['ttl'] = src['ttl'];
     if (m === 'agent') out['preset'] = src['preset'];
-    if (m === 'denial_of_wallet') { out['enabled'] = src['enabled']; out['acknowledgedAuthorizedUse'] = src['acknowledgedAuthorizedUse']; }
+    // F-SEC (appsec F1): the DoW dual-use consent gates (enabled + acknowledgedAuthorizedUse) are NEVER
+    // encoded. A shared link must not pre-affirm "I am authorized to test this" on the recipient's behalf or
+    // auto-render the exposure figure — the recipient re-checks both boxes themselves. Structural DoW inputs
+    // (request counts, ceilings) still round-trip; only the consent affirmation is withheld.
     safeInputs[m] = out;
   }
   return b64urlEncode(JSON.stringify({ v: 1, mode, selection, inputs: safeInputs }));
@@ -78,7 +82,9 @@ export function decodePermalink(hash: string): DecodedPermalink | null {
   if (mode === 'chatbot') { inputs['contextStrategy'] = oneOf<ContextStrategy>(src['contextStrategy'], ['minimal', 'moderate', 'full'], 'moderate'); inputs['ttl'] = oneOf(src['ttl'], ['min5', 'hr1'] as const, 'min5'); }
   if (mode === 'prompt') inputs['ttl'] = oneOf(src['ttl'], ['min5', 'hr1'] as const, 'min5');
   if (mode === 'agent') inputs['preset'] = oneOf(src['preset'], ['langchain', 'crewai', 'autogen', 'llamaindex', 'custom'] as const, 'custom');
-  if (mode === 'denial_of_wallet') { inputs['enabled'] = bool(src['enabled']); inputs['acknowledgedAuthorizedUse'] = bool(src['acknowledgedAuthorizedUse']); }
+  // F-SEC (appsec F1): force both DoW consent gates OFF on decode regardless of link contents, so a crafted
+  // link can never land the recipient on a pre-armed exposure figure. They must affirm authorization locally.
+  if (mode === 'denial_of_wallet') { inputs['enabled'] = false; inputs['acknowledgedAuthorizedUse'] = false; }
 
   return { mode, selection, inputs: inputs as Partial<ModeInputs[Mode]> };
 }

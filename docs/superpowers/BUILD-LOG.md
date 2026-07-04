@@ -77,8 +77,8 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) + review (3 confirmed, all fixed) | Tasks 1-9 + review fixes (207 tests, audit 0) | **YES (PR #8, 0bdcef7)** | **DONE — PHASE 0 COMPLETE** |
 | 1 | Workloads + Optimization + Denial of Wallet | written+amended (P1-A1..A30) | done (6-perspective, 40 findings) + review (2 lenses, 5 confirmed, all fixed) | Tasks 0-10 + review fixes (287 tests, tsc x3 + lint + build + audit 0 + all gates green) | **YES (PR #9, a9e632f)** | **DONE** |
 | 2 | UI + dataviz (2A shell / 2B worker / 2C wiring / 2D charts / 2E a11y / 2F CSP+size) | written+amended (P2-A1..A22) | done (6-persp workflow, 18 confirmed + 14 plausible) + review (security 3 + code 3, all fixed) | 2A-2F (336 tests, 5 E2E, all gates) | **YES (PR #10 908602d + PR #11 c4d416d)** | **DONE — cut line met/exceeded; palette + 4 viz + §5.8 deferred** |
-| 3 | Workflow — exports (CSV/PDF) + permalink (config-only) + examples | lean (no separate plan) | security-tested inline (CSV injection, permalink proto-pollution/text-strip) | done (347 tests, first-paint clean) | pending PR | **DONE (lean) — import + saved-scenarios deferred (above §13 cut line)** |
-| 4 | Hardening: headed E2E every function, appsec audit, load, live deploy | not written | - | - | - | QUEUED |
+| 3 | Workflow — exports (CSV/PDF) + permalink (config-only) + examples | lean (no separate plan) | security-tested inline (CSV injection, permalink proto-pollution/text-strip) | done (347 tests, first-paint clean) | **YES (PR #12, b78a55d)** | **DONE (lean) — import + saved-scenarios deferred (above §13 cut line)** |
+| 4 | Hardening: headed E2E every function, appsec audit, honest-claims floor, live deploy | not written | integrated-surface appsec audit → **GO (conditional)**, 1 code finding (F1) fixed + 4 owner runbook items | 13 headed E2E (every function, under real CSP) + §13 honesty-doc floor + F1 permalink consent fix (348 tests, all gates green) | pending PR → integration | **IN PROGRESS — code complete + green; PR into integration next, then the single go-live PR** |
 
 ## Phase 0D owner runbook (D13 — settings/credentials are not code; owner actions, recorded not faked)
 
@@ -93,9 +93,9 @@ These CANNOT be self-enforced by CI/config and are required before/at go-live:
 4. **SHA-pin the GitHub Actions** (`actions/checkout`, `actions/setup-node`) at go-live hardening (D13).
 5. **Real Exact-usage capture** (0B B1): run a one-shot capture of OpenAI/Anthropic `usage.prompt_tokens` with the
    OWNER's API key, commit a provenance-carrying fixture, then `markFamilyExact`. Until then OpenAI stays `exact_unverified`.
-6. **Enable Private Vulnerability Reporting** (repo Settings → Security) so the Denial-of-Wallet `DOW_VDP_URL`
-   (`github.com/TikiTribe/TokenTally/security/advisories/new`) resolves for external reporters (Phase-1 security review F-3).
-   The `security@rockcyber.com` backup in SECURITY.md carries the VDP if PVR is left off, but enabling PVR is the intended path.
+6. ✅ **DONE — Private Vulnerability Reporting is ENABLED** (verified 2026-07-04 via `gh api repos/TikiTribe/TokenTally/private-vulnerability-reporting` → `enabled:true`), so the Denial-of-Wallet `DOW_VDP_URL`
+   (`github.com/TikiTribe/TokenTally/security/advisories/new`) resolves for external reporters. Resolves Phase-1 review F-3 / Phase-4 appsec F2.
+   The `security@rockcyber.com` backup in SECURITY.md remains the documented alternate channel.
 
 ## §12 launch-criteria waivers (owner-signed at go-live)
 
@@ -317,7 +317,37 @@ These CANNOT be self-enforced by CI/config and are required before/at go-live:
   actually running eslint. Verify a "known broken" claim before trusting it; [[eslint-broken-flat-config]]
   updated to RESOLVED.
 
-## RESUME HERE (checkpoint, 2026-07-04 — PHASES 0+1 COMPLETE; starting Phase 2 UI + dataviz)
+## RESUME HERE (current, 2026-07-04 — PHASES 0–3 MERGED; PHASE 4 CODE-COMPLETE + GREEN; go-live PR sequence)
+
+State: **all engine + UI + workflow phases (0A–0D, 1, 2, 3) are merged into `feat/realtime-determinism-engine`.**
+Phase 4 (hardening) is code-complete on `feat/phase-4-golive`, 3 commits ahead of integration:
+- `7e2f76b` — 13 headed Playwright E2E: every user function driven in a real browser under the served vercel.json
+  CSP (all 5 modes compute, off-thread tokenize, CSV+PDF download, permalink round-trip w/ prompt-text-strip
+  assertion, example load, theme cycle, DoW double-gate) + CSP/egress/a11y(light+dark) specs.
+- `62de7e5` — §13 honesty floor: removed the unqualified ±5% / "100% coverage" / stale "16 models" claims from
+  README + DEPLOYMENT; extended `assert-honest-claims` to scan the launch docs (broadened no-± accuracy regex).
+- `6dfe5eb` — appsec F1 fix: the permalink no longer round-trips the DoW dual-use consent gates (a shared link
+  can't pre-affirm authorization or auto-render the exposure figure); decode forces both gates off + regression test.
+
+**Pre-phase appsec audit (integrated attack surface, not per-phase logic): GO (conditional).** Verified clean against
+the BUILT `dist/`: no XSS/DOM-sink, CSP holds under the export/worker/blob runtime, permalink proto-pollution-proof,
+CSV/PDF injection-safe, zero off-origin egress, registry hash-verified/offline, 0 vulns. F1 (only code finding) fixed
+above; F2 (VDP link) resolved — repo PVR confirmed enabled. F3/F4/F5 are owner runbook items (SHA-pin actions,
+branch protection, live CSP curl) — gate "publicly live", NOT the merge.
+
+Green at HEAD: **348 unit tests** (61 files) + **13 E2E**, `tsc --noEmit` clean, lint clean (0 warnings), build ✓,
+first-paint-lean (43-module engine-free entry) ✓, size (all 5 chunk budgets) ✓, wasm-free ✓, honest-claims ✓,
+`npm audit --omit=dev` 0 high+.
+
+NEXT (do in order, do not stop): (1) PR `feat/phase-4-golive` → `feat/realtime-determinism-engine`; merge on green CI;
+delete the branch. (2) Open the SINGLE final go-live PR `feat/realtime-determinism-engine` → `main`; this is the only
+PR that ever touches main. (3) On merge, flip production; then clean up all phase branches. (4) Hand the owner the
+F3/F4/F5 runbook items (branch protection, SHA-pin actions, live CSP curl on a rewritten route) as the "declare live"
+checklist. `main` stays the frozen live MVP until step 2 merges.
+
+---
+
+## RESUME HERE (superseded — checkpoint, 2026-07-04 — PHASES 0+1 COMPLETE; starting Phase 2 UI + dataviz)
 
 State: **Phase 0 (engine + deploy/security) AND Phase 1 (workloads + optimization + DoW) are done and merged**
 into `feat/realtime-determinism-engine`:
