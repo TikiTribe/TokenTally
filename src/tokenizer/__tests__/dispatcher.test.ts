@@ -116,6 +116,20 @@ describe('countTokens (dispatcher, B2/B3/B10/B11/B12)', () => {
     expect(Number.isFinite(r.count)).toBe(true);
   });
 
+  it('B15: once a transformers adapter is registered, Gemini reads approx (not estimate)', () => {
+    const fakeTransformers: TokenizerAdapter = {
+      engine: 'transformers',
+      available: true,
+      count: (t) => Math.max(1, Math.ceil(t.length / 4)), // sane vs the heuristic
+    };
+    registerAdapter(fakeTransformers);
+    const r = countTokens('gemini/gemini-1.5-pro', 'the quick brown fox');
+    expect(r.engine).toBe('transformers');
+    expect(r.badge).toBe('approx'); // §12 requires Gemini labeled Approx
+    expect(r.awaitingAdapter).toBe(false);
+    expect(r.errorBand).not.toBeNull(); // a proxy tokenizer carries a band, not null
+  });
+
   it('B11: listFlaggedFamilies is unknown-ids only; listAwaitingAdapter is known-no-adapter', () => {
     const ids = ['gpt-4o', 'claude-3-5-sonnet', 'meta-llama/llama-3-8b', 'made-up-xyz'];
     expect(listFlaggedFamilies(ids)).toEqual(['unknown']);
