@@ -81,6 +81,30 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | QUEUED |
 | 4 | Hardening: E2E, appsec audit, a11y, load, live deploy | not written | - | - | - | QUEUED |
 
+## Phase 0D owner runbook (D13 — settings/credentials are not code; owner actions, recorded not faked)
+
+These CANNOT be self-enforced by CI/config and are required before/at go-live:
+1. **Branch protection** (require the `ci` check + no direct pushes) on `main` AND `feat/realtime-determinism-engine`:
+   `gh api -X PUT repos/TikiTribe/TokenTally/branches/main/protection` with the `ci` job as a required status check
+   (and the same for the integration branch). CI provides the signal; the enforcement is a repo-admin setting.
+2. **Vercel Project Node version** set to 22 (match `.nvmrc`/CI); enable "wait for CI" / an ignored-build-step so a
+   red CI does not ship production.
+3. **Live CSP smoke check** at go-live/preview: `curl -sI <preview-url>/<deep/spa/route>` and byte-compare the served
+   `Content-Security-Policy` to `vercel.json`'s value on a REWRITTEN path (D2). Only then may "CSP verified enforced" be declared.
+4. **SHA-pin the GitHub Actions** (`actions/checkout`, `actions/setup-node`) at go-live hardening (D13).
+5. **Real Exact-usage capture** (0B B1): run a one-shot capture of OpenAI/Anthropic `usage.prompt_tokens` with the
+   OWNER's API key, commit a provenance-carrying fixture, then `markFamilyExact`. Until then OpenAI stays `exact_unverified`.
+
+## §12 launch-criteria waivers (owner-signed at go-live)
+
+- **§12 "Gemini labeled Approx" — WAIVED for the initial launch (D14 decision, 2026-07-04).** The §13 cut line is
+  amended to **OpenAI-Exact-class + Estimate-only**; no Approx badge ships initially. Reason: registering
+  Transformers.js for open-family Approx requires a RUNTIME WASM-free proof (a static `dist` grep cannot see
+  onnxruntime-web's runtime `WebAssembly.instantiate`), which is infeasible in-sandbox and would silently break the
+  no-`wasm-unsafe-eval` CSP if WASM leaked. Honest alternative shipped: OpenAI real-tiktoken counts + labeled
+  error-banded Estimates for everyone else, with no copy claiming Approx (guarded by the D15 grep gate). Approx is a
+  tracked post-0D deliverable gated on the runtime WASM-free proof. Owner signs this waiver at go-live.
+
 ## Decision log
 
 - 2026-07-03: Tokenizer Option A (local estimate for Claude), all-local tiered. [spec D3/D4]
