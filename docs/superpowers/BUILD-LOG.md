@@ -74,7 +74,7 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
 | 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
 | 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | **YES (PR #7, b08760a)** | **DONE** |
-| 0D | Deploy/security infra | in progress | - | - | - | IN PROGRESS |
+| 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) | - | - | IN PROGRESS (implementing) |
 | 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
@@ -87,6 +87,17 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 - 2026-07-03: Registry keyed on (canonical model, deployment). [spec D9]
 - 2026-07-03: Sole decider = owner; F1 owner/presenter residual explicitly accepted. [spec §13]
 - 2026-07-03: Phase 0 decomposed into 0A-0D (independently testable). [plan scope check]
+- 2026-07-04: **0D: the §13 "CSP verified enforced / zero egress" floor is NOT declared in 0D.** The real risk
+  surface (charts→inline styles, the tokenizer worker, Transformers.js runtime WASM) is Phase 2, and Vercel's live
+  response isn't testable in-sandbox. 0D ships the config + partial verification against the current tiktoken/chart-less
+  build and EXPLICITLY re-verifies at the Phase-2/go-live gate. Certifying now against the chart-less MVP would be the
+  exact dishonest-"verified" failure §13 exists to prevent. [premortem D1, appsec-core]
+- 2026-07-04: **0D: `style-src 'self' 'unsafe-inline'` (documented spec §5.9 deviation).** Recharts/html2canvas emit
+  inline style= attributes a nonce/hash cannot admit; strict style-src white-screens the Phase-2 charts. Since script-src
+  is locked to 'self', inline-STYLE injection is low-severity. [premortem D3]
+- 2026-07-04: **0D: HSTS ships WITHOUT `preload`** (one-way apex commitment, added at go-live when the domain is final);
+  and the Approx-badge fork (D14) will likely AMEND the §13 cut line to OpenAI-Exact + Estimate-only (Transformers.js
+  runtime-WASM-free proof is hard in-sandbox) — decided via adversarial-premortem-single, with a signed §12 waiver, not defaulted. [premortem D11/D14]
 - 2026-07-04: **0C: spec §5.3 W2 break-even formula is WRONG; implementation uses the corrected one.** The spec's
   `p_warm/(1-p_warm) = cacheWrite/(input-cacheRead)` treats the cache-write cost as an ADD-ON to base input, but
   Anthropic bills a cache write INSTEAD OF base input for those tokens (cold=cacheWrite, warm=cacheRead, no-cache=input).
