@@ -217,13 +217,18 @@ Replaces the OpenAI-vs-Anthropic-only logic with provider-agnostic analysis acro
 
 ## 8. Testing strategy
 
-The current app has no automated tests. A precision financial tool with a new engine requires them. Test-driven where practical.
+The current app has no automated tests. A precision financial tool with a new engine cannot ship that way.
 
-- **Cost core:** hand-verified scenarios per workload, asserting within 1% of hand calculation. Reproduces the existing 22-scenario validation and extends it to agent and crew.
-- **Tokenizer engine:** known token counts per family (fixtures captured from real tokenizers) to catch regressions and confirm the Exact tier is actually exact.
-- **Caching archetypes:** unit tests per archetype, including the cross-run warmth formula at sparse, break-even, and saturated traffic.
+**Test-driven development is mandatory for all engine code** (Model Registry, Tokenizer Engine, Caching Model, Cost Core, workload strategies, Optimization Engine). We follow the superpowers `test-driven-development` skill: write a failing test that pins the expected behavior (red), write the minimum code to pass (green), refactor with the test as a guard. No engine function is written before its test. This is not negotiable for money-affecting math, and it is how every phase is delivered.
+
+- **Test stack:** Vitest (Vite-native) for unit and integration, Testing Library for components. Added in Phase 0 before any engine code exists.
+- **Red-green-refactor per unit:** every cost formula, tokenizer resolution, and caching archetype begins as a failing test derived from a hand calculation or a captured fixture, then gets the minimum implementation to pass.
+- **Cost core:** hand-verified scenarios per workload written first from the hand math, asserting within 1% of hand calculation. Reproduces the existing 22-scenario validation and extends it to agent and crew.
+- **Tokenizer engine:** known token counts per family (fixtures captured from real tokenizers) written as failing tests first, to confirm the Exact tier is actually exact and to catch regressions.
+- **Caching archetypes:** tests per archetype written before the formula, including the cross-run warmth model at sparse, break-even, and saturated traffic.
 - **Registry:** golden-file test that the generated snapshot matches the pinned upstream and passes schema validation.
 - **UI:** component tests for the calculators and a smoke test per mode. Visual review during implementation.
+- **CI gate:** GitHub Actions runs the full suite on every PR and blocks merge on any failing, skipped, or disabled test. No test is silenced to make a build pass.
 
 ## 9. Error handling and kill switches
 
@@ -237,7 +242,7 @@ The current app has no automated tests. A precision financial tool with a new en
 
 Too large for one implementation plan. Each phase becomes its own plan via the writing-plans skill. Phase 0 is the critical path and unblocks parallel UI work.
 
-- **Phase 0, Foundation:** Model Registry (ingestion, typed records, build snapshot, GHA refresh PR), provider-agnostic Cost Core and types, three caching archetypes plus cross-run warm cache, Tokenizer Engine (three engines, badges, lazy loading), extended validators. Headless and fully tested.
+- **Phase 0, Foundation:** Model Registry (ingestion, typed records, build snapshot, GHA refresh PR), provider-agnostic Cost Core and types, three caching archetypes plus cross-run warm cache, Tokenizer Engine (three engines, badges, lazy loading), extended validators. Headless, developed test-first (TDD), and fully covered. Establishes the Vitest harness the later phases build on.
 - **Phase 1, Workloads and intelligence:** refactor Chatbot and Prompt onto the core, add Agent and Multi-agent, build the provider-agnostic Optimization Engine including Denial of Wallet.
 - **Phase 2, UI and dataviz:** multi-mode shell, visual identity, all visualizations, light/dark, command palette, model picker, live token visualizer, sensitivity sliders.
 - **Phase 3, Workflow:** shareable permalink, import usage, saved scenarios, examples, export upgrades.
@@ -262,4 +267,5 @@ The first implementation plan targets Phase 0.
 - Denial of Wallet produces a defensible worst-case blast radius.
 - Light and dark, responsive, WCAG AA, first-paint under budget.
 - Deploys to Vercel via GitHub Actions with a human-reviewed pricing refresh.
+- Engine code delivered test-first (TDD); CI blocks merge on any failing or skipped test.
 - Zero high or critical `npm audit` findings.
