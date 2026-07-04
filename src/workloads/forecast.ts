@@ -89,39 +89,57 @@ export function assembleForecast(p: AssembleParams): WorkloadForecast {
   if (scn.model.billingUnit !== 'per_token') return notModeled(p, scn.model.billingUnit);
 
   const wc = monthlyWarmCost(scn);
+  // C2 review fix: when the context window truncated the accumulation, the window cap already bounds the
+  // cost and the accumulation plateaus at the cap (no real per-band straddle) — skip the correction.
   const straddle =
-    wc.applicable && detectStraddle(scn.model, scn.prefixTokens, p.accum.base, p.accum.growth, p.accum.units);
+    wc.applicable &&
+    !p.contextTruncated &&
+    detectStraddle(scn.model, scn.prefixTokens, p.accum.base, p.accum.growth, p.accum.units);
 
   let cost: WarmCostResult = wc;
   if (straddle) {
-    const prefixCacheCentral = wc.waterfall.components
-      .filter((c) => c.label === 'cacheWrite' || c.label === 'cacheReads')
-      .reduce((s, c) => s + (c.cost ?? 0), 0);
-    const ior = bandedAccumulatedCost(
-      scn.model,
-      scn.prefixTokens,
-      p.accum.base,
-      p.accum.growth,
-      p.accum.units,
-      p.accum.arrivalsPerCycle,
-      scn.perArrivalOutputTokens,
-      scn.perArrivalReasoningTokens,
-    );
-    const centralCorrected = prefixCacheCentral + ior;
-    const delta = wc.conservativeTotal - wc.centralTotal; // pure prefix warm-cache saving (IOR cancels)
-    const conservativeCorrected = centralCorrected + delta;
-    const relHigh = centralCorrected > 0 ? Math.max(0, delta / centralCorrected) : 0;
-    cost = {
-      ...wc,
-      centralTotal: centralCorrected,
-      conservativeTotal: conservativeCorrected,
-      savingsUpTo: {
-        central: Math.max(0, delta),
-        conservativeReference: conservativeCorrected,
-        qualifier: 'up_to',
-      },
-      confidence: composeConfidence(centralCorrected, scn.tokenizerBand ?? null, { relLow: 0, relHigh }),
-    };
+    let centralCorrected: number;
+    let conservativeCorrected: number;
+    if (scn.model.cache === null) {
+      // C1 review fix: with no cache the prefix is billed as INPUT every arrival, so band (prefix + input)
+      // together at each band's rate. This reconciles exactly to the per-step chart (A11) even under a
+      // straddle; the earlier code left the prefix at the single mean tier and diverged ~7.6%.
+      const total = bandedAccumulatedCost(
+        scn.model, 0, scn.prefixTokens + p.accum.base, p.accum.growth, p.accum.units,
+        p.accum.arrivalsPerCycle, scn.perArrivalOutputTokens, scn.perArrivalReasoningTokens,
+      );
+      centralCorrected = total;
+      conservativeCorrected = total; // no warm cache to save
+    } else {
+      // Cache model: keep the warm-cache prefix cost at the mean tier (second-order; the probabilistic
+      // warm/cold split makes exact per-band prefix pricing moot) and band the non-prefix input/output.
+      const prefixCacheCentral = wc.waterfall.components
+        .filter((c) => c.label === 'cacheWrite' || c.label === 'cacheReads')
+        .reduce((s, c) => s + (c.cost ?? 0), 0);
+      const ior = bandedAccumulatedCost(
+        scn.model, scn.prefixTokens, p.accum.base, p.accum.growth, p.accum.units,
+        p.accum.arrivalsPerCycle, scn.perArrivalOutputTokens, scn.perArrivalReasoningTokens,
+      );
+      centralCorrected = prefixCacheCentral + ior;
+      conservativeCorrected = centralCorrected + (wc.conservativeTotal - wc.centralTotal);
+    }
+    // F-1 review fix: if the banded correction overflowed (hostile magnitudes), keep the engine-guarded
+    // finite wc values rather than shipping $Infinity.
+    if (Number.isFinite(centralCorrected) && Number.isFinite(conservativeCorrected)) {
+      const delta = conservativeCorrected - centralCorrected;
+      const relHigh = centralCorrected > 0 ? Math.max(0, delta / centralCorrected) : 0;
+      cost = {
+        ...wc,
+        centralTotal: centralCorrected,
+        conservativeTotal: conservativeCorrected,
+        savingsUpTo: {
+          central: Math.max(0, delta),
+          conservativeReference: conservativeCorrected,
+          qualifier: 'up_to',
+        },
+        confidence: composeConfidence(centralCorrected, scn.tokenizerBand ?? null, { relLow: 0, relHigh }),
+      };
+    }
   }
 
   return {

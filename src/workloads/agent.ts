@@ -30,12 +30,13 @@ function plottedStepNumbers(steps: number): number[] {
 
 // Per-step cost. P1-A11: step 1 bills the prefix at the cold WRITE rate, steps 2+ at the warm READ rate;
 // each step's rate tier is selected from its OWN accumulated tokens (not a frozen base). For a cache-null
-// model write=read=input, so Σ(step)·runs foots exactly to the monthly total.
-function stepProfile(cfg: AgentConfig, prefixTokens: number, steps: number): StepProfile[] {
+// model write=read=input, so Σ(step)·runs foots exactly to the monthly total. C2 review fix: each step's
+// input is clamped to the context-window cap so the chart never displays tokens the model cannot hold.
+function stepProfile(cfg: AgentConfig, prefixTokens: number, steps: number, cap: number): StepProfile[] {
   const reasonRate = cfg.model.reasoningPerMToken ?? 0;
   const reasoning = cfg.reasoningTokensPerStep ?? 0;
   return plottedStepNumbers(steps).map((k) => {
-    const input = cfg.perStepUserSeedTokens + cfg.observationGrowthPerStep * (k - 1);
+    const input = Math.min(bounded(cfg.perStepUserSeedTokens + cfg.observationGrowthPerStep * (k - 1)), cap);
     const tierTokens = prefixTokens + input;
     const inRate = effectiveInputRate(cfg.model, tierTokens);
     const outRate = effectiveOutputRate(cfg.model, tierTokens) ?? 0;
@@ -51,7 +52,8 @@ function stepProfile(cfg: AgentConfig, prefixTokens: number, steps: number): Ste
 export function agentForecast(cfg: AgentConfig): WorkloadForecast {
   if (cfg.enabled === false) return disabledForecast('agent');
 
-  const steps = Math.max(0, Math.floor(cfg.stepsPerRun));
+  // F-1 review fix: bound counts + token inputs against hostile magnitudes.
+  const steps = Math.floor(bounded(cfg.stepsPerRun));
   const runs = bounded(cfg.runsPerMonth);
   const arrivals = bounded(runs * steps);
   const prefixTokens = Math.max(0, cfg.toolSchemaTokens) + Math.max(0, cfg.systemTokens);
@@ -59,9 +61,11 @@ export function agentForecast(cfg: AgentConfig): WorkloadForecast {
   const gap = Math.max(0, cfg.avgStepGapSeconds ?? DEFAULT_STEP_GAP_SECONDS);
   const activeFraction = Math.min(1, (arrivals * gap) / (SECONDS_PER_MONTH * k));
 
-  const rawPerArrivalInput = cfg.perStepUserSeedTokens + meanAccumulated(0, cfg.observationGrowthPerStep, steps);
+  const base = bounded(cfg.perStepUserSeedTokens);
+  const growth = bounded(cfg.observationGrowthPerStep);
+  const rawPerArrivalInput = base + meanAccumulated(0, growth, steps);
   const cap = cfg.model.contextWindow !== null ? Math.max(0, cfg.model.contextWindow - prefixTokens) : Infinity;
-  const perArrivalInput = Math.min(rawPerArrivalInput, cap);
+  const perArrivalInput = bounded(Math.min(rawPerArrivalInput, cap));
   const contextTruncated = rawPerArrivalInput > cap;
 
   const forecast = assembleForecast({
@@ -80,12 +84,12 @@ export function agentForecast(cfg: AgentConfig): WorkloadForecast {
       burstsPerMonth: runs / k, // A10: per-prefix cold onsets
       tokenizerBand: cfg.tokenizerBand ?? null,
     },
-    accum: { base: cfg.perStepUserSeedTokens, growth: cfg.observationGrowthPerStep, units: steps, arrivalsPerCycle: runs },
+    accum: { base, growth, units: steps, arrivalsPerCycle: runs },
     accuracyNote: accuracyNoteFor(cfg.model, cfg.tokenizerBand ?? null, cfg.assumptionsSource),
     snapshotVersion: cfg.snapshotVersion ?? 'unknown',
     formula: 'agent: bursty warm-cache tool-schema prefix + per-step accumulated observations + action output',
     contextTruncated,
     steps: null,
   });
-  return { ...forecast, steps: stepProfile(cfg, prefixTokens, steps) };
+  return { ...forecast, steps: stepProfile(cfg, prefixTokens, steps, cap) };
 }

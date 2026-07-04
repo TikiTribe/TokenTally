@@ -16,7 +16,10 @@ const DEFAULT_TURN_GAP_SECONDS = 45; // typical human reply cadence; within-burs
 export function chatbotForecast(cfg: ChatbotConfig): WorkloadForecast {
   if (cfg.enabled === false) return disabledForecast('chatbot');
 
-  const turns = Math.max(0, Math.floor(cfg.turnsPerConversation));
+  // F-1 review fix: bound the count + token inputs (turns/growth/base) so a hostile magnitude can never
+  // overflow the per-arrival input to Infinity (which the engine would clamp to $0) or overflow the banded
+  // straddle math to $Infinity.
+  const turns = Math.floor(bounded(cfg.turnsPerConversation));
   const conversations = bounded(cfg.conversationsPerMonth);
   const arrivals = bounded(conversations * turns);
   const k = Math.max(1, Math.floor(cfg.distinctSystemPrompts ?? 1));
@@ -28,9 +31,11 @@ export function chatbotForecast(cfg: ChatbotConfig): WorkloadForecast {
   const activeFraction = Math.min(1, (arrivals * gap) / (SECONDS_PER_MONTH * k));
 
   // A9: clamp accumulated per-arrival input to what the context window can hold beyond the prefix.
-  const rawPerArrivalInput = cfg.avgUserMessageTokens + meanAccumulated(0, cfg.contextGrowthPerTurn, turns);
+  const base = bounded(cfg.avgUserMessageTokens);
+  const growth = bounded(cfg.contextGrowthPerTurn);
+  const rawPerArrivalInput = base + meanAccumulated(0, growth, turns);
   const cap = cfg.model.contextWindow !== null ? Math.max(0, cfg.model.contextWindow - cfg.systemPromptTokens) : Infinity;
-  const perArrivalInput = Math.min(rawPerArrivalInput, cap);
+  const perArrivalInput = bounded(Math.min(rawPerArrivalInput, cap));
   const contextTruncated = rawPerArrivalInput > cap;
 
   return assembleForecast({
@@ -49,7 +54,7 @@ export function chatbotForecast(cfg: ChatbotConfig): WorkloadForecast {
       burstsPerMonth: conversations / k, // A10: per-prefix cold onsets
       tokenizerBand: cfg.tokenizerBand ?? null,
     },
-    accum: { base: cfg.avgUserMessageTokens, growth: cfg.contextGrowthPerTurn, units: turns, arrivalsPerCycle: conversations },
+    accum: { base, growth, units: turns, arrivalsPerCycle: conversations },
     accuracyNote: accuracyNoteFor(cfg.model, cfg.tokenizerBand ?? null, cfg.assumptionsSource),
     snapshotVersion: cfg.snapshotVersion ?? 'unknown',
     formula: 'chatbot: bursty warm-cache (≈1 cold write/conversation) + accumulated input + output',

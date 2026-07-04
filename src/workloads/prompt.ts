@@ -11,14 +11,17 @@ import type { PromptConfig, WorkloadForecast } from '@/types/workload';
 export function promptForecast(cfg: PromptConfig): WorkloadForecast {
   if (cfg.enabled === false) return disabledForecast('prompt');
 
-  const turns = Math.max(1, Math.floor(cfg.turnsPerCall ?? 1));
+  const turns = Math.max(1, Math.floor(bounded(cfg.turnsPerCall ?? 1)));
   const calls = bounded(cfg.callsPerMonth);
   const arrivals = bounded(calls * turns);
   const shared = Math.max(0, cfg.sharedSystemPromptTokens ?? 0);
 
-  const rawPerArrivalInput = cfg.promptTokens + meanAccumulated(0, cfg.contextGrowthPerTurn ?? 0, turns);
+  // F-1 review fix: bound base/growth so a hostile magnitude cannot overflow to Infinity/$0.
+  const base = bounded(cfg.promptTokens);
+  const growth = bounded(cfg.contextGrowthPerTurn ?? 0);
+  const rawPerArrivalInput = base + meanAccumulated(0, growth, turns);
   const cap = cfg.model.contextWindow !== null ? Math.max(0, cfg.model.contextWindow - shared) : Infinity;
-  const perArrivalInput = Math.min(rawPerArrivalInput, cap);
+  const perArrivalInput = bounded(Math.min(rawPerArrivalInput, cap));
   const contextTruncated = rawPerArrivalInput > cap;
 
   return assembleForecast({
@@ -36,7 +39,7 @@ export function promptForecast(cfg: PromptConfig): WorkloadForecast {
       profile: 'steady',
       tokenizerBand: cfg.tokenizerBand ?? null,
     },
-    accum: { base: cfg.promptTokens, growth: cfg.contextGrowthPerTurn ?? 0, units: turns, arrivalsPerCycle: calls },
+    accum: { base, growth, units: turns, arrivalsPerCycle: calls },
     accuracyNote: accuracyNoteFor(cfg.model, cfg.tokenizerBand ?? null, cfg.assumptionsSource),
     snapshotVersion: cfg.snapshotVersion ?? 'unknown',
     formula: 'prompt: per-call input + output (shared-prefix warm-cache when present)',

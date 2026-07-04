@@ -87,4 +87,13 @@ describe('denialOfWallet', () => {
     const r = denialOfWallet({ model: gpt4o, attackerRequestsPerMonth: 1e300, enabled: true, retryCeiling: 1e10 });
     expect(Number.isFinite(r.worstCaseMonthly)).toBe(true);
   });
+
+  // Review fix (security F-3): a non-finite FALLBACK token count must clamp to a large finite exposure,
+  // not silently collapse to $0 via the engine's nonNeg(Infinity)=0 guard.
+  it('F-3: Infinity fallback tokens do not silently zero the worst case', () => {
+    const noCaps: ModelRecord = { ...gpt4o, contextWindow: null, maxOutput: null };
+    const r = denialOfWallet({ model: noCaps, attackerRequestsPerMonth: 1000, enabled: true, fallbackInputTokens: Infinity, fallbackOutputTokens: 4000 });
+    expect(Number.isFinite(r.worstCaseMonthly)).toBe(true);
+    expect(r.worstCaseMonthly).toBeGreaterThan(0); // NOT a silent $0
+  });
 });

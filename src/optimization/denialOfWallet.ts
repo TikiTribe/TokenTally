@@ -97,11 +97,14 @@ export function denialOfWallet(cfg: DenialOfWalletConfig): DenialOfWalletResult 
   }
 
   const usedFallback = cfg.model.contextWindow === null || cfg.model.maxOutput === null;
-  const inputTokens = cfg.model.contextWindow ?? Math.max(0, cfg.fallbackInputTokens ?? 0);
-  const outputTokens = cfg.model.maxOutput ?? Math.max(0, cfg.fallbackOutputTokens ?? 0);
+  // Review fix (security F-3): route fallback token counts through bounded() too — Math.max(0, Infinity)
+  // passes Infinity into the engine, which clamps it to 0 and SILENTLY drops the exposure. bounded() maps
+  // Infinity/huge to the CEIL so the worst case stays a large-but-finite figure.
+  const inputTokens = cfg.model.contextWindow ?? bounded(cfg.fallbackInputTokens ?? 0);
+  const outputTokens = cfg.model.maxOutput ?? bounded(cfg.fallbackOutputTokens ?? 0);
   // P1-A14: an adversary can force a large reasoning budget on a reasoning model.
   const reasoningTokens =
-    cfg.model.reasoningPerMToken !== null ? (cfg.fallbackReasoningTokens ?? cfg.model.maxOutput ?? outputTokens) : 0;
+    cfg.model.reasoningPerMToken !== null ? bounded(cfg.fallbackReasoningTokens ?? cfg.model.maxOutput ?? outputTokens) : 0;
   const retries = Math.max(1, cfg.retryCeiling ?? 1);
   const requests = bounded(bounded(cfg.attackerRequestsPerMonth) * retries);
 

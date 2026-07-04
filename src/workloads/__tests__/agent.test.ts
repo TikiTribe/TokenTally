@@ -73,4 +73,26 @@ describe('agentForecast', () => {
     expect(f.cost.applicable).toBe(false);
     expect(f.steps).toBeNull();
   });
+
+  // C1 review fix: step-profile dollars must reconcile to the headline even for a cache-null TIERED model
+  // that straddles a price tier (the prefix must be banded, not left at the mean tier).
+  it('C1: cache-null tiered straddle still reconciles Σ(step)·runs to monthlyCost within 1%', () => {
+    const tiered: ModelRecord = {
+      ...flat, inputPrice: 3, outputPrice: 9, cache: null, contextWindow: 1_000_000,
+      tiers: [{ thresholdTokens: 200000, inputPrice: 6, outputPrice: 18 }],
+    };
+    const f = agentForecast({ model: tiered, toolSchemaTokens: 50000, systemTokens: 0, perStepUserSeedTokens: 2000, observationGrowthPerStep: 40000, actionOutputTokens: 100, stepsPerRun: 8, runsPerMonth: 100 });
+    expect(f.tierStraddle).toBe(true);
+    const perRun = f.steps!.reduce((s, x) => s + x.cost, 0);
+    expect(perRun * 100).toBeCloseTo(f.monthlyCost, 2);
+  });
+
+  // C2 review fix: no plotted step may exceed the context window, and the forecast stays finite.
+  it('C2: step inputs are clamped to the context window when accumulation overflows it', () => {
+    const f = agentForecast({ ...base, model: flat, toolSchemaTokens: 2000, systemTokens: 500, perStepUserSeedTokens: 100, observationGrowthPerStep: 50000, stepsPerRun: 8, runsPerMonth: 100 });
+    const cap = 128000 - 2500; // contextWindow - prefix
+    expect(f.contextTruncated).toBe(true);
+    for (const s of f.steps!) expect(s.inputTokens).toBeLessThanOrEqual(cap);
+    expect(Number.isFinite(f.monthlyCost)).toBe(true);
+  });
 });

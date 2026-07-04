@@ -41,6 +41,8 @@ jobs:
         run: npm run size
       - name: WASM-free dist (D4)
         run: npm run wasm-check
+      - name: First-paint stays lean (P1-A25)
+        run: npm run first-paint-check
       - name: Honest accuracy claims (D15)
         run: npm run claims-check
       - name: Cache-policy freshness (D16)

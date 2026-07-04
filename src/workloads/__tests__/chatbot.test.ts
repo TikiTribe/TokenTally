@@ -83,4 +83,13 @@ describe('chatbotForecast', () => {
     const f = chatbotForecast({ ...base, contextGrowthPerTurn: 100000, turnsPerConversation: 10 });
     expect(f.contextTruncated).toBe(true);
   });
+
+  // F-1 review fix: hostile magnitudes on count/growth inputs must yield a finite, non-Infinity cost
+  // (the old code overflowed the accum descriptor to $Infinity even with a context window set).
+  it('F-1: hostile turns/growth yield a finite cost, never $Infinity', () => {
+    const noWindow: ModelRecord = { ...claude, contextWindow: null };
+    const f = chatbotForecast({ ...base, model: noWindow, turnsPerConversation: 1e300, contextGrowthPerTurn: 1e200, avgUserMessageTokens: 2000 });
+    expect(Number.isFinite(f.monthlyCost)).toBe(true);
+    expect(f.monthlyCost).toBeGreaterThan(0);
+  });
 });
