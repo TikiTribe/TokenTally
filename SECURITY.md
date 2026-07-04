@@ -379,16 +379,20 @@ Before each release, complete this checklist:
 
 ---
 
-## Vulnerability Reporting
+## Vulnerability Reporting (VDP)
 
-If you discover a security vulnerability in TokenTally:
+If you discover a security vulnerability in TokenTally, report it privately through GitHub Security
+Advisories — do NOT open a public issue:
 
-1. **Do NOT** create a public GitHub issue
-2. Email the maintainer directly with details
-3. Include steps to reproduce
-4. Provide suggested fix if possible
+- **Report a vulnerability:** https://github.com/TikiTribe/TokenTally/security/advisories/new
+- **Backup channel:** security@rockcyber.com
 
-We will acknowledge within 48 hours and provide a timeline for fix and disclosure.
+Please include: a description of the issue, steps to reproduce, affected component/version, and a
+suggested fix if you have one. Do not test against systems you are not authorized to test.
+
+**Response targets:** acknowledgement within 48 hours; triage and a remediation timeline within 5 business
+days; coordinated disclosure once a fix ships. This VDP link is the same one surfaced by the in-product
+Denial-of-Wallet feature.
 
 ---
 
@@ -401,5 +405,5 @@ We will acknowledge within 48 hours and provide a timeline for fix and disclosur
 
 ---
 
-**Last Updated:** January 2025
+**Last Updated:** July 2026
 **Review Frequency:** Every release + quarterly dependency audit
