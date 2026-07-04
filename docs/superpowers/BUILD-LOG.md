@@ -72,8 +72,8 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 |-------|-------|------|-----------|------|--------|-------|
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
-| 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | PR open | CLOSE-OUT (PR -> integration) |
-| 0C | Caching + Cost Core | not written | - | - | - | QUEUED |
+| 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
+| 0C | Caching + Cost Core | in progress | - | - | - | IN PROGRESS |
 | 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
@@ -190,7 +190,35 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
   a plan-sized artifact; empirically resolve any cross-perspective conflict (babbage encoding) against ground truth
   before amending. The 0B-close-out security+code review is the post-implementation adversarial pass.
 
-## RESUME HERE (checkpoint, 2026-07-04 — Phase 0A DONE + merged, starting 0B)
+## RESUME HERE (checkpoint, 2026-07-04 — Phases 0A + 0B DONE + merged, starting 0C)
+
+State: **0A and 0B are DONE and merged** into the integration branch `feat/realtime-determinism-engine`
+(0A = PR #5 / 28b0f9a; 0B = PR #6 / 9e8780c). Integration is green: 141 tests, tsc clean, build green,
+Vercel previews built on both PRs. Now on branch **`feat/phase-0c-caching-cost`** (off integration).
+`main` remains the untouched live MVP.
+
+Available to 0C: the Registry (`src/registry`: getModel/getDeployments/listByMode, CacheSpec, PriceTier,
+billingUnit, tiers, reasoningPerMToken) and the Tokenizer (`src/tokenizer`: countTokens -> TokenCount with
+count/badge/errorBand/awaitingAdapter/truncated). Both are pure, tested, always-green modules.
+
+Phase 0C = Caching Model + Cost Core (spec §5.3, §5.4). Scope:
+- Caching Model: 3 archetypes (A automatic prefix cache no-write; B breakpoint+TTL write cost, 5min/1hr
+  multipliers as cited constants; C hourly storage) via a cache-field resolver; the closed-form cross-run
+  WARM cache with distinct-prefixes K, steady (p_warm=1-e^(-lambda_p*T)) and bursty (busy/idle f) profiles,
+  Archetype-A best-effort as a BOUNDED RANGE, writes/month, and the NUMERICALLY-DEFINED break-even
+  (p_warm/(1-p_warm) = cacheWriteRate/(inputRate-cacheReadRate)).
+- Cost Core: pure TS, provider-agnostic, billing-unit-aware; normalizes by unit, applies 128k/200k tiers,
+  null-output for embeddings, reasoning bar from reasoningPerMToken; composes a confidence range from the
+  tokenizer errorBand (systematic bias) + input variance; emits the waterfall (prefix, cache write, cache
+  reads, input, output, reasoning, context). Never coerces a non-token unit to $0.
+
+NEXT ACTIONS (0C loop): read spec §5.3/§5.4 (+ CacheSpec/PriceTier in src/types/registry.ts); write Plan 0C
+(superpowers:writing-plans, test-first, always-green new modules e.g. src/engine/caching + src/engine/cost);
+adversarial premortem (full for the closed-form warmth/break-even math + cost composition; appsec lens kept);
+fix findings; implement test-first (hand-verify >=3 scenarios within 1% per spec §8); security + code review;
+PR -> integration (NEVER main); merge; delete; then 0D.
+
+## RESUME HERE (superseded — Phase 0A DONE + merged, starting 0B)
 
 State: **Phase 0A is DONE and merged.** PR #5 (`feat/phase-0a-registry` -> `feat/realtime-determinism-engine`)
 merged as commit 28b0f9a; phase branch deleted (local + remote); Vercel preview built green. Integration branch
