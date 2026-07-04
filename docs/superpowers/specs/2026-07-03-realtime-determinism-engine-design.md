@@ -1,9 +1,9 @@
 # TokenTally: Real-Time Determinism Engine and Multi-Workload Overhaul
 
-- **Version:** 1.2 (design)
+- **Version:** 1.2.1 (design)
 - **Date:** 2026-07-03
 - **Owner (build):** rock@rockcyber.com
-- **Independent launch decider (go/no-go):** TBD, must not be the demo presenter (see §13)
+- **Decider (build + go/no-go):** rock@rockcyber.com, sole decider, no independent gate (see §13)
 - **Status:** Draft for review, revised after two adversarial premortem rounds
 - **Launch target:** Event adjacent to Black Hat USA
 
@@ -28,6 +28,7 @@
   - C2 → a Playwright test under the served CSP that fails on `securitypolicyviolation`, replacing the jsdom "proof" (§5.9, §8).
   - C3, C4 → `allowLocalModels=true`, a tokenizer-only subpath import, a `grep dist` WASM-free assertion, and a tokenizer-redistribution license check (§5.2, §5.9).
   - C6 → the IndexedDB claim right-sized to staleness, not anti-poisoning (§5.2, §7).
+- **v1.2.1** records the sole-decider decision: F1's owner-is-presenter conflict is explicitly accepted for a solo project; the launch-gate relies on the dated descope trigger and the non-negotiable floor, not a second person (§13).
 
 ## 1. Summary
 
@@ -284,7 +285,7 @@ The first implementation plan targets Phase 0.
 
 ## 13. Launch gate
 
-- **Owner/decider split:** the build owner is not the go/no-go decider. An independent decider (named before Phase 1) can cut scope or pull the demo.
+- **Sole decider:** rock@rockcyber.com owns both build and go/no-go. The premortem's owner-is-presenter conflict (F1) is explicitly accepted for a solo project. With no second person to call a no-go, the discipline is structural, carried by the dated descope trigger and the non-negotiable floor below, not by a human veto.
 - **Minimum lovable demo (cut line):** Chatbot and Agent on the shared engine, Exact/Approx/Estimate badges, the cross-run warm-cache view with break-even, one flagship visualization, on real data with the strict CSP live and verified. Crew, Denial of Wallet, permalink, and import are above the cut line.
 - **Descope trigger:** if Phase 1 is not feature-complete by a dated checkpoint (set at Phase 0 kickoff), the launch falls back to the minimum lovable demo automatically.
 - **Non-negotiable floor:** TDD on engine code and the honest-claims correction ship regardless of scope cuts. The date is the variable, the correctness of the numbers is not.
