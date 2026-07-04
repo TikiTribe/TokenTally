@@ -19,7 +19,8 @@
     "claims-check": "node scripts/ci/assert-honest-claims.mjs",
     "policy-fresh": "node scripts/ci/assert-policy-fresh.mjs",
     "typecheck:scripts": "tsc -p tsconfig.scripts.json",
-    "size": "size-limit"
+    "size": "size-limit",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "js-tiktoken": "1.0.21",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.0",
+    "@playwright/test": "1.56.1",
     "@size-limit/preset-app": "11.2.0",
     "@types/cheerio": "0.22.35",
     "@types/node-fetch": "2.6.11",

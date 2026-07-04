@@ -35,8 +35,8 @@ export default [
   { files: ['**/*.{tsx,jsx}'], plugins: { react }, settings: { react: { version: 'detect' } }, rules: { 'react/no-danger': 'error' } },
   // Strict TS rules on the new engine code.
   { files: ['src/engine/**/*.ts', 'src/registry/**/*.ts', 'src/tokenizer/**/*.ts', 'src/types/**/*.ts'], rules: { ...tsPlugin.configs.recommended.rules, '@typescript-eslint/no-explicit-any': 'error', 'no-unused-vars': 'off', '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }] } },
-  // Build scripts log to stdout legitimately; their fs writes are build-time (no attacker path).
-  { files: ['scripts/**/*.{ts,mjs}', '**/*.config.{ts,js}'], rules: { 'no-console': 'off', 'security/detect-non-literal-fs-filename': 'off' } },
+  // Build scripts + test/E2E infra log to stdout legitimately; their fs reads/writes are build-time (no attacker path).
+  { files: ['scripts/**/*.{ts,mjs}', 'tests/**/*.{ts,mjs}', '**/*.config.{ts,js}'], rules: { 'no-console': 'off', 'security/detect-non-literal-fs-filename': 'off' } },
   // Old MVP (Phase-2 rewrite): security floor only.
   { files: OLD_MVP, rules: { 'no-console': 'off' } },
   // Legacy CSV-pricing scripts, superseded by src/registry/buildRegistry (slated for removal): security floor only.
