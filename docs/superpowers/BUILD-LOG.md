@@ -76,9 +76,9 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | **YES (PR #7, b08760a)** | **DONE** |
 | 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) + review (3 confirmed, all fixed) | Tasks 1-9 + review fixes (207 tests, audit 0) | **YES (PR #8, 0bdcef7)** | **DONE — PHASE 0 COMPLETE** |
 | 1 | Workloads + Optimization + Denial of Wallet | written+amended (P1-A1..A30) | done (6-perspective, 40 findings) + review (2 lenses, 5 confirmed, all fixed) | Tasks 0-10 + review fixes (287 tests, tsc x3 + lint + build + audit 0 + all gates green) | **YES (PR #9, a9e632f)** | **DONE** |
-| 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
-| 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | QUEUED |
-| 4 | Hardening: E2E, appsec audit, a11y, load, live deploy | not written | - | - | - | QUEUED |
+| 2 | UI + dataviz (2A shell / 2B worker / 2C wiring / 2D charts / 2E a11y / 2F CSP+size) | written+amended (P2-A1..A22) | done (6-persp workflow, 18 confirmed + 14 plausible) + review (security 3 + code 3, all fixed) | 2A-2F (336 tests, 5 E2E, all gates) | **YES (PR #10 908602d + PR #11 c4d416d)** | **DONE — cut line met/exceeded; palette + 4 viz + §5.8 deferred** |
+| 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | IN PROGRESS (lean: exports+permalink+examples; import/saved deferred) |
+| 4 | Hardening: headed E2E every function, appsec audit, load, live deploy | not written | - | - | - | QUEUED |
 
 ## Phase 0D owner runbook (D13 — settings/credentials are not code; owner actions, recorded not faked)
 
