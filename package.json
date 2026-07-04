@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "test:ci": "tsc --noEmit && vitest run --reporter=dot --coverage",
-    "build-registry": "tsx scripts/registry/buildRegistry.ts"
+    "build-registry": "tsx scripts/registry/buildRegistry.ts",
+    "wasm-check": "node scripts/ci/assert-wasm-free.mjs dist"
   },
   "dependencies": {
     "js-tiktoken": "1.0.21",
