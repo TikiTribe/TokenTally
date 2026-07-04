@@ -1,0 +1,23 @@
+{
+  "gpt-4o": { "input_cost_per_token": 2.5e-06, "output_cost_per_token": 1e-05, "cache_read_input_token_cost": 1.25e-06, "max_input_tokens": 128000, "max_output_tokens": 16384, "litellm_provider": "openai", "mode": "chat" },
+  "bedrock/us-gov-east-1/anthropic.claude-3-5-sonnet": { "input_cost_per_token": 3.6e-06, "output_cost_per_token": 1.8e-05, "cache_creation_input_token_cost": 4.5e-06, "cache_read_input_token_cost": 3.6e-07, "litellm_provider": "bedrock", "mode": "chat" },
+  "medlm-large": { "input_cost_per_character": 5e-06, "litellm_provider": "vertex_ai", "mode": "chat" },
+  "replicate-per-second-chat": { "input_cost_per_second": 0.0001, "litellm_provider": "replicate", "mode": "chat" },
+  "databricks/databricks-dbrx-instruct": { "input_dbu_cost_per_token": 1e-05, "litellm_provider": "databricks", "mode": "chat" },
+  "openrouter/meta-llama/llama-3-8b-instruct:free": { "input_cost_per_token": 0, "output_cost_per_token": 0, "litellm_provider": "openrouter", "mode": "chat" },
+  "gemini-1.5-pro": { "input_cost_per_character": 3.125e-07, "input_cost_per_token": 1.25e-06, "output_cost_per_character": 9.375e-07, "litellm_provider": "vertex_ai", "mode": "chat" },
+  "gemini-1.5-flash": { "input_cost_per_token": 7.5e-08, "input_cost_per_token_above_128k_tokens": 1.5e-07, "output_cost_per_token": 3e-07, "litellm_provider": "vertex_ai", "mode": "chat" },
+  "claude-3-7-sonnet-200k": { "input_cost_per_token": 3e-06, "output_cost_per_token": 1.5e-05, "input_cost_per_token_above_200k_tokens": 6e-06, "cache_read_input_token_cost_above_200k_tokens": 6e-07, "cache_creation_input_token_cost": 3.75e-06, "cache_read_input_token_cost": 3e-07, "litellm_provider": "anthropic", "mode": "chat" },
+  "o1": { "input_cost_per_token": 1.5e-05, "output_cost_per_token": 6e-05, "output_cost_per_reasoning_token": 6e-05, "litellm_provider": "openai", "mode": "chat" },
+  "deepseek-chat": { "input_cost_per_token": 2.7e-07, "output_cost_per_token": 1.1e-06, "input_cost_per_token_cache_hit": 7e-08, "litellm_provider": "deepseek", "mode": "chat" },
+  "some-cache-model": { "input_cost_per_token": 1e-06, "output_cost_per_token": 2e-06, "supports_prompt_caching": true, "litellm_provider": "openai", "mode": "chat" },
+  "openrouter/deepseek/deepseek-r1": { "input_cost_per_token": 5.5e-07, "output_cost_per_token": 2.19e-06, "litellm_provider": "openrouter", "mode": "chat" },
+  "dupe-model": { "input_cost_per_token": 1e-06, "output_cost_per_token": 2e-06, "litellm_provider": "openai", "mode": "chat" },
+  "openai/dupe-model": { "input_cost_per_token": 9e-06, "output_cost_per_token": 2e-06, "litellm_provider": "openai", "mode": "chat" },
+  "gpt-3.5-turbo-instruct": { "input_cost_per_token": 1.5e-06, "output_cost_per_token": 2e-06, "litellm_provider": "openai", "mode": "completion" },
+  "text-embedding-3-small": { "input_cost_per_token": 2e-08, "litellm_provider": "openai", "mode": "embedding" },
+  "together-ai-41.1b-80b": { "litellm_provider": "together_ai" },
+  "dall-e-3": { "output_cost_per_pixel": 0, "litellm_provider": "openai", "mode": "image_generation" },
+  "whisper-1": { "input_cost_per_second": 0.0001, "litellm_provider": "openai", "mode": "audio_transcription" },
+  "sample_spec": { "litellm_provider": "one of the providers in the litellm provider enum", "mode": "one of: chat, embedding, completion, image_generation, audio_transcription" }
+}
