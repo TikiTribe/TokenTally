@@ -53,6 +53,8 @@ export interface AppState {
   setSelection(m: Mode, s: ModelSelection): void;
   patchInputs<M extends Mode>(m: M, patch: Partial<ModeInputs[M]>): void;
   reportTokenCount(fieldId: string, tc: FieldTokenCount): void;
+  // §5.8: apply a validated config bundle (from an example or a decoded permalink) atomically.
+  applyConfig(mode: Mode, selection: ModelSelection, inputs: Record<string, unknown>): void;
   ensureRegistry(): Promise<void>;
   recompute(): Promise<void>;
 }
@@ -78,6 +80,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({ inputs: { ...state.inputs, [m]: { ...state.inputs[m], ...patch } } })),
   reportTokenCount: (fieldId, tc) =>
     set((state) => ({ tokenCounts: { ...state.tokenCounts, [fieldId]: tc } })),
+  applyConfig: (mode, selection, inputs) =>
+    set((state) => ({
+      mode,
+      selection: { ...state.selection, [mode]: selection },
+      // merge only into the target mode; the untrusted `inputs` was already validated by the caller.
+      inputs: { ...state.inputs, [mode]: { ...(state.inputs[mode] as unknown as Record<string, unknown>), ...inputs } } as ModeInputs,
+    })),
 
   ensureRegistry: async () => {
     const st = get().registryStatus;
