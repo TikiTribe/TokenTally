@@ -73,7 +73,8 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
 | 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
-| 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | PR open | CLOSE-OUT (PR -> integration) |
+| 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | **YES (PR #7, b08760a)** | **DONE** |
+| 0D | Deploy/security infra | in progress | - | - | - | IN PROGRESS |
 | 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
@@ -211,7 +212,44 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
   a plan-sized artifact; empirically resolve any cross-perspective conflict (babbage encoding) against ground truth
   before amending. The 0B-close-out security+code review is the post-implementation adversarial pass.
 
-## RESUME HERE (checkpoint, 2026-07-04 — Phases 0A + 0B DONE + merged, starting 0C)
+## RESUME HERE (checkpoint, 2026-07-04 — Phases 0A+0B+0C DONE+merged, starting 0D; Phase-0 ENGINE COMPLETE)
+
+State: **the entire Phase-0 ENGINE is done and merged** into `feat/realtime-determinism-engine`
+(0A registry = PR #5/28b0f9a; 0B tokenizer = PR #6/9e8780c; 0C caching+cost = PR #7/b08760a).
+Integration is green: 189 tests, tsc clean, build green, engine tree-shaken out of the MVP bundle,
+Vercel previews on every PR. Now on branch **`feat/phase-0d-deploy-security`** (off integration).
+`main` remains the untouched live MVP.
+
+Phase 0D = Deploy/security infra — the LAST Phase-0 piece, and it is deploy-coupled (different character
+from the pure engine 0A-0C). Full inherited scope (from spec §5.9/§7 + the 0A-0C deferrals):
+- **ESLint flat-config migration** (BLOCKER, do BEFORE Phase 2): repo has no eslint.config.js and flat-only
+  plugins; `npm run lint` is broken repo-wide. Build eslint.config.js (@eslint/js + @typescript-eslint +
+  eslint-plugin-security, all flat-ready), fix the `lint` script (drop the removed --ext), scope console to
+  scripts/**, add a scripts typecheck (buildRegistry.ts is not tsc-gated today). See [[eslint-broken-flat-config]].
+- **Strict enforced CSP** (spec §5.9 full directive set; no unsafe-eval; wasm-unsafe-eval OMITTED) + a
+  **Playwright test that loads the app under the served CSP and fails on any securitypolicyviolation** (C2).
+- **Transformers.js adapter** registration (0B seam: registerAdapter in bootstrap) + self-hosted tokenizer
+  assets + redistribution license check + the `grep -r wasm dist/` WASM-free assertion + the zero-egress
+  Playwright test + IndexedDB staleness cache + pre-demo tokenizer-URL 200 pre-flight. **Approx-before-demo
+  gate (B15/premortem): pull one Gemma tokenizer forward so Gemini shows Approx, OR amend the §13 cut line.**
+- **CI (GitHub Actions):** typecheck, lint, unit tests, build, size-limit gate, WASM-free dist, egress test,
+  the CSP Playwright test; block on any failing/skipped test. `npm ci` + exact pins. Node 24 alignment
+  (.nvmrc/engines/CI — currently .nvmrc pins stale 20.11).
+- **Dependency-vuln remediation:** 10 Dependabot vulns on `main` (2 critical/6 high/2 moderate) — resolve on
+  the integration line (NOT on main) before go-live; `npm audit` clean is a §12 success criterion.
+- **POLICY_REVERIFIED staleness CI gate** (0C C15) + the pricing-refresh Action (D7).
+- **Real Exact-usage capture** (0B B1) needs the OWNER's OpenAI/Anthropic API key — OUT OF BAND, owner action;
+  until then OpenAI stays exact_unverified. Flag it; do not fabricate.
+
+NEXT ACTIONS (0D loop): read spec §5.9/§7; write Plan 0D (superpowers:writing-plans) — note 0D is heavily
+deploy/CI-coupled, so decompose into what's locally verifiable (ESLint config, CSP header in vercel.json,
+size-limit config, Playwright specs, Transformers.js adapter) vs what needs a live deploy; premortem it
+(appsec lens is the CORE here — CSP bypass, WASM, egress, supply chain); fix findings; implement test-first;
+security + code review; PR feat/phase-0d-deploy-security -> integration (NEVER main); merge; then Phases 1-4.
+END: after all phases + headed Playwright E2E + appsec pass + vuln remediation, the SINGLE final
+integration->main go-live PR flips production, then delete all phase branches.
+
+## RESUME HERE (superseded — Phases 0A+0B DONE+merged, starting 0C)
 
 State: **0A and 0B are DONE and merged** into the integration branch `feat/realtime-determinism-engine`
 (0A = PR #5 / 28b0f9a; 0B = PR #6 / 9e8780c). Integration is green: 141 tests, tsc clean, build green,
