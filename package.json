@@ -17,7 +17,8 @@
     "build-registry": "tsx scripts/registry/buildRegistry.ts",
     "wasm-check": "node scripts/ci/assert-wasm-free.mjs dist",
     "claims-check": "node scripts/ci/assert-honest-claims.mjs",
-    "policy-fresh": "node scripts/ci/assert-policy-fresh.mjs"
+    "policy-fresh": "node scripts/ci/assert-policy-fresh.mjs",
+    "typecheck:scripts": "tsc -p tsconfig.scripts.json"
   },
   "dependencies": {
     "js-tiktoken": "1.0.21",
