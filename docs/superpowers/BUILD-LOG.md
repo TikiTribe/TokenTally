@@ -325,7 +325,10 @@ on the root AND a rewritten deep SPA route (HSTS `max-age=63072000; includeSubDo
 designed). That closes the last go-live item (F5). NOTE: my earlier `tokentally.griffen.codes` finding below
 was a stale/unrelated alias — the real production domain is `tokentally.ai`; I did not touch it. Good.
 
-### Post-launch v1.1 (branch `feat/e2e-and-help`, PR to `main` = production)
+### Post-launch v1.1 — SHIPPED ✅ (PR #15 `cb1b987`, merged to `main`, live-verified on tokentally.ai)
+Merged 2026-07-04 after CI + CodeQL + Vercel preview green and a 3-lens adversarial review (7 findings fixed).
+Live smoke on `https://tokentally.ai/` confirms: 7 help tooltips on the chatbot panel, the explainer, a
+tooltip opening on focus (aria-expanded), a rendered forecast, and **zero CSP violations** on the real origin.
 User asked for (1) detailed instructions/tooltips throughout, and (2) a genuinely complete headed E2E.
 - **Comprehensive headed E2E (was previously only a smoke suite).** 31 new Playwright specs (real Chromium,
   served under the production CSP) → **44 total, all green**: 6 hand-computed MATH oracles across all 5
