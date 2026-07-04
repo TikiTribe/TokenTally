@@ -4,10 +4,12 @@
 import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-// A bare "±5%" (or ASCII +/-5%, +-5%) accuracy claim, or a "100%" adjacent to test/coverage.
+// A bare "±5%" accuracy claim (incl. decimal "±5.0%" and prose "±5 percent" variants, ASCII +/-5%), or a
+// "100%" adjacent to test/coverage. NOTE: we deliberately do NOT match a bare "5%" with no ± prefix — that
+// would false-positive on legitimate mentions (e.g. "a 5% cache hit rate") and on the scoped per-badge copy.
 const BANNED = [
-  { re: /±\s*5\s*%/, why: 'unqualified "±5%" accuracy claim (precision is scoped per badge)' },
-  { re: /\+\s*\/?\s*-\s*5\s*%/, why: 'unqualified "+/-5%" accuracy claim' },
+  { re: /±\s?5(?:\.\d)?\s?(%|percent)/i, why: 'unqualified "±5%" accuracy claim (precision is scoped per badge)' },
+  { re: /\+\s?\/?\s?-\s?5(?:\.\d)?\s?(%|percent)/i, why: 'unqualified "+/-5%" accuracy claim' },
   { re: /100\s*%[^.]{0,30}(test|cover)/i, why: '"100%" test-coverage claim (the scenarios were manual)' },
   { re: /(test|cover)[^.]{0,30}100\s*%/i, why: '"100%" test-coverage claim (the scenarios were manual)' },
 ];
@@ -29,7 +31,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       for (const e of readdirSync(d)) {
         const p = join(d, e);
         if (statSync(p).isDirectory()) walk(p);
-        else if (/\.(html|js|css|txt|json)$/.test(e)) offenders.push(...scanText(p, readFileSync(p, 'utf8')));
+        // include .map (sourcesContent) and .svg — any text asset the deploy actually serves.
+        else if (/\.(html|js|css|txt|json|map|svg)$/.test(e)) offenders.push(...scanText(p, readFileSync(p, 'utf8')));
       }
     };
     walk(dir);
