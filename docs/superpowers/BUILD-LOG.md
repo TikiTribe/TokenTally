@@ -74,7 +74,7 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
 | 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
 | 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | **YES (PR #7, b08760a)** | **DONE** |
-| 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) + review (3 confirmed, all fixed) | Tasks 1-9 + review fixes (207 tests, audit 0) | pending PR | **DONE (impl) — PR into integration** |
+| 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) + review (3 confirmed, all fixed) | Tasks 1-9 + review fixes (207 tests, audit 0) | **YES (PR #8, 0bdcef7)** | **DONE — PHASE 0 COMPLETE** |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
 | 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | QUEUED |
@@ -263,10 +263,11 @@ These CANNOT be self-enforced by CI/config and are required before/at go-live:
 ## RESUME HERE (checkpoint, 2026-07-04 — PHASE 0 COMPLETE; starting Phase 1 Workloads)
 
 State: **the entire Phase 0 is done** — engine (0A registry PR #5/28b0f9a, 0B tokenizer PR #6/9e8780c,
-0C caching+cost PR #7/b08760a) plus **0D deploy/security infra** (branch `feat/phase-0d-deploy-security`,
-impl Tasks 1-9 + close-out review 3-fixed, 207 tests, `npm audit --omit=dev` 0 high+, all CI gates green).
-0D is being PR'd into `feat/realtime-determinism-engine` now. `main` remains the untouched live MVP;
-it stays frozen until the SINGLE final integration->main go-live PR after Phases 1-4 + headed E2E + appsec.
+0C caching+cost PR #7/b08760a) plus **0D deploy/security infra (PR #8/0bdcef7, MERGED)** —
+impl Tasks 1-9 + close-out review 3-fixed, 207 tests, `npm audit --omit=dev` 0 high+, all CI gates green.
+Integration `feat/realtime-determinism-engine` is green at `0bdcef7` (207 tests, tsc/lint/build clean, CI passed
+on PR #8, Vercel preview deployed). `main` remains the untouched live MVP; it stays frozen until the SINGLE
+final integration->main go-live PR after Phases 1-4 + headed E2E + appsec.
 
 Carry into every later phase (0D deferred items that are NOT done, tracked honestly):
 - **§13 CSP/WASM/egress runtime floor is NOT verified** — the strict CSP is written into vercel.json and the
