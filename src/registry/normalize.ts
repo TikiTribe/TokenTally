@@ -3,7 +3,14 @@
 // This file grows across Phase 0A Tasks 4-9; each section is appended, never rewritten.
 // Owner: TokenTally engine. Version: Phase 0A.
 
-import type { BillingUnit, PriceTier, CacheSpec, CacheArchetype } from '@/types/registry';
+import type {
+  BillingUnit,
+  PriceTier,
+  CacheSpec,
+  CacheArchetype,
+  ModelRecord,
+} from '@/types/registry';
+import { resolveFamily } from '@/registry/resolveFamily';
 
 export type RawEntry = Record<string, unknown>;
 
@@ -207,4 +214,63 @@ export function classifyRow(_canonicalId: string, e: RawEntry): { drop: boolean;
   if (!hasAnyUnit) return { drop: true, freeTier: false }; // in-scope mode but no price = junk
   const freeTier = inTok === 0 && (outTok === 0 || outTok === null);
   return { drop: false, freeTier };
+}
+
+// A7: id-component safety. A canonicalId/deployment that carries a character outside this class, or
+// is a prototype-pollution key, is rejected before it can reach an object map or the DOM. This is a
+// latent stored-XSS / proto-pollution defense for the UI phase (model ids render into the page and
+// key runtime maps). Underscore, dot, colon, at, slash, and hyphen are the only punctuation real
+// TokenCost ids use (e.g. `together_ai`, `anthropic.claude-3-5-sonnet`, `meta-llama/llama-3:free`).
+const ID_PATTERN = /^[A-Za-z0-9._:@/-]+$/;
+const DANGEROUS_KEYS = new Set<string>(['__proto__', 'constructor', 'prototype']);
+
+function isSafeIdComponent(s: string): boolean {
+  return ID_PATTERN.test(s) && !DANGEROUS_KEYS.has(s);
+}
+
+export function normalizeEntry(rawKey: string, e: RawEntry): ModelRecord | null {
+  const { canonicalId, deployment, provider } = parseKey(rawKey, e);
+  // A7: drop unsafe ids/deployments up front (counted by normalizeCatalog as a drop).
+  if (!isSafeIdComponent(canonicalId) || !isSafeIdComponent(deployment)) return null;
+  const { drop, freeTier } = classifyRow(canonicalId, e);
+  if (drop) return null;
+  const billingUnit = detectBillingUnit(e);
+  const inputPrice = normalizeInputPrice(e, billingUnit);
+  if (inputPrice === null) return null; // A4: absent or insane input price = unusable row
+  const { family, tier } = resolveFamily(canonicalId);
+  // classifyRow already proved e.mode is one of the four in-scope modes, so this cast is sound.
+  const mode = e.mode as ModelRecord['mode'];
+  const reasoning = num(e.output_cost_per_reasoning_token);
+  return {
+    canonicalId,
+    deployment,
+    displayName: canonicalId, // A7: derived from the sanitized canonical id
+    provider,
+    underlyingFamily: family,
+    mode,
+    billingUnit,
+    inputPrice,
+    outputPrice: mode === 'embedding' ? null : normalizeOutputPrice(e, billingUnit),
+    reasoningPerMToken: reasoning === null ? null : reasoning * PER_MILLION,
+    cache: resolveCacheSpec(e, provider),
+    contextWindow: num(e.max_input_tokens),
+    maxOutput: num(e.max_output_tokens),
+    tiers: parseTiers(e, billingUnit),
+    accuracyTier: tier,
+    freeTier,
+    deprecated: e.deprecated === true,
+  };
+}
+
+export function normalizeCatalog(
+  raw: Record<string, RawEntry>,
+): { models: ModelRecord[]; droppedCount: number } {
+  const models: ModelRecord[] = [];
+  let droppedCount = 0;
+  for (const [rawKey, entry] of Object.entries(raw)) {
+    const rec = normalizeEntry(rawKey, entry);
+    if (rec === null) droppedCount++;
+    else models.push(rec);
+  }
+  return { models, droppedCount };
 }
