@@ -43,4 +43,17 @@ describe('modeMapping (2C)', () => {
     const i: CrewInputs = { memberCount: 4, runsPerMonth: 500, stepsPerMember: 5, sharedTranscriptGrowthPerStep: 200 };
     expect(mapCrew(i, model, 's').agents).toHaveLength(4);
   });
+
+  it('crew: a hostile memberCount is clamped to the engine cap BEFORE allocation (review #3)', () => {
+    const huge: CrewInputs = { memberCount: 1e9, runsPerMonth: 1, stepsPerMember: 1, sharedTranscriptGrowthPerStep: 0 };
+    const t0 = performance.now();
+    const cfg = mapCrew(huge, model, 's');
+    expect(cfg.agents.length).toBeLessThanOrEqual(64); // MAX_CREW_MEMBERS — never allocates 1e9 objects
+    expect(performance.now() - t0).toBeLessThan(200);
+  });
+
+  it('crew: 0 / negative memberCount coerces to 1 (never a 0-length crew)', () => {
+    expect(mapCrew({ memberCount: 0, runsPerMonth: 1, stepsPerMember: 1, sharedTranscriptGrowthPerStep: 0 }, model, 's').agents).toHaveLength(1);
+    expect(mapCrew({ memberCount: -5, runsPerMonth: 1, stepsPerMember: 1, sharedTranscriptGrowthPerStep: 0 }, model, 's').agents).toHaveLength(1);
+  });
 });

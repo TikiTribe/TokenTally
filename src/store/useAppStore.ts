@@ -3,6 +3,7 @@
 // actions (ensureRegistry here; engineClient in 2C), so this module carries ZERO engine/registry runtime
 // symbols and the first-paint-lean gate stays green. Owner: TokenTally UI. Version: Phase 2A.
 import { create } from 'zustand';
+import { getStoredTheme } from '@/shell/ThemeController'; // tiny DOM util, no engine deps (first-paint safe)
 import type {
   Mode, ThemeMode, RegistryStatus, ModelSelection, SnapshotMeta, ModeInputs, FieldTokenCount,
 } from '@/store/types';
@@ -58,7 +59,7 @@ export interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   mode: 'chatbot',
-  theme: 'system',
+  theme: getStoredTheme(), // hydrate from localStorage so a reload keeps the user's choice (matches initTheme)
   paletteOpen: false,
   registryStatus: 'idle',
   snapshotMeta: null,

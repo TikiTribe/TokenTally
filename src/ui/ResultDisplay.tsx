@@ -67,12 +67,17 @@ function DowResult({ r }: { r: DenialOfWalletResult }): JSX.Element {
 export function ResultDisplay(): JSX.Element {
   const result = useAppStore((s) => s.result);
   const registryStatus = useAppStore((s) => s.registryStatus);
+  const status = useAppStore((s) => s.status);
+  const error = useAppStore((s) => s.error);
 
   return (
     <div className="card" style={{ marginTop: '1rem' }}>
       <h2 style={{ marginTop: 0, fontSize: '1rem' }}>Cost forecast</h2>
       {registryStatus !== 'ready' ? (
         <p style={{ color: 'var(--text-muted)' }}>Loading pricing data…</p>
+      ) : status === 'error' ? (
+        // Never a silent failure: surface the recompute error rather than leaving a stale/blank result.
+        <p role="alert" style={{ color: 'var(--danger)' }}>Could not price this workload: {error ?? 'unknown error'}</p>
       ) : result === null ? (
         <p style={{ color: 'var(--text-muted)' }}>Enter your workload to see a forecast.</p>
       ) : result.kind === 'unavailable' ? (

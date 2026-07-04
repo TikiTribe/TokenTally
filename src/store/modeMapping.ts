@@ -4,6 +4,7 @@
 // token count + errorBand (the tokenizer confidence band). DoW enables only when BOTH the kill switch and
 // the authorized-use acknowledgement are on, and always supplies fallback caps (P2-A9, never 0-by-omission).
 // Owner: TokenTally UI. Version: Phase 2C.
+import { MAX_CREW_MEMBERS } from '@/workloads'; // runtime const; modeMapping is lazy (via engineClient), not first-paint
 import type { ModelRecord } from '@/types/registry';
 import type { ChatbotConfig, PromptConfig, AgentConfig, CrewConfig } from '@/types/workload';
 import type { DenialOfWalletConfig } from '@/optimization';
@@ -66,8 +67,11 @@ export function mapCrew(i: CrewInputs, model: ModelRecord, snapshotVersion: stri
     observationGrowthPerStep: 300, actionOutputTokens: 120, stepsPerRun: i.stepsPerMember,
     runsPerMonth: i.runsPerMonth, snapshotVersion,
   };
+  // Review fix (#3): clamp to the engine's cap BEFORE Array.from — a hostile memberCount (e.g. 1e9) would
+  // otherwise hang the main thread (or RangeError) building millions of objects crewForecast then discards.
+  const count = Math.min(MAX_CREW_MEMBERS, Math.max(1, Math.floor(i.memberCount) || 1));
   return {
-    agents: Array.from({ length: Math.max(1, Math.floor(i.memberCount)) }, () => ({ ...member })),
+    agents: Array.from({ length: count }, () => ({ ...member })),
     sharedTranscriptGrowthPerStep: i.sharedTranscriptGrowthPerStep,
     runsPerMonth: i.runsPerMonth,
     snapshotVersion,
