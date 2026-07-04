@@ -3,7 +3,7 @@
 // This file grows across Phase 0A Tasks 4-9; each section is appended, never rewritten.
 // Owner: TokenTally engine. Version: Phase 0A.
 
-import type { BillingUnit, PriceTier } from '@/types/registry';
+import type { BillingUnit, PriceTier, CacheSpec, CacheArchetype } from '@/types/registry';
 
 export type RawEntry = Record<string, unknown>;
 
@@ -142,4 +142,69 @@ export function parseTiers(e: RawEntry, unit: BillingUnit): PriceTier[] {
     });
   }
   return tiers;
+}
+
+// A2/A8: cache-spec resolution. In-scope text cache fields only: read
+// (`cache_read_input_token_cost`), write (`cache_creation_input_token_cost`), and the DeepSeek
+// cache-hit read (`input_cost_per_token_cache_hit`). Audio-cache fields
+// (`cache_*_input_audio_token_cost`) are out of scope: audio is deferred, so they are ignored here.
+// The above-200k tiered cache read/write are wired separately via parseTiers.
+//
+// Archetype is provider-shaped: Anthropic/Bedrock expose an explicit breakpoint + TTL
+// (`breakpoint_ttl`); Gemini/Vertex cache implicitly by default (`automatic`) and only expose a
+// `storage` model when an explicit cache-creation (storage) rate is present; everything else is
+// implicit/automatic.
+const BREAKPOINT_PROVIDERS = /anthropic|bedrock/;
+const STORAGE_SIGNAL_PROVIDERS = /gemini|vertex/;
+
+function archetypeFor(provider: string, e: RawEntry): CacheArchetype {
+  if (BREAKPOINT_PROVIDERS.test(provider)) return 'breakpoint_ttl';
+  if (STORAGE_SIGNAL_PROVIDERS.test(provider)) {
+    return num(e.cache_creation_input_token_cost) !== null ? 'storage' : 'automatic';
+  }
+  return 'automatic';
+}
+
+export function resolveCacheSpec(e: RawEntry, provider: string): CacheSpec | null {
+  const readRaw = num(e.cache_read_input_token_cost) ?? num(e.input_cost_per_token_cache_hit);
+  const writeRaw = num(e.cache_creation_input_token_cost);
+  const supported = e.supports_prompt_caching === true || readRaw !== null || writeRaw !== null;
+  if (!supported) return null;
+  const archetype = archetypeFor(provider, e);
+  // A4: an insane (negative / ~1000x) raw cache rate is omitted, never trusted as a real price.
+  const read = readRaw !== null && sanePrice(readRaw, 'per_token') ? readRaw : null;
+  const write = writeRaw !== null && sanePrice(writeRaw, 'per_token') ? writeRaw : null;
+  if (read === null && write === null) {
+    // Caching is supported but no usable rate exists: flag rateUnavailable, not free.
+    return { archetype, rateUnavailable: true, readUnavailable: false };
+  }
+  return {
+    archetype,
+    ...(read !== null ? { cacheReadPerMToken: read * PER_MILLION } : {}),
+    ...(write !== null ? { cacheWritePerMToken: write * PER_MILLION } : {}),
+    rateUnavailable: false,
+    // A2: a write rate with no read rate must never be read as $0 downstream.
+    readUnavailable: write !== null && read === null,
+  };
+}
+
+// A6: whitelist mode to the Phase-0 scope. A row whose mode is absent or outside the whitelist is a
+// pricing bucket or a deferred modality (image_generation / audio_* / rerank / moderation), dropped
+// and counted. A priced-at-zero row with an in-scope mode is a real free model, kept and flagged.
+const ALLOWED_MODES = new Set<string>(['chat', 'completion', 'responses', 'embedding']);
+
+export function classifyRow(_canonicalId: string, e: RawEntry): { drop: boolean; freeTier: boolean } {
+  if (typeof e.mode !== 'string' || !ALLOWED_MODES.has(e.mode)) {
+    return { drop: true, freeTier: false };
+  }
+  const inTok = num(e.input_cost_per_token);
+  const outTok = num(e.output_cost_per_token);
+  const hasAnyUnit =
+    inTok !== null ||
+    num(e.input_cost_per_character) !== null ||
+    num(e.input_cost_per_second) !== null ||
+    num(e.input_dbu_cost_per_token) !== null;
+  if (!hasAnyUnit) return { drop: true, freeTier: false }; // in-scope mode but no price = junk
+  const freeTier = inTok === 0 && (outTok === 0 || outTok === null);
+  return { drop: false, freeTier };
 }
