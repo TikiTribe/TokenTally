@@ -78,3 +78,28 @@ export function normalizeOutputPrice(e: RawEntry, unit: BillingUnit): number | n
     }
   }
 }
+
+// A1: key parsing is provider-semantic, not positional. Region routes (bedrock/vertex/azure)
+// put the region in the deployment and the model in the trailing segment; aggregators put
+// their route in the FIRST segment and the org-namespaced model in the rest. The deployment
+// is part of the primary key, so divergent-price SKUs across regions/aggregators stay distinct.
+const AGGREGATOR_PROVIDERS = new Set([
+  'openrouter', 'deepinfra', 'together_ai', 'fireworks_ai', 'vercel_ai_gateway',
+  'anyscale', 'novita', 'featherless_ai', 'lambda_ai', 'aiml',
+]);
+
+export function parseKey(
+  rawKey: string,
+  e: RawEntry,
+): { canonicalId: string; deployment: string; provider: string } {
+  const provider = typeof e.litellm_provider === 'string' ? e.litellm_provider : 'unknown';
+  const parts = rawKey.split('/');
+  if (parts.length === 1) return { canonicalId: rawKey, deployment: provider, provider };
+  // Bracket indexing under noUncheckedIndexedAccess yields `string | undefined`, guarded with
+  // `??`. (Array.prototype.at is ES2022; the project lib targets ES2020, so avoid it here.)
+  const head = parts[0] ?? '';
+  if (AGGREGATOR_PROVIDERS.has(head)) {
+    return { canonicalId: parts.slice(1).join('/'), deployment: head, provider };
+  }
+  return { canonicalId: parts[parts.length - 1] ?? rawKey, deployment: parts.slice(0, -1).join('/'), provider };
+}
