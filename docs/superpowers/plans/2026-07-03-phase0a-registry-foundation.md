@@ -61,6 +61,79 @@ Raw-entry shape (from the real file, the fields this plan reads):
 
 ---
 
+## PREMORTEM AMENDMENTS (v2, AUTHORITATIVE, read first, override the tasks below on conflict)
+
+The plan premortem (2026-07-03, four perspectives) found real defects. Apply every amendment. Where an amendment conflicts with a task's code or test, the amendment wins. Add the enumerated tests test-first.
+
+**A1 — `parseKey` (Task 5) is provider-semantic, not positional.** Region routes (bedrock/vertex/azure) put the region in the deployment; aggregators (openrouter, deepinfra, together_ai, fireworks_ai, vercel_ai_gateway, anyscale, novita, featherless_ai, lambda_ai, aiml) put their route in the first segment and the org-namespaced model in the rest. Replace the whole function:
+
+```ts
+const AGGREGATOR_PROVIDERS = new Set([
+  'openrouter','deepinfra','together_ai','fireworks_ai','vercel_ai_gateway',
+  'anyscale','novita','featherless_ai','lambda_ai','aiml',
+]);
+export function parseKey(rawKey: string, e: RawEntry): { canonicalId: string; deployment: string; provider: string } {
+  const provider = typeof e.litellm_provider === 'string' ? e.litellm_provider : 'unknown';
+  const parts = rawKey.split('/');
+  if (parts.length === 1) return { canonicalId: rawKey, deployment: provider, provider };
+  const head = parts[0] ?? '';
+  if (AGGREGATOR_PROVIDERS.has(head)) {
+    return { canonicalId: parts.slice(1).join('/'), deployment: head, provider };
+  }
+  return { canonicalId: parts.at(-1) ?? rawKey, deployment: parts.slice(0, -1).join('/'), provider };
+}
+```
+Replace the Task 5 test with a table covering: `bedrock/us-gov-east-1/anthropic.claude-3-5-sonnet` → (`anthropic.claude-3-5-sonnet`,`bedrock/us-gov-east-1`); `bedrock/anthropic.claude-3-5-sonnet` → (`anthropic.claude-3-5-sonnet`,`bedrock`); `vertex_ai/gemini-1.5-pro` → (`gemini-1.5-pro`,`vertex_ai`); `openrouter/deepseek/deepseek-r1` → (`deepseek/deepseek-r1`,`openrouter`); bare `gpt-4o` → (`gpt-4o`,`openai`).
+
+**A2 — `resolveCacheSpec` archetype (Task 7): Gemini defaults to `automatic` (implicit); `storage` only on an explicit-cache signal.**
+```ts
+function archetypeFor(provider: string, e: RawEntry): CacheArchetype {
+  if (/anthropic|bedrock/.test(provider)) return 'breakpoint_ttl';
+  if (/gemini|vertex/.test(provider)) {
+    return num(e.cache_creation_input_token_cost) !== null ? 'storage' : 'automatic';
+  }
+  return 'automatic';
+}
+```
+Call `archetypeFor(provider, e)`. Keep the existing Gemini test (`automatic`). Add a write-only test: `{ cache_creation_input_token_cost: 3.75e-6 }` on `anthropic` → `cacheWritePerMToken` set, `cacheReadPerMToken` undefined, and add a `readUnavailable: true` flag to `CacheSpec` so the cost core cannot read undefined as free. Set `readUnavailable` whenever a write rate exists but no read rate.
+
+**A3 — Align dedupe and query keys to `(canonicalId, deployment)`.** Task 9 dedupe key drops price: `` `${m.canonicalId}|${m.deployment}` ``. If two records share that key with different prices, keep the first and increment a logged `conflictCount` (a genuine upstream anomaly). `loadRegistry` (Task 11) throws on a duplicate `byKey`. Add a test: two records same (id,deployment) different price → one survivor (first), and a determinism test (two input orders → identical result).
+
+**A4 — Validate before shipping (supply chain).** In `buildSnapshot`, before normalizing: assert the parsed root is a plain object; skip/ignore any `sample_spec` meta key. Add `sanePrice`:
+```ts
+const MAX_RAW_RATE = 1e-2; // per raw token/char unit, pre-1e6; catches negative and ~1000x errors
+function sanePrice(v: number | null, unit: BillingUnit): boolean {
+  if (v === null) return true;                 // absent is handled elsewhere
+  if (v < 0) return false;
+  if (unit === 'per_token' || unit === 'per_character') return v <= MAX_RAW_RATE;
+  return Number.isFinite(v);
+}
+```
+In `normalizeInputPrice`/`normalizeOutputPrice`/`resolveCacheSpec`, a present-but-insane raw value makes the input invalid (row drops, counted) or the field omitted. Add tests: negative, `Infinity`, `"2.5e-6"` string, and a `5e-3` (1000x) rate all drop the row. Build script asserts `/^[0-9a-f]{40}$/.test(PINNED_COMMIT)` and throws otherwise; compute `sha256` of the raw response body and compare to a committed `EXPECTED_SNAPSHOT_SHA256` (fail on mismatch); write the artifact atomically (temp file + rename).
+
+**A5 — Unit-aware pricing.** `normalizeOutputPrice(e, unit)` mirrors the input switch: `per_token`→`output_cost_per_token`×1e6, `per_character`→`output_cost_per_character`×1e6, `per_second`→`output_cost_per_second`, `dbu`→`output_dbu_cost_per_token`. `parseTiers(e, unit)` reads `input_cost_per_character_above_${t}_tokens` when unit is `per_character`, else the token field; scale by 1e6 only for token/char units. `detectBillingUnit`: `per_character` wins when present (Vertex's real billing unit); document and test the `{per_char + per_token}` precedence. Add tests: `output_cost_per_character` produces a non-null output; a per-character 128k tier is read in the per-character unit; a per_second value is not ×1e6.
+
+**A6 — Whitelist `mode` (implements the Phase-0 scope cut).** In `classifyRow`:
+```ts
+const ALLOWED_MODES = new Set(['chat','completion','responses','embedding']);
+if (typeof e.mode !== 'string' || !ALLOWED_MODES.has(e.mode)) return { drop: true, freeTier: false };
+```
+This drops `image_generation`/`audio_transcription`/`audio_speech`/`rerank`/`moderation`. Add a test per non-scope mode asserting `drop: true`.
+
+**A7 — Sanitize ids (latent stored-XSS defense for the UI phase).** In `normalizeEntry`, drop-and-count any record whose `canonicalId` or `deployment` fails `/^[A-Za-z0-9._:@/-]+$/`; derive `displayName` from the sanitized `canonicalId`. Add a test: a `__proto__` key and a `<script>`-bearing key both drop.
+
+**A8 — Cache-field scope honesty.** Audio-cache fields (`cache_*_input_audio_token_cost`) are out of scope (audio is deferred). Rename Task 7's "seven fields" to "the in-scope text cache fields (read, write, DeepSeek cache-hit) plus the above-200k tiered read/write wired via `parseTiers`." State the audio scope cut in a comment.
+
+**A9 — Typecheck gates.** Task 12 `test:ci` runs `tsc --noEmit` before Vitest. Add `"typecheck": "tsc --noEmit"` and `"test:ci": "tsc --noEmit && vitest run --reporter=dot --coverage"`. Fix every strict-mode access: use `parts.at(0) ?? ''`, guard array indexing (`noUncheckedIndexedAccess` is on).
+
+**A10 — Reproducible install.** Strip every `^`/`~` in `package.json` to the exact version resolved in `package-lock.json` (read the lockfile for each). Add a guard step: `grep -E '"\^|"~' package.json` must return nothing. Use `npm ci` (not `npm install`) after pinning. Do not change `vercel.json` install command yet (Phase 0D).
+
+**A11 — Determinism + robust assertions.** Sort `snap.models` by `(canonicalId, deployment)` before writing (build script). Replace every test `.find(...)!` with `const x = ...; expect(x).toBeDefined();` then use `x!`. Expand the Task 10 golden fixture to ~20 rows covering: per_second, dbu, a 0/0 free row, a both-units row, a 128k tier row, a 200k tiered-cache row, a reasoning-token row, a DeepSeek cache-hit row, a supports-caching-no-rate row, a duplicate collision, an aggregator 3-segment row, an image_generation row (must drop), and a `sample_spec` meta key (must be ignored); assert exact `droppedCount` and surviving count.
+
+**A12 — Unify the constant.** Use one `PER_MILLION` in `normalize.ts`; delete the duplicate `PER_M` from Task 6.
+
+---
+
 ### Task 1: Vitest harness and pinned toolchain
 
 **Files:**
