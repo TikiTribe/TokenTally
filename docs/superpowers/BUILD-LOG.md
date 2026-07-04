@@ -71,8 +71,8 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | Phase | Scope | Plan | Premortem | Impl | Merged | State |
 |-------|-------|------|-----------|------|--------|-------|
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
-| 0A | Test harness + types + Registry | written+amended | done (A1-A12) | Tasks 1-12 green (74 tests) | no | IN PROGRESS ~90% (review running) |
-| 0B | Tokenizer Engine | not written | - | - | - | QUEUED |
+| 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
+| 0B | Tokenizer Engine | in progress | - | - | - | IN PROGRESS |
 | 0C | Caching + Cost Core | not written | - | - | - | QUEUED |
 | 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
@@ -126,33 +126,51 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
   synthetic per_second+chat row to exercise the raw-passthrough path.
 - ESLint is non-functional repo-wide (flat-config migration owed to 0D; see decision log). Until then the lint gate
   is substituted by tsc-strict + tests + a banned-pattern grep + the security review.
+- 0A adversarial review (3 lenses × verify, 15 agents) confirmed 6 real defects, ALL fixed before merge (commit
+  e9d9e39): (1) the A7 id-firewall skipped the `provider` field (litellm_provider) — a poisoned provider could carry
+  stored-XSS/proto-pollution into a record; now sanitized like id/deployment. (2) reasoning-token rate and (3) ALL
+  parseTiers rates bypassed the A4 sanePrice guard — a poisoned/typo rate scaled x1e6 into a mis-bill; now guarded.
+  (4) `PriceTier.inputPrice` was 0 for a cache/output-only tier (reads as free above the threshold); now nullable
+  = "use base rate", mirroring outputPrice. (5+6) two false-green test gaps (dbu raw-passthrough, divergent-output
+  collision) closed. LESSON: apply the price-sanity guard to EVERY price surface uniformly; sanitize EVERY DOM-bound/
+  map-key field uniformly. Don't leave a secondary field (reasoning, tiers, provider) out of a guard the rest of the
+  file enforces — reviewers find the one gap. The review workflow (3 parallel finders → adversarial per-finding
+  verify, refute-by-default) rejected 4 non-defects (non-occurring data, covered-elsewhere) and kept only manifest ones.
+- Vercel builds a preview on ANY pushed branch/PR (not just the integration branch); PR #5 into the integration branch
+  got a green Vercel preview + "Vercel Agent Review" (NEUTRAL) + preview-comments checks. Production stays main-only.
+  So preview coverage is broader than assumed — every phase PR is deployable-verified, not just phase boundaries.
+- SUPPLY CHAIN / GO-LIVE BLOCKER: GitHub reports 10 Dependabot vulns on `main` (2 critical, 6 high, 2 moderate) as of
+  2026-07-04. These are the live MVP's deps and MUST be resolved before the final integration->main go-live (QC.1: no
+  high/critical vulns at release). Handle in 0D (or a dedicated dependency-hardening pass) before go-live; audit via
+  `npm audit` + the Dependabot dashboard. Do NOT bump deps on `main` directly (main is frozen); fix on the integration
+  line and carry through the go-live PR.
 
-## RESUME HERE (checkpoint, 2026-07-03 — Tasks 1-12 green, review running)
+## RESUME HERE (checkpoint, 2026-07-04 — Phase 0A DONE + merged, starting 0B)
 
-State: on branch `feat/phase-0a-registry`. ALL Phase 0A implementation (Tasks 1-12) is committed and GREEN.
-Verified: `npm run test:ci` = 74 tests pass across 11 files (tsc --noEmit + vitest --coverage), exit 0;
-registry files at 100% statement / ~90% branch coverage; `npm run build` pending final re-run. Working tree
-clean except pre-existing untracked clutter (.serena/*, claudedocs/*, *.docx, investigate-failures.ts,
-test-execution.ts) and `.serena/project.yml` (not ours). Integration branch `feat/realtime-determinism-engine`
-exists at 5d4694d (the premortem-amendments commit); 0A is ahead by the 12-task implementation.
+State: **Phase 0A is DONE and merged.** PR #5 (`feat/phase-0a-registry` -> `feat/realtime-determinism-engine`)
+merged as commit 28b0f9a; phase branch deleted (local + remote); Vercel preview built green. Integration branch
+`feat/realtime-determinism-engine` now carries the full registry (84 tests, tsc clean, build green).
 
-Tasks 7-12 landed (commits 9061b42, d105a92, 6af34a7, 038eb69, ae754c0, 2eb2539): resolveCacheSpec+classifyRow
-(A2/A4/A6), normalizeEntry/normalizeCatalog (A7 id sanitization + proto-pollution drop), dedupeRecords (A3),
-buildSnapshot + guarded build script (A4/A11, network NOT run, placeholders kept, no generated.json), query API
-(A3 dup-key throw), CI gate + coverage note (A9/A10/A12).
+Now on branch **`feat/phase-0b-tokenizer`** (off integration @ 28b0f9a). Working tree clean except pre-existing
+untracked clutter (.serena/*, claudedocs/*, *.docx, investigate-failures.ts, test-execution.ts) and .serena/project.yml.
 
-IN FLIGHT: adversarial review workflow (appsec + correctness + test-quality, each finding verified) running in
-background (run wf_2db63ad5-6b4). ESLint deferred to 0D (see decision log).
+Phase 0B = Tokenizer Engine. It consumes `resolveFamily`, `ModelRecord`, and the query API from 0A. Scope (from the
+0A plan's deferral list + spec v1.2.1): per-family tokenizer loading (js-tiktoken for OpenAI; Transformers.js/local
+for open families), a resolver table mapping TokenizerFamily -> tokenizer, a worker boundary, a WASM-free proof
+(grep dist — js-tiktoken + Transformers.js tokenization are pure JS, enabling a strict CSP without wasm-unsafe-eval;
+VERIFY), an egress test (no network at runtime), and the per-family Exact spot-check that promotes accuracyTier
+`exact_unverified` -> `exact`. Tokenizer Option A: Claude uses a local estimate (stays `estimate`).
 
-REMAINING for Phase 0A close-out:
-1. Ingest the review workflow result; fix every CONFIRMED finding test-first; keep the suite green (full test:ci
-   + tsc after each fix). Re-run `npm run build`.
-2. PR `feat/phase-0a-registry` -> `feat/realtime-determinism-engine` (NEVER main); merge on green; delete the phase branch.
-3. Push the integration branch (backup + Vercel preview at the phase boundary).
-4. Mark 0A DONE in the phase table; update lessons.
+NEXT ACTIONS (0B loop):
+1. Read spec v1.2.1 (docs/superpowers/specs/2026-07-03-realtime-determinism-engine-design.md) tokenizer sections.
+2. Write Plan 0B (superpowers:writing-plans) decomposed test-first, always-green (new `src/tokenizer` modules only).
+3. Adversarial premortem (full 6-perspective for the sub-spec design choices; focused for the mechanical plan;
+   appsec lens never skipped — WASM/CSP/egress/supply-chain of the tokenizer deps). Fix ALL findings.
+4. Implement test-first; full test:ci + tsc green after each task (and after ANY subagent work, before trusting it).
+5. Security + code review (workflow: appsec/correctness/test-quality → adversarial verify). Fix confirmed findings.
+6. PR `feat/phase-0b-tokenizer` -> integration (NEVER main); merge on green; delete branch.
+7. Update this log; proceed to 0C (Caching + Cost Core), 0D (Deploy/security infra incl ESLint flat-config BEFORE
+   Phase 2, size-limit, refresh Action, dependency-vuln remediation), then Phases 1-4.
 
-THEN: write Plan 0B (Tokenizer Engine) from spec v1.2.1; premortem (full 6-perspective for the sub-spec, focused
-for the mechanical plan; appsec lens never skipped); fix findings; implement test-first; continue the loop through
-0C, 0D (incl the ESLint flat-config migration BEFORE Phase 2), then Phases 1-4, ending with headed Playwright E2E
-over every function, an appsec pass, and the single final integration->main go-live PR, then delete all phase branches.
-(main is NOT touched until that final go-live. Push the integration branch at phase boundaries for preview deploys.)
+END: headed Playwright E2E over every function, appsec pass, resolve the 10 Dependabot vulns, then the SINGLE final
+integration->main go-live PR (flips production), then delete all phase branches. main is untouched until that PR.
