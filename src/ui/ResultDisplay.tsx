@@ -42,6 +42,12 @@ function DowResult({ r }: { r: DenialOfWalletResult }): JSX.Element {
   }
   return (
     <div>
+      {/* F-SEC-2/P2-A20: the guardrail travels WITH the figure — disclaimer + VDP link render before the number,
+          not only in the (unmountable) input panel. */}
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{r.disclaimer}</p>
+      <p style={{ fontSize: '0.85rem' }}>
+        Report a vulnerability: <a href={r.vdpUrl} style={{ color: 'var(--primary)' }} rel="noreferrer">{r.vdpUrl}</a>
+      </p>
       <output aria-live="polite" style={{ display: 'block', fontSize: '1.5rem', fontWeight: 700 }}>
         Worst-case exposure: {money(r.worstCaseMonthly)} / month
       </output>

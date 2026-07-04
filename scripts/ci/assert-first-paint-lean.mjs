@@ -16,7 +16,7 @@ export function findEngineLeaks(moduleIds) {
 
 // Only run as a CLI, not when imported by the unit test.
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const report = 'dist/.first-paint-entry-modules.json';
+  const report = '.first-paint-entry-modules.json'; // repo root, never served (security F3)
   if (!existsSync(report)) {
     console.error(
       `assert-first-paint-lean: ${report} missing — run \`npm run build\` (the firstPaintLeanGuard plugin writes it).`,

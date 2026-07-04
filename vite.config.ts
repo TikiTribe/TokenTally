@@ -1,20 +1,23 @@
 /// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { writeFileSync } from 'node:fs';
 import path from 'path';
 
-// P2-A7: emit the entry chunk's REAL (pre-minification) module ids so assert-first-paint-lean.mjs can gate
+// P2-A7: write the entry chunk's REAL (pre-minification) module ids so assert-first-paint-lean.mjs can gate
 // on them — the identifier grep it replaces is blind to esbuild minification. Non-throwing: writes the
-// report; the CI script is the gate (so a leak fails a dedicated step with a clear message, not an opaque
-// build throw).
+// report; the CI script is the gate. Security F3 fix: write to a REPO-ROOT path (NOT dist/, so it is never
+// served) and strip the absolute prefix to repo-relative ids (no dev-home-dir disclosure).
 function firstPaintLeanGuard(): Plugin {
   return {
     name: 'first-paint-lean-guard',
-    generateBundle(_options, bundle) {
+    writeBundle(_options, bundle) {
+      const root = process.cwd();
       const entry = Object.values(bundle).find((c) => c.type === 'chunk' && c.isEntry);
-      const moduleIds = entry && entry.type === 'chunk' ? Object.keys(entry.modules) : [];
-      // emitFile lets Rollup write it into outDir regardless of whether dist/ exists yet.
-      this.emitFile({ type: 'asset', fileName: '.first-paint-entry-modules.json', source: JSON.stringify(moduleIds) });
+      const moduleIds = (entry && entry.type === 'chunk' ? Object.keys(entry.modules) : []).map((id) =>
+        id.startsWith(root) ? id.slice(root.length) : id,
+      );
+      writeFileSync(path.join(root, '.first-paint-entry-modules.json'), JSON.stringify(moduleIds));
     },
   };
 }

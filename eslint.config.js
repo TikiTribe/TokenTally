@@ -10,7 +10,7 @@ import security from 'eslint-plugin-security';
 import react from 'eslint-plugin-react';
 
 // P2: the new UI is strictly linted (the old MVP island was deleted in Phase 2A).
-const UI_GLOBS = ['src/store/**/*.{ts,tsx}', 'src/shell/**/*.{ts,tsx}', 'src/modes/**/*.{ts,tsx}', 'src/ui/**/*.{ts,tsx}', 'src/hooks/**/*.{ts,tsx}', 'src/App.tsx', 'src/main.tsx'];
+const UI_GLOBS = ['src/store/**/*.{ts,tsx}', 'src/shell/**/*.{ts,tsx}', 'src/modes/**/*.{ts,tsx}', 'src/ui/**/*.{ts,tsx}', 'src/viz/**/*.{ts,tsx}', 'src/hooks/**/*.{ts,tsx}', 'src/App.tsx', 'src/main.tsx'];
 
 export default [
   { ignores: ['dist/**', 'coverage/**', 'node_modules/**', '**/*.d.ts', 'test-*.ts', 'investigate-*.ts', 'test-calculations.ts', 'test-execution.ts'] },
