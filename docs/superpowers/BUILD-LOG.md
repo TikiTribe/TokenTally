@@ -74,7 +74,7 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
 | 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
 | 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | **YES (PR #7, b08760a)** | **DONE** |
-| 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) | - | - | IN PROGRESS (implementing) |
+| 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) | Task 1 ESLint DONE; Tasks 2-10 pending | no | IN PROGRESS (~15%) |
 | 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
@@ -252,11 +252,29 @@ from the pure engine 0A-0C). Full inherited scope (from spec §5.9/§7 + the 0A-
 - **Real Exact-usage capture** (0B B1) needs the OWNER's OpenAI/Anthropic API key — OUT OF BAND, owner action;
   until then OpenAI stays exact_unverified. Flag it; do not fabricate.
 
-NEXT ACTIONS (0D loop): read spec §5.9/§7; write Plan 0D (superpowers:writing-plans) — note 0D is heavily
-deploy/CI-coupled, so decompose into what's locally verifiable (ESLint config, CSP header in vercel.json,
-size-limit config, Playwright specs, Transformers.js adapter) vs what needs a live deploy; premortem it
-(appsec lens is the CORE here — CSP bypass, WASM, egress, supply chain); fix findings; implement test-first;
-security + code review; PR feat/phase-0d-deploy-security -> integration (NEVER main); merge; then Phases 1-4.
+0D STATUS: Plan 0D written + amended (D1-D16) at docs/superpowers/plans/2026-07-04-phase0d-deploy-security.md;
+6-perspective appsec premortem done (37 findings). Probe evidence in scratchpad/0d-probe-notes.md.
+**Task 1 (ESLint flat-config migration) DONE + committed (721e97f):** eslint.config.js green repo-wide,
+.eslintrc.json deleted, lint script fixed, globals+@eslint/js pinned exact, 189 tests + tsc still green.
+
+NEXT ACTIONS (0D remaining, apply D1-D16; the §13 CSP/WASM/egress floor is NOT declared in 0D — re-verified at
+Phase 2/go-live per D1):
+- Task 2/3 (config): vercel.json — strict CSP with `style-src 'self' 'unsafe-inline'` (D3), HSTS WITHOUT preload
+  (D11), X-XSS-Protection 0, installCommand `npm ci`; vite.config.ts `build.assetsInlineLimit: 0`; .nvmrc + engines
+  `>=22` (D10, NOT >=24<25). Verify build green.
+- Task 4 (D9): size-limit per-chunk (first-paint tight; separate lazy-tokenizer budget) — measure then set.
+- Task 5/6: CI workflow (.github/workflows/ci.yml) with a HARD skip/only guard (D6: vitest json + grep .skip/.only),
+  npm audit --audit-level=high (D8), typecheck:scripts (D12), tsconfig.scripts.json; assert-wasm-free.mjs = precise
+  magic-bytes scan + 2 unit tests (D4); POLICY_REVERIFIED staleness real comparison (D16); +-5% copy grep gate (D15);
+  pin Actions by SHA + npm ci --ignore-scripts + npm audit signatures (D13).
+- Task 7 (D8): remediate the 4 SHIPPED vulns (jsPDF/dompurify/lodash) via real upgrades + a PDF/CSV export smoke test.
+- Task 8 (env-gated, D2/D3/D5): serve-with-csp.mjs PARSES vercel.json (single-source) + Playwright CSP+egress specs
+  (worker-aware, chart/export-driven) — land specs + wire CI even if browsers can't install in-sandbox.
+- Task 9 (decision, D14): adversarial-premortem-single the Approx fork -> likely AMEND §13 cut line to
+  OpenAI-Exact + Estimate-only, record a signed §12 waiver; do NOT register Transformers.js without a runtime WASM-free proof.
+- RUNBOOK (owner/config, D13): gh api branch-protection on main+integration; Vercel "wait for CI" + Node version; the
+  live curl CSP smoke check; the real Exact-usage capture (owner API key). Record, do not fake.
+Then security + code review of the 0D diff; PR feat/phase-0d-deploy-security -> integration (NEVER main); merge; then Phases 1-4.
 END: after all phases + headed Playwright E2E + appsec pass + vuln remediation, the SINGLE final
 integration->main go-live PR flips production, then delete all phase branches.
 
