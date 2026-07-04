@@ -9,7 +9,12 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "scrape-pricing": "npx tsx scripts/scrape-pricing.ts",
-    "update-pricing": "npx tsx scripts/update-pricing-from-csv.ts"
+    "update-pricing": "npx tsx scripts/update-pricing-from-csv.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "test:ci": "tsc --noEmit && vitest run --reporter=dot --coverage",
+    "build-registry": "tsx scripts/registry/buildRegistry.ts"
   },
   "dependencies": {
     "jspdf": "3.0.3",
@@ -20,24 +25,27 @@
     "zustand": "4.5.5"
   },
   "devDependencies": {
-    "@types/cheerio": "^0.22.35",
-    "@types/node-fetch": "^2.6.11",
+    "@types/cheerio": "0.22.35",
+    "@types/node-fetch": "2.6.11",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@typescript-eslint/eslint-plugin": "8.15.0",
     "@typescript-eslint/parser": "8.15.0",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "4.7.0",
+    "@vitest/coverage-v8": "2.1.9",
     "autoprefixer": "10.4.20",
-    "cheerio": "^1.0.0-rc.12",
-    "csv-parse": "^5.5.6",
+    "cheerio": "1.0.0-rc.12",
+    "csv-parse": "5.6.0",
     "eslint": "9.39.0",
     "eslint-plugin-react": "7.37.2",
     "eslint-plugin-react-hooks": "5.0.0",
     "eslint-plugin-security": "3.0.1",
-    "node-fetch": "^3.3.2",
+    "node-fetch": "3.3.2",
     "postcss": "8.4.49",
     "tailwindcss": "3.4.15",
+    "tsx": "4.19.2",
     "typescript": "5.6.3",
-    "vite": "^6.4.1"
+    "vite": "6.4.1",
+    "vitest": "2.1.9"
   }
 }

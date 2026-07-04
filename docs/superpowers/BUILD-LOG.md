@@ -71,10 +71,10 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | Phase | Scope | Plan | Premortem | Impl | Merged | State |
 |-------|-------|------|-----------|------|--------|-------|
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
-| 0A | Test harness + types + Registry | written | pending | not started | no | PLAN READY |
+| 0A | Test harness + types + Registry | written+amended | done (A1-A12) | Tasks 1-12 green (74 tests) | no | IN PROGRESS ~90% (review running) |
 | 0B | Tokenizer Engine | not written | - | - | - | QUEUED |
 | 0C | Caching + Cost Core | not written | - | - | - | QUEUED |
-| 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action) | not written | - | - | - | QUEUED |
+| 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
 | 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | QUEUED |
@@ -86,6 +86,16 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 - 2026-07-03: Registry keyed on (canonical model, deployment). [spec D9]
 - 2026-07-03: Sole decider = owner; F1 owner/presenter residual explicitly accepted. [spec §13]
 - 2026-07-03: Phase 0 decomposed into 0A-0D (independently testable). [plan scope check]
+- 2026-07-03: **ESLint deferred to 0D.** ESLint 9.39 is installed but the repo has only a legacy
+  `.eslintrc.json` (no flat `eslint.config.js`), and the installed plugins (eslint-plugin-security 3.0.1
+  etc.) ship flat-only configs that the legacy validator rejects even under `ESLINT_USE_FLAT_CONFIG=false`.
+  So `npm run lint` is broken on main already, and restoring it is a repo-wide flat-config migration =
+  0D infra. Premortem (single, proportionate): strongest risk is deferring a security control (eslint-
+  plugin-security) on a web-facing app; compensated because 0A is pure data-normalization (no DOM/network/
+  user-regex), its real security surface (proto-pollution A7, price sanity A4, id sanitization, supply-chain
+  hash) is handled in code AND independently reviewed now, and a banned-pattern grep on the 0A diff is clean
+  (only a legitimate console.log in the build-script CLI). CONSTRAINT: 0D must restore ESLint BEFORE Phase 2
+  (first DOM/injection surface). [genuine fork, evidence-backed]
 
 ## Lessons carried forward (updated as phases complete)
 
@@ -98,11 +108,51 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 - `js-tiktoken` and Transformers.js *tokenization* are pure JS (no WASM), so a strict CSP without
   `wasm-unsafe-eval` is achievable IF the build is proven WASM-free (grep dist). Verify in 0B/0D.
 - A CSP cannot be validated in jsdom; it needs a Playwright test under the served header. [C2]
+- Real TokenCost tier field names are ABBREVIATED: `input_cost_per_token_above_128k_tokens` / `_above_200k_tokens`
+  (and per-character variants), not the numeric `128000`. Plan Task 6 mismatched test (`128k`) vs impl (`128000`);
+  fixed in parseTiers. When planning, keep test fixtures and impl field-name construction consistent with the real schema.
+- A dispatched implementation subagent committed a task while its tests were RED (parseTiers). ALWAYS run the full
+  suite + `tsc --noEmit` after a subagent implementation and BEFORE trusting/merging its commits. Add a mandatory
+  green-verification gate after every subagent implementation phase.
+- Tasks 7-12 were implemented inline (not delegated) because they are sequential (each appends to normalize.ts),
+  amendment-laden, and high-judgment; TDD red->green per test with a full-suite+tsc gate after each caught nothing
+  regressing. The build script (`scripts/registry/buildRegistry.ts`) is NOT in any tsconfig `include` (root tsconfig
+  is src-only; test files are excluded too), so `tsc --noEmit` does not typecheck it — verified it separately via a
+  throwaway `tsconfig.verify-scripts.json` (extends root, includes scripts+src, types:[node]) = clean. 0D's CI should
+  add a scripts typecheck permanently. Neither scripts nor *.test.ts are tsc-gated today; runtime Vitest is the net.
+- Golden-fixture counting is exact and testable: a ~21-row fixture yielded 16 survivors / 3 drops / 1 ignored meta /
+  1 divergent-price collision; asserting the exact counts is a strong regression tripwire. per_second/dbu survivors
+  need an in-scope mode (chat) since real per_second models are usually audio (dropped by A6) — the fixture uses a
+  synthetic per_second+chat row to exercise the raw-passthrough path.
+- ESLint is non-functional repo-wide (flat-config migration owed to 0D; see decision log). Until then the lint gate
+  is substituted by tsc-strict + tests + a banned-pattern grep + the security review.
 
-## Next action
+## RESUME HERE (checkpoint, 2026-07-03 — Tasks 1-12 green, review running)
 
-1. Focused adversarial premortem on Plan 0A (docs/superpowers/plans/2026-07-03-phase0a-registry-foundation.md); fix findings on the integration branch.
-2. Create `feat/phase-0a-registry` off the integration branch; implement 0A test-first.
-3. Lint + typecheck + tests green; security + code review; PR into integration branch; merge; delete branch.
-4. Update this log; proceed to Plan 0B.
-(main is NOT touched until final go-live.)
+State: on branch `feat/phase-0a-registry`. ALL Phase 0A implementation (Tasks 1-12) is committed and GREEN.
+Verified: `npm run test:ci` = 74 tests pass across 11 files (tsc --noEmit + vitest --coverage), exit 0;
+registry files at 100% statement / ~90% branch coverage; `npm run build` pending final re-run. Working tree
+clean except pre-existing untracked clutter (.serena/*, claudedocs/*, *.docx, investigate-failures.ts,
+test-execution.ts) and `.serena/project.yml` (not ours). Integration branch `feat/realtime-determinism-engine`
+exists at 5d4694d (the premortem-amendments commit); 0A is ahead by the 12-task implementation.
+
+Tasks 7-12 landed (commits 9061b42, d105a92, 6af34a7, 038eb69, ae754c0, 2eb2539): resolveCacheSpec+classifyRow
+(A2/A4/A6), normalizeEntry/normalizeCatalog (A7 id sanitization + proto-pollution drop), dedupeRecords (A3),
+buildSnapshot + guarded build script (A4/A11, network NOT run, placeholders kept, no generated.json), query API
+(A3 dup-key throw), CI gate + coverage note (A9/A10/A12).
+
+IN FLIGHT: adversarial review workflow (appsec + correctness + test-quality, each finding verified) running in
+background (run wf_2db63ad5-6b4). ESLint deferred to 0D (see decision log).
+
+REMAINING for Phase 0A close-out:
+1. Ingest the review workflow result; fix every CONFIRMED finding test-first; keep the suite green (full test:ci
+   + tsc after each fix). Re-run `npm run build`.
+2. PR `feat/phase-0a-registry` -> `feat/realtime-determinism-engine` (NEVER main); merge on green; delete the phase branch.
+3. Push the integration branch (backup + Vercel preview at the phase boundary).
+4. Mark 0A DONE in the phase table; update lessons.
+
+THEN: write Plan 0B (Tokenizer Engine) from spec v1.2.1; premortem (full 6-perspective for the sub-spec, focused
+for the mechanical plan; appsec lens never skipped); fix findings; implement test-first; continue the loop through
+0C, 0D (incl the ESLint flat-config migration BEFORE Phase 2), then Phases 1-4, ending with headed Playwright E2E
+over every function, an appsec pass, and the single final integration->main go-live PR, then delete all phase branches.
+(main is NOT touched until that final go-live. Push the integration branch at phase boundaries for preview deploys.)

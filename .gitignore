@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-package-lock.json
+# package-lock.json is tracked for reproducible `npm ci` installs (QC.1 / NIST SP 800-218)
 yarn.lock
 pnpm-lock.yaml
 
