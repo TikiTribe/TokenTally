@@ -1,4 +1,5 @@
-import { defineConfig, type Plugin } from 'vite';
+/// <reference types="vitest/config" />
+import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
@@ -34,6 +35,13 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+  },
+  // P2-A8: Vitest config lives here so the `@/` aliases carry over. Node by default (engine/scripts tests);
+  // jsdom only for React component tests (*.test.tsx). The setup registers jest-dom + afterEach(cleanup).
+  test: {
+    environment: 'node',
+    environmentMatchGlobs: [['**/*.test.tsx', 'jsdom']],
+    setupFiles: ['./vitest.setup.ts'],
   },
   build: {
     outDir: 'dist',
