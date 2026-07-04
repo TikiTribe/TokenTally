@@ -75,7 +75,7 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
 | 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | **YES (PR #7, b08760a)** | **DONE** |
 | 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) + review (3 confirmed, all fixed) | Tasks 1-9 + review fixes (207 tests, audit 0) | **YES (PR #8, 0bdcef7)** | **DONE — PHASE 0 COMPLETE** |
-| 1 | Workloads + Optimization + Denial of Wallet | written+amended (P1-A1..A30) | done (6-perspective, 40 findings) + review (2 lenses, 5 confirmed, all fixed) | Tasks 0-10 + review fixes (287 tests, tsc x3 + lint + build + audit 0 + all gates green) | pending PR | **IMPL+REVIEW DONE — PR into integration** |
+| 1 | Workloads + Optimization + Denial of Wallet | written+amended (P1-A1..A30) | done (6-perspective, 40 findings) + review (2 lenses, 5 confirmed, all fixed) | Tasks 0-10 + review fixes (287 tests, tsc x3 + lint + build + audit 0 + all gates green) | **YES (PR #9, a9e632f)** | **DONE** |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
 | 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | QUEUED |
 | 4 | Hardening: E2E, appsec audit, a11y, load, live deploy | not written | - | - | - | QUEUED |
@@ -317,46 +317,45 @@ These CANNOT be self-enforced by CI/config and are required before/at go-live:
   actually running eslint. Verify a "known broken" claim before trusting it; [[eslint-broken-flat-config]]
   updated to RESOLVED.
 
-## RESUME HERE (checkpoint, 2026-07-04 — PHASE 0 COMPLETE; starting Phase 1 Workloads)
+## RESUME HERE (checkpoint, 2026-07-04 — PHASES 0+1 COMPLETE; starting Phase 2 UI + dataviz)
 
-State: **the entire Phase 0 is done** — engine (0A registry PR #5/28b0f9a, 0B tokenizer PR #6/9e8780c,
-0C caching+cost PR #7/b08760a) plus **0D deploy/security infra (PR #8/0bdcef7, MERGED)** —
-impl Tasks 1-9 + close-out review 3-fixed, 207 tests, `npm audit --omit=dev` 0 high+, all CI gates green.
-Integration `feat/realtime-determinism-engine` is green at `0bdcef7` (207 tests, tsc/lint/build clean, CI passed
-on PR #8, Vercel preview deployed). `main` remains the untouched live MVP; it stays frozen until the SINGLE
-final integration->main go-live PR after Phases 1-4 + headed E2E + appsec.
+State: **Phase 0 (engine + deploy/security) AND Phase 1 (workloads + optimization + DoW) are done and merged**
+into `feat/realtime-determinism-engine`:
+- 0A registry PR #5/28b0f9a · 0B tokenizer PR #6/9e8780c · 0C caching+cost PR #7/b08760a · 0D deploy/security PR #8/0bdcef7
+- **1 workloads PR #9/a9e632f** — Chatbot/Prompt/Agent/Crew adapters, Optimization (candidates/tornado/budget),
+  defensive Denial-of-Wallet, all on the 0C `monthlyWarmCost` seam. 30 premortem amendments + 5 review fixes.
+Integration is green at **`a9e632f`**: **287 tests**, tsc (base+scripts+tests) + lint + build clean, first-paint-lean
++ honest-claims + wasm + size gates pass, `npm audit --omit=dev` 0 high+. CI passed on PR #9; Vercel preview deployed.
+`main` remains the untouched live MVP; it stays frozen until the SINGLE final integration->main go-live PR after
+Phases 2-4 + headed E2E + appsec.
 
-Carry into every later phase (0D deferred items that are NOT done, tracked honestly):
-- **§13 CSP/WASM/egress runtime floor is NOT verified** — the strict CSP is written into vercel.json and the
-  Playwright CSP/egress specs are scaffolded, but browsers can't install in-sandbox, so "CSP enforced" and
-  "zero egress" are re-verified at Phase 2/go-live (D1). Do not declare them done before then.
-- **Approx badge WAIVED for launch** (§12 waiver, D14): cut line is OpenAI-Exact-class + labeled Estimate-only.
-  Transformers.js/Gemma-Approx needs a RUNTIME WASM-free proof (infeasible in-sandbox) — tracked post-0D.
-- **Real Exact-usage capture** (0B B1) needs the OWNER's OpenAI API key (out of band). Until then OpenAI stays
-  `exact_unverified`; do NOT fabricate a captured fixture. Owner runbook items (branch protection, Vercel
-  "wait for CI"/Node 22, live curl CSP smoke, SHA-pin Actions) are recorded in the §0D owner runbook, not faked.
+Public engine API for Phase 2 to consume (import via DYNAMIC import() only — first-paint-lean gate enforces it):
+- `@/workloads`: `chatbotForecast`/`promptForecast`/`agentForecast`/`crewForecast`, `AGENT_PRESETS`/`applyPreset`,
+  `WorkloadForecast`/`StepProfile`/config types. `@/optimization`: `optimize`/`solveBudget`/`tornado`/`denialOfWallet`,
+  `DOW_DISCLAIMER`/`DOW_VDP_URL`. `@/registry`: `loadRegistry`/`getModel`/`getDeployments`/`listByMode`/`getSnapshotMeta`.
+  `@/tokenizer`: `countTokens`. Every forecast carries `snapshotVersion`+`formula`+`accuracyNote` for the trust surfaces.
 
-Phase 1 STATUS: branch **`feat/phase-1-workloads`** (off integration). Plan written (500cc56) + premortem
-amendments P1-A1..A30 applied (8b71a31). 6-perspective adversarial-premortem-complete DONE (40 findings;
-convergences: VDP ×4, DoW-retry-$0 ×3, tier-straddle ×3, crew-optimizer ×2, honest-claims-blind ×2). Plan
-+ amendments at docs/superpowers/plans/2026-07-04-phase1-workloads.md. NOT yet implemented.
+NEXT ACTIONS (Phase 2 = UI + dataviz, spec §5.7 — refine from spec):
+1. Refine the Phase 2 plan (writing-plans): the multi-mode shell (Chatbot/Prompt/Agent/Crew/DoW), real-time <100ms via
+   the tokenizer worker + debounce, command palette, light/dark, WCAG AA; the dataviz set (cost waterfall, cache-warmth
+   curve with the range, cost-vs-context scatter, live token visualizer as DOM TEXT NODES only, agent step-accumulation
+   chart matching the engine, tornado, blast-radius radial); trust surfaces (formula + snapshotVersion links, badges,
+   "data as of snapshotDate"). Wire the OLD MVP's replacement here (delete src/utils/costCalculator + old components).
+2. adversarial-premortem-complete on the plan; fix ALL findings.
+3. Implement test-first (Testing Library + Playwright); after any subagent code run full tests + tsc + review; PR
+   feat/phase-2-ui -> integration (NEVER main); merge on green; delete branch; push integration for preview.
 
-NEXT ACTIONS (implement Phase 1 test-first, applying the amendments; revised order in the plan's amendment tail):
-1. **A8 oracles FIRST** (failing): cache-capable Claude (sparse 500 + saturated 100k conv/mo, hand p_warm),
-   tiered-straddle agent, per_character, crew-additivity, DoW≥central. These red tests gate A6/A7.
-2. Task 0 types (add snapshotVersion/formula A16, assumptionsSource A17, avgTurn/StepGapSeconds A6, contextTruncated
-   A9, tierStraddle A7; drop CrewConfig from WorkloadConfig A22) + strict-lint globs. Task 1 accumulate + CEIL clamp
-   (A13). Task 1b `tiers.ts` per-band pricing (A7).
-3. Tasks 2-9 with their amendments (Chatbot A5/A6/A10; Agent A6/A10/A11/A12; Optimize A3/A18/A20/A21/A22/A28;
-   DoW A1/A2/A14/A15). `npx tsc --noEmit` (base + scripts + NEW tsconfig.tests.json) + `npm run lint` in EVERY
-   task green step (A24) — vitest erases types so type breaks otherwise hide until the end.
-4. Task 10 reconciliation + barrels (A23) + first-paint grep (A25) + honesty-string unit test (A26).
-5. Security + code review of the diff; after any subagent code run full tests + tsc + review before trusting.
-   PR feat/phase-1-workloads -> integration (NEVER main); merge on green; delete branch; push integration for preview.
-
-Carry into every later phase (0D deferred, tracked honestly): §13 CSP/WASM/egress runtime floor NOT verified
-(re-verify Phase 2/go-live, D1); Approx badge WAIVED (§12/D14); real Exact-usage capture needs owner key (0B B1);
-owner runbook items (branch protection, Vercel wait-for-CI/Node 22, live CSP curl, SHA-pin Actions) recorded not faked.
+Carry into every later phase (deferred, tracked honestly):
+- **§13 CSP/WASM/egress runtime floor NOT verified** — strict CSP is in vercel.json + Playwright specs scaffolded, but
+  browsers can't install in-sandbox; "CSP enforced"/"zero egress" are re-verified at Phase 2/go-live (D1). **Phase 2 is
+  where the enforced CSP + the securitypolicyviolation Playwright test + the egress test must actually run** (spec §5.9).
+- **Approx badge WAIVED for launch** (§12/D14): cut line = OpenAI-Exact-class + Estimate-only; Transformers.js/Gemma-Approx
+  needs a runtime WASM-free proof (infeasible in-sandbox), tracked post-launch.
+- **Real Exact-usage capture** (0B B1) needs the OWNER's OpenAI key (out of band) — OpenAI stays `exact_unverified`; no fabrication.
+- **Phase-1 carry-forward:** render optimizer/DoW/forecast strings as DOM text nodes only (A29); the runtime kill-switch
+  operator surface is a Phase-2 deliverable (A27); gate Crew + DoW behind a build-time feature flag so a §13 descope removes
+  them from `dist/` (A19); enable repo Private Vulnerability Reporting so the DoW VDP link resolves (§0D runbook item 6).
+- Owner runbook (branch protection, Vercel wait-for-CI/Node 22, live CSP curl, SHA-pin Actions, PVR) recorded in §0D, not faked.
 Phase-1-specific carry-forward: text-node-only render contract for optimizer/DoW strings (A29, enforce in Phase 2);
 runtime kill-switch operator surface is Phase 2 (A27); Crew/DoW build-time feature flag for descope is Phase 2 (A19).
 END: after Phases 1-4 + headed Playwright E2E (every function) + appsec pass + vuln remediation, the SINGLE final
