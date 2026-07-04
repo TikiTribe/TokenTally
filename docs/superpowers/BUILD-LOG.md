@@ -317,6 +317,42 @@ These CANNOT be self-enforced by CI/config and are required before/at go-live:
   actually running eslint. Verify a "known broken" claim before trusting it; [[eslint-broken-flat-config]]
   updated to RESOLVED.
 
+## GO-LIVE STATUS (2026-07-04) — CODE LIVE ON `main`; PUBLIC CUTOVER IS OWNER-GATED
+
+**Done (autonomous, all green):** The single go-live PR **#14** (`feat/realtime-determinism-engine` → `main`,
+121 commits / 224 files) is **MERGED**. `main` HEAD = merge commit `80b06ba`. CI + **CodeQL** + Vercel build all
+passed on #14. Vercel built a **new Production deployment from `80b06ba` — state `success`**. All my phase branches
+are deleted; integration branch retained as the record. main is no longer the old MVP at the git level.
+
+**BLOCKER to "publicly live" — owner-gated, cannot self-resolve (no valid Vercel credentials):**
+Verified by curl on 2026-07-04:
+- The **public custom domain `tokentally.griffen.codes` still serves the ~23-day-old MVP** (`age≈1.99M s`,
+  `x-vercel-cache: HIT`, old title "All-in-One AI Cost Calculator", **0 of our 6 security headers**). It was NOT
+  promoted to the new deployment.
+- The **new Production deployment URL is behind Vercel Deployment Protection** (`302 → vercel.com/sso-api`), so it
+  is not publicly reachable even though its build succeeded.
+- **Both** promotion paths are unauthenticated: the Vercel MCP needs the owner's browser OAuth; `vercel whoami`
+  returns "token is not valid". I did **not** disable protection or repoint the domain — that is an outward-facing
+  production-exposure change on a currently-running product, and the §0D runbook already scopes Vercel promotion as
+  an owner action. Recorded, not faked.
+
+**Owner "make it public" checklist (Vercel dashboard or `vercel login` first):**
+1. **Promote** the `80b06ba` Production deployment to the production alias (or set the project's Production Branch =
+   `main` with auto-alias), so `token-tally.vercel.app` / the intended custom domain serves the new deployment.
+2. Point the **public custom domain** (`tokentally.griffen.codes`, if that is the intended prod domain) at the new
+   deployment — it currently serves the old MVP.
+3. **Disable/relax Deployment Protection** for Production so the app is publicly reachable (keep it on for previews).
+4. Then the **live CSP smoke check (F5)**: `curl -sI <public-prod-url>/<deep/spa/route>` and byte-compare the served
+   `Content-Security-Policy` to `vercel.json` — only THEN declare "CSP verified enforced live." (Locally + in CI the
+   served CSP is already byte-verified against `vercel.json`; this confirms Vercel emits it on the real origin.)
+5. Repo settings (unchanged by merge): **branch protection** on `main` requiring the `ci` check (F4); **SHA-pin** the
+   GitHub Actions (F3 — CI currently warns on the Node-20 action deprecation).
+
+Until 1–3 are done, end users on the public domain still see the old MVP; the new engine is built, merged, secure,
+and deploy-successful, but privately (auth-gated). Everything I control is complete and green.
+
+---
+
 ## RESUME HERE (current, 2026-07-04 — PHASES 0–3 MERGED; PHASE 4 CODE-COMPLETE + GREEN; go-live PR sequence)
 
 State: **all engine + UI + workflow phases (0A–0D, 1, 2, 3) are merged into `feat/realtime-determinism-engine`.**
