@@ -9,7 +9,8 @@ import tsPlugin from '@typescript-eslint/eslint-plugin';
 import security from 'eslint-plugin-security';
 import react from 'eslint-plugin-react';
 
-const OLD_MVP = ['src/components/**', 'src/utils/**', 'src/store/**', 'src/hooks/**', 'src/App.tsx', 'src/main.tsx', 'src/config/pricingData.ts', 'src/config/tooltipContent.ts'];
+// P2: the new UI is strictly linted (the old MVP island was deleted in Phase 2A).
+const UI_GLOBS = ['src/store/**/*.{ts,tsx}', 'src/shell/**/*.{ts,tsx}', 'src/modes/**/*.{ts,tsx}', 'src/ui/**/*.{ts,tsx}', 'src/hooks/**/*.{ts,tsx}', 'src/App.tsx', 'src/main.tsx'];
 
 export default [
   { ignores: ['dist/**', 'coverage/**', 'node_modules/**', '**/*.d.ts', 'test-*.ts', 'investigate-*.ts', 'test-calculations.ts', 'test-execution.ts'] },
@@ -33,12 +34,13 @@ export default [
   },
   // react/no-danger is the no-innerHTML security tripwire (full react linting lands with the Phase-2 UI).
   { files: ['**/*.{tsx,jsx}'], plugins: { react }, settings: { react: { version: 'detect' } }, rules: { 'react/no-danger': 'error' } },
-  // Strict TS rules on the new engine code.
-  { files: ['src/engine/**/*.ts', 'src/registry/**/*.ts', 'src/tokenizer/**/*.ts', 'src/types/**/*.ts', 'src/workloads/**/*.ts', 'src/optimization/**/*.ts'], rules: { ...tsPlugin.configs.recommended.rules, '@typescript-eslint/no-explicit-any': 'error', 'no-unused-vars': 'off', '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }] } },
+  // Strict TS rules on the new engine + UI code.
+  { files: ['src/engine/**/*.ts', 'src/registry/**/*.ts', 'src/tokenizer/**/*.ts', 'src/types/**/*.ts', 'src/workloads/**/*.ts', 'src/optimization/**/*.ts', ...UI_GLOBS], rules: { ...tsPlugin.configs.recommended.rules, '@typescript-eslint/no-explicit-any': 'error', 'no-unused-vars': 'off', '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }] } },
+  // P2-A15: forbid raw DOM HTML sinks in the UI (belt-and-suspenders beyond react/no-danger). Token/registry
+  // strings must render as text nodes only.
+  { files: UI_GLOBS, rules: { 'no-restricted-properties': ['error', { property: 'innerHTML', message: 'DOM text nodes only — use textContent' }, { property: 'outerHTML', message: 'no outerHTML sink' }, { property: 'insertAdjacentHTML', message: 'no insertAdjacentHTML sink' }] } },
   // Build scripts + test/E2E infra log to stdout legitimately; their fs reads/writes are build-time (no attacker path).
-  { files: ['scripts/**/*.{ts,mjs}', 'tests/**/*.{ts,mjs}', '**/*.config.{ts,js}'], rules: { 'no-console': 'off', 'security/detect-non-literal-fs-filename': 'off' } },
-  // Old MVP (Phase-2 rewrite): security floor only.
-  { files: OLD_MVP, rules: { 'no-console': 'off' } },
+  { files: ['scripts/**/*.{ts,mjs}', 'tests/**/*.{ts,mjs}', 'src/**/*.test.{ts,tsx}', '**/*.config.{ts,js}'], rules: { 'no-console': 'off', 'security/detect-non-literal-fs-filename': 'off' } },
   // Legacy CSV-pricing scripts, superseded by src/registry/buildRegistry (slated for removal): security floor only.
   { files: ['scripts/scrape-pricing.ts', 'scripts/update-pricing-from-csv.ts', 'scripts/utils/**'], rules: { '@typescript-eslint/no-unused-vars': 'off' } },
 ];

@@ -68,7 +68,10 @@
     "dist",
     "build",
     "**/*.spec.ts",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "**/*.spec.tsx",
+    "**/*.test.tsx",
+    "src/vitest.d.ts"
   ],
   "references": [
     {

@@ -36,15 +36,18 @@ export default defineConfig({
   server: {
     port: 5173,
   },
-  // P2-A8: Vitest config lives here so the `@/` aliases carry over. Node by default (engine/scripts tests);
-  // jsdom only for React component tests (*.test.tsx). The setup registers jest-dom + afterEach(cleanup).
-  test: {
-    environment: 'node',
-    environmentMatchGlobs: [['**/*.test.tsx', 'jsdom']],
-    setupFiles: ['./vitest.setup.ts'],
-  },
+  // (Vitest config lives in vitest.config.ts — it takes precedence over any test block here.)
   build: {
     outDir: 'dist',
+    // Keep the two heaviest assets out of the entry chunk: React in a stable 'vendor' chunk, recharts (added
+    // in 2D) in its own lazy 'charts' chunk. The engine/registry stay lazy via dynamic import().
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+        },
+      },
+    },
     // Do NOT ship source maps to production (security-venue launch): sourcemap:true published .js.map with
     // full sourcesContent (the entire annotated original TS source) as immutable-cached, publicly-served
     // assets, and let an unqualified claim in a source comment survive in the map after minification stripped

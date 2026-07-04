@@ -5,5 +5,5 @@
     "noEmit": true
   },
   "include": ["scripts/registry/**/*.ts", "src/**/*.ts", "src/**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx", "src/vitest.d.ts"]
 }

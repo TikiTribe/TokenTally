@@ -1,77 +1,77 @@
-import { Calculator } from './components/Calculator';
-import { TabNavigation } from './components/TabNavigation';
-import { PromptCalculator } from './components/PromptCalculator';
-import { useCalculatorStore } from './store/useCalculatorStore';
-import { getPricingModel } from './config/pricingData';
+// Phase 2A application shell. Landmark scaffold + WCAG tablist + theme control. First-paint safe: the only
+// engine/registry access is inside the React.lazy mode panels (each its own chunk) and the store's dynamic
+// ensureRegistry — nothing here top-level-imports the engine/registry (first-paint-lean gate). Owner:
+// TokenTally UI. Version: Phase 2A.
+import { lazy, Suspense, useEffect } from 'react';
+import { useAppStore } from '@/store/useAppStore';
+import { applyTheme, persistTheme } from '@/shell/ThemeController';
+import { ModeNav } from '@/shell/ModeNav';
+import { SnapshotStamp } from '@/shell/SnapshotStamp';
+import type { Mode, ThemeMode } from '@/store/types';
 
-/**
- * TokenTally - LLM Chatbot & Prompt Cost Calculator
- *
- * Main application component with dual calculator modes
- */
-function App() {
-  const { mode, setMode, promptConfig, setPromptConfig } = useCalculatorStore();
+const PANELS: Record<Mode, React.LazyExoticComponent<() => JSX.Element>> = {
+  chatbot: lazy(() => import('@/modes/ChatbotPanel')),
+  prompt: lazy(() => import('@/modes/PromptPanel')),
+  agent: lazy(() => import('@/modes/AgentPanel')),
+  crew: lazy(() => import('@/modes/CrewPanel')),
+  denial_of_wallet: lazy(() => import('@/modes/DenialOfWalletPanel')),
+};
 
-  // Derive supportsCache from selected model
-  const selectedModel = getPricingModel(promptConfig.modelId);
-  const supportsCache = selectedModel?.supportsCache ?? false;
+const THEME_CYCLE: Record<ThemeMode, ThemeMode> = { system: 'light', light: 'dark', dark: 'system' };
+const THEME_LABEL: Record<ThemeMode, string> = { system: 'System', light: 'Light', dark: 'Dark' };
+
+function App(): JSX.Element {
+  const mode = useAppStore((s) => s.mode);
+  const theme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
+  const Panel = PANELS[mode];
+
+  // Load the pricing registry once (dynamic import keeps it out of first-paint).
+  useEffect(() => {
+    void useAppStore.getState().ensureRegistry();
+  }, []);
+
+  // Apply + persist the theme whenever it changes ('system' defers to prefers-color-scheme via CSS).
+  useEffect(() => {
+    applyTheme(theme);
+    persistTheme(theme);
+  }, [theme]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-4xl font-bold text-gray-900">TokenTally</h1>
-          <p className="text-gray-600 mt-2">
-            LLM Cost Forecasting - Predict costs with precision scoped per model
-            for chatbots and batch API operations
+    <>
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
+      <header style={{ borderBottom: '1px solid var(--border)', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '1.5rem' }}>TokenTally</h1>
+          <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            LLM cost forecasting — precision scoped per model, honest ranges everywhere.
           </p>
         </div>
+        <button className="btn-secondary" aria-label={`Theme: ${THEME_LABEL[theme]}. Activate to change.`} onClick={() => setTheme(THEME_CYCLE[theme])}>
+          Theme: {THEME_LABEL[theme]}
+        </button>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tab Navigation */}
-        <TabNavigation activeMode={mode} onModeChange={setMode} />
+      <nav aria-label="Calculator mode" style={{ padding: '0 1rem' }}>
+        <ModeNav />
+      </nav>
 
-        {/* Conditional Rendering Based on Mode */}
-        {mode === 'chatbot' ? (
-          <Calculator />
-        ) : (
-          <PromptCalculator
-            promptText={promptConfig.promptText}
-            onPromptChange={(text) => setPromptConfig({ promptText: text })}
-            responsePreset={promptConfig.responsePreset}
-            onResponsePresetChange={(preset) => setPromptConfig({ responsePreset: preset })}
-            batchOperations={promptConfig.batchOperations}
-            onBatchOperationsChange={(value) => setPromptConfig({ batchOperations: value })}
-            multiTurnEnabled={promptConfig.multiTurnEnabled}
-            onMultiTurnToggle={() => setPromptConfig({ multiTurnEnabled: !promptConfig.multiTurnEnabled })}
-            turns={promptConfig.turns}
-            onTurnsChange={(value) => setPromptConfig({ turns: value })}
-            contextStrategy={promptConfig.contextStrategy}
-            onContextStrategyChange={(strategy) => setPromptConfig({ contextStrategy: strategy })}
-            cacheHitRate={promptConfig.cacheHitRate}
-            onCacheHitRateChange={(value) => setPromptConfig({ cacheHitRate: value })}
-            supportsCache={supportsCache}
-          />
-        )}
+      <main id="main" style={{ padding: '1rem', maxWidth: 720, margin: '0 auto' }}>
+        {/* aria-live cost headline region — populated in Phase 2C */}
+        <div aria-live="polite" id="cost-headline" />
+        <section role="tabpanel" id={`panel-${mode}`} aria-labelledby={`tab-${mode}`}>
+          <Suspense fallback={<div className="card">Loading…</div>}>
+            <Panel />
+          </Suspense>
+        </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-16">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="text-center text-sm text-gray-600">
-            <p>
-              TokenTally - Built with React, TypeScript, and Tailwind CSS
-            </p>
-            <p className="mt-2">
-              Accuracy: scoped per model | Pricing data: OpenAI and Anthropic
-            </p>
-          </div>
-        </div>
+      <footer style={{ borderTop: '1px solid var(--border)', padding: '1rem', marginTop: '2rem' }}>
+        <SnapshotStamp />
       </footer>
-    </div>
+    </>
   );
 }
 
