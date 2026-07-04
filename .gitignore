@@ -53,3 +53,7 @@ coverage/
 .temp/
 .tmp/
 .first-paint-entry-modules.json
+test-results/
+playwright-report/
+investigate-failures.ts
+test-execution.ts
