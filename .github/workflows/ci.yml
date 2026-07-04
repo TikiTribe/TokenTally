@@ -50,3 +50,10 @@ jobs:
 
       - name: Dependency audit - shipped deps, zero high/critical (D8)
         run: npm audit --omit=dev --audit-level=high
+
+      # P2-A19 / 2F: run the §5.9 CSP + zero-egress verification against the built dist served under the
+      # real vercel.json CSP. Blocks merge on any securitypolicyviolation or cross-origin request.
+      - name: Install Chromium for E2E
+        run: npx playwright install --with-deps chromium
+      - name: E2E - CSP + egress under the served CSP (§5.9)
+        run: npm run test:e2e

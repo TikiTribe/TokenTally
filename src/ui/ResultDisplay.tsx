@@ -5,12 +5,14 @@
 // render honest text (P2-A9/A20). Owner: TokenTally UI. Version: Phase 2C.
 import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
+import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
+import { TornadoChart } from '@/viz/TornadoChart';
 import type { WorkloadForecast } from '@/workloads';
-import type { DenialOfWalletResult } from '@/optimization';
+import type { DenialOfWalletResult, TornadoBar } from '@/optimization';
 
 const money = (n: number): string => `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
-function WorkloadResult({ f }: { f: WorkloadForecast }): JSX.Element {
+function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoBar[] }): JSX.Element {
   const c = f.cost;
   if (!c.applicable) {
     return <p style={{ color: 'var(--text-muted)' }}>{f.accuracyNote}</p>; // non-per_token etc — honest note, not $0
@@ -27,7 +29,18 @@ function WorkloadResult({ f }: { f: WorkloadForecast }): JSX.Element {
           : `Range ${money(band.low)} – ${money(band.high)} · conservative (no warm cache) ${money(c.conservativeTotal)}`}
       </p>
       <p><span className="badge badge-estimate">{f.accuracyNote}</span></p>
+      {/* §13 cut line: the cross-run warm-cache view + break-even. */}
+      {c.warmth !== null || c.breakEvenArrivals !== null ? (
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          {c.savingsUpTo.central > 0 ? `Caching saves up to ${money(c.savingsUpTo.central)}/mo. ` : ''}
+          {c.breakEvenArrivals !== null && Number.isFinite(c.breakEvenArrivals)
+            ? `Warm-cache break-even at ~${Math.round(c.breakEvenArrivals).toLocaleString()} arrivals/mo.`
+            : ''}
+        </p>
+      ) : null}
       <CostWaterfall waterfall={c.waterfall} />
+      <StepAccumulationChart steps={f.steps} />
+      <TornadoChart bars={tornado} />
       <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         Formula: {f.formula} · priced against snapshot {f.snapshotVersion.slice(0, 8)}
       </p>
@@ -83,7 +96,7 @@ export function ResultDisplay(): JSX.Element {
       ) : result.kind === 'unavailable' ? (
         <p style={{ color: 'var(--text-muted)' }}>{result.reason}</p>
       ) : result.kind === 'workload' ? (
-        <WorkloadResult f={result.forecast} />
+        <WorkloadResult f={result.forecast} tornado={result.tornado} />
       ) : (
         <DowResult r={result.result} />
       )}
