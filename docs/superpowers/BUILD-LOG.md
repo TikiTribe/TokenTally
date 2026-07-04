@@ -73,7 +73,7 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
 | 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
-| 0C | Caching + Cost Core | written+amended (C1-C16) | done (6-perspective, 38 findings, 1 CRITICAL) | - | - | IN PROGRESS (implementing) |
+| 0C | Caching + Cost Core | written+amended (C1-C16) | done (6-perspective, 38 findings, 1 CRITICAL) | Tasks 1-8 green (180 tests, 3 scenarios <1%) | no | IN PROGRESS ~90% (review running) |
 | 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
