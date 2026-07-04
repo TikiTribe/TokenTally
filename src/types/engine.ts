@@ -39,3 +39,33 @@ export interface WaterfallBarInput {
   rate: number;
   unit: BillingUnit;
 }
+
+// C13: the warm-cache scenario is expressed in ARRIVAL terms (lambda = prefix re-hits/month, K =
+// distinct prefixes), independent of turns/conversations, so Phase-1 chatbot/agent/crew adapters can
+// each produce it without redesign.
+export interface WarmScenario {
+  model: import('@/types/registry').ModelRecord;
+  prefixTokens: number; // cached stable prefix (system prompt / tool-schema block)
+  perArrivalInputTokens: number; // non-prefix input per arrival
+  perArrivalOutputTokens: number;
+  perArrivalReasoningTokens: number;
+  arrivalsPerMonth: number; // lambda
+  distinctPrefixes: number; // K
+  ttl: 'min5' | 'hr1';
+  profile: TrafficKind;
+  activeFraction?: number; // f (bursty)
+  burstsPerMonth?: number; // B (bursty cold onsets, C2)
+  tokenizerBand?: { relLow: number; relHigh: number } | null; // systematic bias from the 0B tokenizer
+}
+
+export interface WarmCostResult {
+  applicable: boolean; // C13: false for non-token billing units (warm-cache modeling opts out)
+  warmth: number | WarmthRange | null; // point (breakpoint/storage), range (automatic), or null (n/a)
+  centralTotal: number;
+  conservativeTotal: number; // p_warm=0 total — the W6 reference AND the Denial-of-Wallet seam (C10/C12)
+  savingsUpTo: { central: number; conservativeReference: number; qualifier: 'up_to' };
+  writesPerMonth: number;
+  waterfall: CostWaterfall;
+  confidence: ConfidenceRange;
+  breakEvenArrivals: number | null;
+}
