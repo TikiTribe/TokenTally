@@ -71,10 +71,10 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | Phase | Scope | Plan | Premortem | Impl | Merged | State |
 |-------|-------|------|-----------|------|--------|-------|
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
-| 0A | Test harness + types + Registry | written+amended | done (A1-A12) | Tasks 1-12 green (74 tests) | no | IN PROGRESS ~90% (review running) |
-| 0B | Tokenizer Engine | not written | - | - | - | QUEUED |
+| 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
+| 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | PR open | CLOSE-OUT (PR -> integration) |
 | 0C | Caching + Cost Core | not written | - | - | - | QUEUED |
-| 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**) | not written | - | - | - | QUEUED |
+| 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
 | 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | QUEUED |
@@ -86,6 +86,18 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 - 2026-07-03: Registry keyed on (canonical model, deployment). [spec D9]
 - 2026-07-03: Sole decider = owner; F1 owner/presenter residual explicitly accepted. [spec §13]
 - 2026-07-03: Phase 0 decomposed into 0A-0D (independently testable). [plan scope check]
+- 2026-07-04: **0B: encoding comes from js-tiktoken's `getEncodingNameForModel` oracle, not a hand-rolled table.**
+  Probe-verified: the oracle returns the correct encoding for every known OpenAI id (babbage-002->r50k, gpt-4.5->o200k,
+  davinci-002->p50k, gpt-4->cl100k) and THROWS "Unknown model" on novel/prefixed ids — its rejection is the flagForReview
+  signal. Eliminates the hand-rolled-map drift bug class. [premortem B2, empirically verified]
+- 2026-07-04: **0B: no Exact badge at launch without real provider ground truth.** The spot-check fixture cannot be
+  fabricated (a circular tiktoken-vs-tiktoken gate). OpenAI ships `exact_unverified`; real Exact promotion needs a
+  provenance-carrying `usage` capture done OUT OF BAND with the owner's OpenAI/Anthropic API key (owner action, tracked
+  follow-up — NOT blocking 0B). [premortem B1]
+- 2026-07-04: **0B scope (B15): Approx badge deferred with Transformers.js -> dated 0D-before-demo gate.** 0B ships ~13%
+  Exact-class / 0% Approx / 87% Estimate, NOT the spec's projected 67/15/18. Before the demo, either pull one Gemma
+  tokenizer forward (so Gemini shows Approx) OR amend the §13 cut line to OpenAI-Exact-class + Estimate-only and correct
+  copy. Owner decision at the checkpoint; do not silently ship a demo that violates the cut-line badge floor. [premortem B15]
 - 2026-07-03: **ESLint deferred to 0D.** ESLint 9.39 is installed but the repo has only a legacy
   `.eslintrc.json` (no flat `eslint.config.js`), and the installed plugins (eslint-plugin-security 3.0.1
   etc.) ship flat-only configs that the legacy validator rejects even under `ESLINT_USE_FLAT_CONFIG=false`.
@@ -126,33 +138,86 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
   synthetic per_second+chat row to exercise the raw-passthrough path.
 - ESLint is non-functional repo-wide (flat-config migration owed to 0D; see decision log). Until then the lint gate
   is substituted by tsc-strict + tests + a banned-pattern grep + the security review.
+- 0A adversarial review (3 lenses × verify, 15 agents) confirmed 6 real defects, ALL fixed before merge (commit
+  e9d9e39): (1) the A7 id-firewall skipped the `provider` field (litellm_provider) — a poisoned provider could carry
+  stored-XSS/proto-pollution into a record; now sanitized like id/deployment. (2) reasoning-token rate and (3) ALL
+  parseTiers rates bypassed the A4 sanePrice guard — a poisoned/typo rate scaled x1e6 into a mis-bill; now guarded.
+  (4) `PriceTier.inputPrice` was 0 for a cache/output-only tier (reads as free above the threshold); now nullable
+  = "use base rate", mirroring outputPrice. (5+6) two false-green test gaps (dbu raw-passthrough, divergent-output
+  collision) closed. LESSON: apply the price-sanity guard to EVERY price surface uniformly; sanitize EVERY DOM-bound/
+  map-key field uniformly. Don't leave a secondary field (reasoning, tiers, provider) out of a guard the rest of the
+  file enforces — reviewers find the one gap. The review workflow (3 parallel finders → adversarial per-finding
+  verify, refute-by-default) rejected 4 non-defects (non-occurring data, covered-elsewhere) and kept only manifest ones.
+- Vercel builds a preview on ANY pushed branch/PR (not just the integration branch); PR #5 into the integration branch
+  got a green Vercel preview + "Vercel Agent Review" (NEUTRAL) + preview-comments checks. Production stays main-only.
+  So preview coverage is broader than assumed — every phase PR is deployable-verified, not just phase boundaries.
+- SUPPLY CHAIN / GO-LIVE BLOCKER: GitHub reports 10 Dependabot vulns on `main` (2 critical, 6 high, 2 moderate) as of
+  2026-07-04. These are the live MVP's deps and MUST be resolved before the final integration->main go-live (QC.1: no
+  high/critical vulns at release). Handle in 0D (or a dedicated dependency-hardening pass) before go-live; audit via
+  `npm audit` + the Dependabot dashboard. Do NOT bump deps on `main` directly (main is frozen); fix on the integration
+  line and carry through the go-live PR.
 
-## RESUME HERE (checkpoint, 2026-07-03 — Tasks 1-12 green, review running)
+## Lessons from the 0B close-out code review (2026-07-04, 3 lenses x verify, 6 confirmed / 8 rejected)
 
-State: on branch `feat/phase-0a-registry`. ALL Phase 0A implementation (Tasks 1-12) is committed and GREEN.
-Verified: `npm run test:ci` = 74 tests pass across 11 files (tsc --noEmit + vitest --coverage), exit 0;
-registry files at 100% statement / ~90% branch coverage; `npm run build` pending final re-run. Working tree
-clean except pre-existing untracked clutter (.serena/*, claudedocs/*, *.docx, investigate-failures.ts,
-test-execution.ts) and `.serena/project.yml` (not ours). Integration branch `feat/realtime-determinism-engine`
-exists at 5d4694d (the premortem-amendments commit); 0A is ahead by the 12-task implementation.
+- A "sanity bound" that compares an EXACT engine to a ROUGH heuristic is unsound: on whitespace/repetitive
+  input the two legitimately diverge >4x, so the guard discarded the correct tiktoken count and returned the
+  worse estimate ('-'x80: exact 1 -> 20; whitespace -> 0 with a false [0,0] band). Replaced B12 with an
+  estimator-INDEPENDENT absolute upper bound (count <= chars*4). A too-low positive count cannot be caught at
+  the dispatcher (repetitive text merges to few tokens) — that is the spot-check's job. Don't let a rough
+  estimator veto an exact one.
+- Whitespace-only input is NOT empty: collapsing /\s+/->'' produced a false-precise 0 with a zero-width band.
+  Only truly-empty text is a certain 0; non-empty is >= 1 token with a real band.
+- The reviewers correctly REJECTED 8 findings (a flagged id reading exact_unverified is fine — it is not
+  exact; the surrogate-clamp only fires when already-flagged truncated; markFamilyExact empty-set is guarded
+  by spotCheckFamily.passed). The adversarial-verify step earns its keep by killing plausible-but-wrong ones.
+- Strengthen a "did it register?" test to actually INVOKE the registered callback and assert the emitted
+  payload — a boolean-only assertion passes on broken glue wiring.
 
-Tasks 7-12 landed (commits 9061b42, d105a92, 6af34a7, 038eb69, ae754c0, 2eb2539): resolveCacheSpec+classifyRow
-(A2/A4/A6), normalizeEntry/normalizeCatalog (A7 id sanitization + proto-pollution drop), dedupeRecords (A3),
-buildSnapshot + guarded build script (A4/A11, network NOT run, placeholders kept, no generated.json), query API
-(A3 dup-key throw), CI gate + coverage note (A9/A10/A12).
+## Lessons from the 0B plan premortem (2026-07-04, 6 perspectives, 31 findings)
 
-IN FLIGHT: adversarial review workflow (appsec + correctness + test-quality, each finding verified) running in
-background (run wf_2db63ad5-6b4). ESLint deferred to 0D (see decision log).
+- A spot-check gate that "verifies" a tokenizer against numbers you fabricated is worse than no gate — under the
+  always-green loop the cheapest fix is to backfill the fixture from the tool's own output, making Exact a
+  tiktoken-vs-tiktoken tautology. NEVER author "captured provider" fixtures without real capture + provenance.
+- When a pinned library already ships the mapping you need (js-tiktoken's `getEncodingNameForModel`), USE IT as the
+  oracle; a hand-rolled parallel copy silently drifts (it already had babbage-002 and gpt-4.5 wrong before a line ran).
+- Honesty is a TYPE-level contract: an Estimate with no `errorBand` field renders as false precision downstream and
+  can't be fixed without a breaking change once 0C consumes it. Put the band on the type before building on it.
+- A `typeof self.postMessage === 'function'` "am I a worker?" guard is TRUE on the main thread; node tests hide it.
+  Guard on `self instanceof WorkerGlobalScope` and add a jsdom test, or the worker hijacks window.onmessage.
+- The fat js-tiktoken main entry inlines all 6 rank tables (~2.58MB gz, ~230MB heap). Set the lite+rank-subpath import
+  path NOW so Phase 2 doesn't inherit it; pull the size-limit gate onto the tokenizer chunk.
+- Front-loading all 5 premortem layers into ONE parallel 6-perspective round (vs sequential rounds) converged well for
+  a plan-sized artifact; empirically resolve any cross-perspective conflict (babbage encoding) against ground truth
+  before amending. The 0B-close-out security+code review is the post-implementation adversarial pass.
 
-REMAINING for Phase 0A close-out:
-1. Ingest the review workflow result; fix every CONFIRMED finding test-first; keep the suite green (full test:ci
-   + tsc after each fix). Re-run `npm run build`.
-2. PR `feat/phase-0a-registry` -> `feat/realtime-determinism-engine` (NEVER main); merge on green; delete the phase branch.
-3. Push the integration branch (backup + Vercel preview at the phase boundary).
-4. Mark 0A DONE in the phase table; update lessons.
+## RESUME HERE (checkpoint, 2026-07-04 — Phase 0A DONE + merged, starting 0B)
 
-THEN: write Plan 0B (Tokenizer Engine) from spec v1.2.1; premortem (full 6-perspective for the sub-spec, focused
-for the mechanical plan; appsec lens never skipped); fix findings; implement test-first; continue the loop through
-0C, 0D (incl the ESLint flat-config migration BEFORE Phase 2), then Phases 1-4, ending with headed Playwright E2E
-over every function, an appsec pass, and the single final integration->main go-live PR, then delete all phase branches.
-(main is NOT touched until that final go-live. Push the integration branch at phase boundaries for preview deploys.)
+State: **Phase 0A is DONE and merged.** PR #5 (`feat/phase-0a-registry` -> `feat/realtime-determinism-engine`)
+merged as commit 28b0f9a; phase branch deleted (local + remote); Vercel preview built green. Integration branch
+`feat/realtime-determinism-engine` now carries the full registry (84 tests, tsc clean, build green).
+
+Now on branch **`feat/phase-0b-tokenizer`** (off integration @ 28b0f9a). Working tree clean except pre-existing
+untracked clutter (.serena/*, claudedocs/*, *.docx, investigate-failures.ts, test-execution.ts) and .serena/project.yml.
+
+Phase 0B = Tokenizer Engine. It consumes `resolveFamily`, `ModelRecord`, and the query API from 0A. Scope (from the
+0A plan's deferral list + spec v1.2.1): per-family tokenizer loading (js-tiktoken for OpenAI; Transformers.js/local
+for open families), a resolver table mapping TokenizerFamily -> tokenizer, a worker boundary, a WASM-free proof
+(grep dist — js-tiktoken + Transformers.js tokenization are pure JS, enabling a strict CSP without wasm-unsafe-eval;
+VERIFY), an egress test (no network at runtime), and the per-family Exact spot-check that promotes accuracyTier
+`exact_unverified` -> `exact`. Tokenizer Option A: Claude uses a local estimate (stays `estimate`).
+
+NEXT ACTIONS (0B loop):
+1. DONE — spec read; Plan 0B written (5a4b09d); 6-perspective premortem done (31 findings); amendments B1-B15
+   committed (bb4fa4d). js-tiktoken 1.0.21 API + encoding oracle probe-verified (scratchpad/0b-probe-notes.md).
+2. IMPLEMENT Tasks 1-10 test-first, applying B1-B15 (amendments OVERRIDE task bodies). Full test:ci + tsc green
+   after each task (and after ANY subagent work, before trusting it). Key: use `getEncodingNameForModel` oracle;
+   NO fabricated fixtures (OpenAI = exact_unverified); errorBand on TokenCount; worker-global guard; lite+rank imports;
+   base64-js override; split flagForReview/awaitingAdapter; input clamp; dispatcher sanity-bound + kill switch.
+3. Security + code review (workflow: appsec/correctness/test-quality -> adversarial verify). Fix confirmed findings.
+4. PR `feat/phase-0b-tokenizer` -> integration (NEVER main); merge on green; delete branch; push integration (preview).
+5. Update this log; proceed to 0C (Caching + Cost Core), 0D (Deploy/security infra incl ESLint flat-config BEFORE
+   Phase 2, Transformers.js adapter + Approx-before-demo gate, size-limit, refresh Action, dependency-vuln remediation,
+   real Exact-usage capture with owner key), then Phases 1-4.
+
+END: headed Playwright E2E over every function, appsec pass, resolve the 10 Dependabot vulns, then the SINGLE final
+integration->main go-live PR (flips production), then delete all phase branches. main is untouched until that PR.
