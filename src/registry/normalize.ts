@@ -3,7 +3,7 @@
 // This file grows across Phase 0A Tasks 4-9; each section is appended, never rewritten.
 // Owner: TokenTally engine. Version: Phase 0A.
 
-import type { BillingUnit } from '@/types/registry';
+import type { BillingUnit, PriceTier } from '@/types/registry';
 
 export type RawEntry = Record<string, unknown>;
 
@@ -102,4 +102,37 @@ export function parseKey(
     return { canonicalId: parts.slice(1).join('/'), deployment: head, provider };
   }
   return { canonicalId: parts[parts.length - 1] ?? rawKey, deployment: parts.slice(0, -1).join('/'), provider };
+}
+
+// A5: 128k/200k tier parsing is unit-aware for the input/output rate (per-token vs per-character),
+// scaled by PER_MILLION only for token/char units; per_second/dbu tiers (none observed) stay raw.
+// Cache tiers (`cache_*_input_token_cost_above_*`) are always token rates, so always ×PER_MILLION.
+// A12: uses the single PER_MILLION constant.
+export function parseTiers(e: RawEntry, unit: BillingUnit): PriceTier[] {
+  const perUnitScale = unit === 'per_token' || unit === 'per_character' ? PER_MILLION : 1;
+  const inputField = (t: number): string =>
+    unit === 'per_character'
+      ? `input_cost_per_character_above_${t}_tokens`
+      : `input_cost_per_token_above_${t}_tokens`;
+  const outputField = (t: number): string =>
+    unit === 'per_character'
+      ? `output_cost_per_character_above_${t}_tokens`
+      : `output_cost_per_token_above_${t}_tokens`;
+  const tiers: PriceTier[] = [];
+  for (const t of [128000, 200000] as const) {
+    // Keys are derived from the hardcoded threshold list, not user input; the reads are safe.
+    const inp = num(e[inputField(t)]);
+    const out = num(e[outputField(t)]);
+    const cr = num(e[`cache_read_input_token_cost_above_${t}_tokens`]);
+    const cw = num(e[`cache_creation_input_token_cost_above_${t}_tokens`]);
+    if (inp === null && out === null && cr === null && cw === null) continue;
+    tiers.push({
+      thresholdTokens: t,
+      inputPrice: inp === null ? 0 : inp * perUnitScale,
+      outputPrice: out === null ? null : out * perUnitScale,
+      ...(cr !== null ? { cacheReadPerMToken: cr * PER_MILLION } : {}),
+      ...(cw !== null ? { cacheWritePerMToken: cw * PER_MILLION } : {}),
+    });
+  }
+  return tiers;
 }
