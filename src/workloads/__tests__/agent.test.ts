@@ -87,6 +87,26 @@ describe('agentForecast', () => {
     expect(perRun * 100).toBeCloseTo(f.monthlyCost, 2);
   });
 
+  // P2-A1 review fix: the waterfall must foot to the corrected headline for a tiered straddle (a UI
+  // waterfall renders cost.waterfall.components and must sum to cost.centralTotal).
+  it('P2-A1: cost.waterfall.total === centralTotal under a tier straddle (cache-null AND cache)', () => {
+    const tieredNoCache: ModelRecord = {
+      ...flat, inputPrice: 3, outputPrice: 9, cache: null, contextWindow: 1_000_000,
+      tiers: [{ thresholdTokens: 200000, inputPrice: 6, outputPrice: 18 }],
+    };
+    const tieredCache: ModelRecord = {
+      ...tieredNoCache,
+      cache: { archetype: 'breakpoint_ttl', cacheReadPerMToken: 0.5, cacheWritePerMToken: 3.75, rateUnavailable: false, readUnavailable: false },
+    };
+    for (const model of [tieredNoCache, tieredCache]) {
+      const f = agentForecast({ model, toolSchemaTokens: 50000, systemTokens: 0, perStepUserSeedTokens: 2000, observationGrowthPerStep: 40000, actionOutputTokens: 100, stepsPerRun: 8, runsPerMonth: 100 });
+      expect(f.tierStraddle).toBe(true);
+      expect(f.cost.waterfall.total).toBeCloseTo(f.cost.centralTotal, 4);
+      const sum = f.cost.waterfall.components.reduce((s, c) => s + (c.cost ?? 0), 0);
+      expect(sum).toBeCloseTo(f.cost.centralTotal, 4);
+    }
+  });
+
   // C2 review fix: no plotted step may exceed the context window, and the forecast stays finite.
   it('C2: step inputs are clamped to the context window when accumulation overflows it', () => {
     const f = agentForecast({ ...base, model: flat, toolSchemaTokens: 2000, systemTokens: 500, perStepUserSeedTokens: 100, observationGrowthPerStep: 50000, stepsPerRun: 8, runsPerMonth: 100 });

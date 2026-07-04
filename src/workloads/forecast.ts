@@ -8,9 +8,17 @@ import { monthlyWarmCost } from '@/engine';
 import { composeConfidence } from '@/engine/cost/confidence';
 import { buildWaterfall } from '@/engine/cost/costCore';
 import { effectiveInputRate, effectiveOutputRate } from '@/engine/cost/rates';
-import { detectStraddle, bandedAccumulatedCost } from '@/workloads/tiers';
-import type { WarmScenario, WarmCostResult, WaterfallBarInput } from '@/types/engine';
+import { detectStraddle, bandedAccumulatedCost, type BandedCost } from '@/workloads/tiers';
+import type { WarmScenario, WarmCostResult, WaterfallBarInput, CostComponentEntry } from '@/types/engine';
 import type { WorkloadForecast, WorkloadKind, StepProfile } from '@/types/workload';
+
+// P2-A1: build waterfall components from a banded breakdown so their sum foots to the corrected total.
+function bandedComponents(b: BandedCost, cacheBars: CostComponentEntry[]): CostComponentEntry[] {
+  const out: CostComponentEntry[] = [...cacheBars, { label: 'input', cost: b.input }];
+  if (b.output > 0) out.push({ label: 'output', cost: b.output });
+  if (b.reasoning > 0) out.push({ label: 'reasoning', cost: b.reasoning });
+  return out;
+}
 
 export interface AssembleParams {
   kind: WorkloadKind;
@@ -100,28 +108,32 @@ export function assembleForecast(p: AssembleParams): WorkloadForecast {
   if (straddle) {
     let centralCorrected: number;
     let conservativeCorrected: number;
+    // P2-A1: rebuild the waterfall from the banded breakdown so waterfall.total === centralCorrected by
+    // construction (a UI waterfall must foot to the headline). Cache bars carry over unchanged.
+    let components: CostComponentEntry[];
     if (scn.model.cache === null) {
       // C1 review fix: with no cache the prefix is billed as INPUT every arrival, so band (prefix + input)
       // together at each band's rate. This reconciles exactly to the per-step chart (A11) even under a
       // straddle; the earlier code left the prefix at the single mean tier and diverged ~7.6%.
-      const total = bandedAccumulatedCost(
+      const b = bandedAccumulatedCost(
         scn.model, 0, scn.prefixTokens + p.accum.base, p.accum.growth, p.accum.units,
         p.accum.arrivalsPerCycle, scn.perArrivalOutputTokens, scn.perArrivalReasoningTokens,
       );
-      centralCorrected = total;
-      conservativeCorrected = total; // no warm cache to save
+      centralCorrected = b.total;
+      conservativeCorrected = b.total; // no warm cache to save
+      components = bandedComponents(b, []);
     } else {
       // Cache model: keep the warm-cache prefix cost at the mean tier (second-order; the probabilistic
       // warm/cold split makes exact per-band prefix pricing moot) and band the non-prefix input/output.
-      const prefixCacheCentral = wc.waterfall.components
-        .filter((c) => c.label === 'cacheWrite' || c.label === 'cacheReads')
-        .reduce((s, c) => s + (c.cost ?? 0), 0);
-      const ior = bandedAccumulatedCost(
+      const cacheBars = wc.waterfall.components.filter((c) => c.label === 'cacheWrite' || c.label === 'cacheReads');
+      const prefixCacheCentral = cacheBars.reduce((s, c) => s + (c.cost ?? 0), 0);
+      const b = bandedAccumulatedCost(
         scn.model, scn.prefixTokens, p.accum.base, p.accum.growth, p.accum.units,
         p.accum.arrivalsPerCycle, scn.perArrivalOutputTokens, scn.perArrivalReasoningTokens,
       );
-      centralCorrected = prefixCacheCentral + ior;
+      centralCorrected = prefixCacheCentral + b.total;
       conservativeCorrected = centralCorrected + (wc.conservativeTotal - wc.centralTotal);
+      components = bandedComponents(b, cacheBars);
     }
     // F-1 review fix: if the banded correction overflowed (hostile magnitudes), keep the engine-guarded
     // finite wc values rather than shipping $Infinity.
@@ -137,6 +149,7 @@ export function assembleForecast(p: AssembleParams): WorkloadForecast {
           conservativeReference: conservativeCorrected,
           qualifier: 'up_to',
         },
+        waterfall: { components, total: centralCorrected },
         confidence: composeConfidence(centralCorrected, scn.tokenizerBand ?? null, { relLow: 0, relHigh }),
       };
     }

@@ -52,3 +52,4 @@ coverage/
 .cache/
 .temp/
 .tmp/
+.first-paint-entry-modules.json

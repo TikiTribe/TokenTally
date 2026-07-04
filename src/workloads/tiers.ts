@@ -81,9 +81,18 @@ export function detectStraddle(
   return (firstTier?.thresholdTokens ?? null) !== (lastTier?.thresholdTokens ?? null);
 }
 
-// Exact monthly dollars for the accumulating input + (constant) output + reasoning bars, summed per band.
-// arrivalsPerCycle = arrivals / units (= conversations/runs): each of the `units` levels recurs this many
-// times across the month. Output/reasoning tokens are constant per arrival but their RATE tracks the band.
+// P2-A1: per-label breakdown so the straddle correction can rebuild a waterfall whose total foots to the
+// corrected headline (the old bare-number return let waterfall.total diverge from centralTotal for a
+// tiered straddle). Exact monthly dollars for the accumulating input + (constant) output + reasoning bars,
+// summed per band. arrivalsPerCycle = arrivals / units (= conversations/runs): each of the `units` levels
+// recurs this many times/month. Output/reasoning tokens are constant per arrival but their RATE tracks the band.
+export interface BandedCost {
+  input: number;
+  output: number;
+  reasoning: number;
+  total: number;
+}
+
 export function bandedAccumulatedCost(
   model: ModelRecord,
   prefixTokens: number,
@@ -93,20 +102,23 @@ export function bandedAccumulatedCost(
   arrivalsPerCycle: number,
   outputTokensPerArrival: number,
   reasoningTokensPerArrival: number,
-): number {
+): BandedCost {
   const bands = partitionByTier(model, prefixTokens, base, growth, units);
   const cycle = nn(arrivalsPerCycle);
   const outTok = nn(outputTokensPerArrival);
   const reasonTok = nn(reasoningTokensPerArrival);
   const reasonRate = model.reasoningPerMToken ?? 0;
-  let dollars = 0;
+  let input = 0;
+  let output = 0;
+  let reasoning = 0;
   for (const band of bands) {
     const tierTokens = nn(prefixTokens) + band.meanInput;
     const inRate = effectiveInputRate(model, tierTokens);
     const outRate = effectiveOutputRate(model, tierTokens) ?? 0;
     const arrivalsInBand = cycle * band.count;
-    dollars +=
-      (arrivalsInBand * (band.meanInput * inRate + outTok * outRate + reasonTok * reasonRate)) / PER_MILLION;
+    input += (arrivalsInBand * band.meanInput * inRate) / PER_MILLION;
+    output += (arrivalsInBand * outTok * outRate) / PER_MILLION;
+    reasoning += (arrivalsInBand * reasonTok * reasonRate) / PER_MILLION;
   }
-  return dollars;
+  return { input, output, reasoning, total: input + output + reasoning };
 }
