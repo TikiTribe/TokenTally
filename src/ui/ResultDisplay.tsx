@@ -7,6 +7,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
 import { TornadoChart } from '@/viz/TornadoChart';
+import { ExportButtons } from '@/ui/ExportButtons';
 import type { WorkloadForecast } from '@/workloads';
 import type { DenialOfWalletResult, TornadoBar } from '@/optimization';
 
@@ -100,6 +101,7 @@ export function ResultDisplay(): JSX.Element {
       ) : (
         <DowResult r={result.result} />
       )}
+      <ExportButtons />
     </div>
   );
 }
