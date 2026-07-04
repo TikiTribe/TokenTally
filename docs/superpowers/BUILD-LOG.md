@@ -345,10 +345,17 @@ NEXT ACTIONS (Phase 2 = UI + dataviz, spec §5.7 — refine from spec):
 3. Implement test-first (Testing Library + Playwright); after any subagent code run full tests + tsc + review; PR
    feat/phase-2-ui -> integration (NEVER main); merge on green; delete branch; push integration for preview.
 
+**ENV UPDATE (2026-07-04): Playwright browsers DO install + launch here** (`npx playwright install chromium` →
+build v1194, then `chromium.launch()` works — verified). The recurring "browsers can't install in-sandbox"
+assumption is FALSE. So Phase 2 MUST actually RUN the §5.9 enforced-CSP `securitypolicyviolation` test, the zero-egress
+test, and the headed E2E suite — not defer them. Gotcha: the cache may hold a mismatched build (MCP's 1223 vs the
+project's 1194) → `npx playwright install chromium` fixes it. See [[playwright-browsers-installable]].
+
 Carry into every later phase (deferred, tracked honestly):
-- **§13 CSP/WASM/egress runtime floor NOT verified** — strict CSP is in vercel.json + Playwright specs scaffolded, but
-  browsers can't install in-sandbox; "CSP enforced"/"zero egress" are re-verified at Phase 2/go-live (D1). **Phase 2 is
-  where the enforced CSP + the securitypolicyviolation Playwright test + the egress test must actually run** (spec §5.9).
+- **§13 CSP/WASM/egress runtime floor NOT yet verified** — strict CSP is in vercel.json + Playwright specs scaffolded.
+  Now RUNNABLE (see ENV UPDATE): **Phase 2 runs the enforced CSP + securitypolicyviolation test + egress test** against
+  a locally-served build (spec §5.9), no longer a go-live-only deferral. The Approx-badge WASM-free runtime proof
+  (§12/D14) is likewise now runnable and should be re-evaluated in Phase 2.
 - **Approx badge WAIVED for launch** (§12/D14): cut line = OpenAI-Exact-class + Estimate-only; Transformers.js/Gemma-Approx
   needs a runtime WASM-free proof (infeasible in-sandbox), tracked post-launch.
 - **Real Exact-usage capture** (0B B1) needs the OWNER's OpenAI key (out of band) — OpenAI stays `exact_unverified`; no fabrication.
