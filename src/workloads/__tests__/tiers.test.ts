@@ -35,14 +35,18 @@ describe('tiers (P1-A7)', () => {
   it('bandedAccumulatedCost: exact per-band input dollars (DS2: $6.072/run for input alone)', () => {
     // input only (output/reasoning 0), one run: band1 4x mean62k @ $3 = 248000*3/1e6=0.744;
     // band2 4x mean222k @ $6 = 888000*6/1e6=5.328; total 6.072
-    const cost = bandedAccumulatedCost(tiered, 50_000, 2000, 40_000, 8, 1, 0, 0);
-    expect(cost).toBeCloseTo(6.072, 6);
+    const b = bandedAccumulatedCost(tiered, 50_000, 2000, 40_000, 8, 1, 0, 0);
+    expect(b.total).toBeCloseTo(6.072, 6);
+    expect(b.input).toBeCloseTo(6.072, 6); // P2-A1: per-label breakdown
+    expect(b.output).toBe(0);
   });
 
-  it('bandedAccumulatedCost reduces to the mean-fold within a single tier', () => {
+  it('bandedAccumulatedCost reduces to the mean-fold within a single tier, split by label', () => {
     // all under 200k: input mean = 100 + 50*(5-1)/2 = 200; 10 cycles; output 20 @ $9; reasoning 0
     // input: 10*5*200*3/1e6 = 0.03 ; output: 10*5*20*9/1e6 = 0.009 ; total 0.039
-    const cost = bandedAccumulatedCost(flat, 0, 100, 50, 5, 10, 20, 0);
-    expect(cost).toBeCloseTo(0.039, 6);
+    const b = bandedAccumulatedCost(flat, 0, 100, 50, 5, 10, 20, 0);
+    expect(b.total).toBeCloseTo(0.039, 6);
+    expect(b.input).toBeCloseTo(0.03, 6);
+    expect(b.output).toBeCloseTo(0.009, 6);
   });
 });

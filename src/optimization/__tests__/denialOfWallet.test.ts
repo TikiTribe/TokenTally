@@ -76,6 +76,20 @@ describe('denialOfWallet', () => {
     expect(DOW_VDP_URL).toMatch(/^https:\/\//);
   });
 
+  // P2-A2: auditability parity — the result carries a snapshotVersion + formula on every exit path.
+  it('P2-A2: carries snapshotVersion + formula (enabled, disabled, and non-per_token)', () => {
+    const enabled = denialOfWallet({ model: gpt4o, attackerRequestsPerMonth: 1000, enabled: true, snapshotVersion: 'snap-x' });
+    expect(enabled.snapshotVersion).toBe('snap-x');
+    expect(enabled.formula.length).toBeGreaterThan(0);
+    const disabled = denialOfWallet({ model: gpt4o, attackerRequestsPerMonth: 1000, snapshotVersion: 'snap-x' });
+    expect(disabled.snapshotVersion).toBe('snap-x');
+    expect(disabled.formula.length).toBeGreaterThan(0);
+    const audio: ModelRecord = { ...gpt4o, billingUnit: 'per_second', contextWindow: null, maxOutput: null };
+    const nonToken = denialOfWallet({ model: audio, attackerRequestsPerMonth: 1000, enabled: true });
+    expect(nonToken.snapshotVersion).toBe('unknown');
+    expect(nonToken.formula.length).toBeGreaterThan(0);
+  });
+
   it('falls back to explicit caps when contextWindow/maxOutput are null', () => {
     const noCaps: ModelRecord = { ...gpt4o, contextWindow: null, maxOutput: null };
     const r = denialOfWallet({ model: noCaps, attackerRequestsPerMonth: 1000, enabled: true, fallbackInputTokens: 8000, fallbackOutputTokens: 4000 });

@@ -27,6 +27,7 @@ export interface DenialOfWalletConfig {
   fallbackOutputTokens?: number; // used when maxOutput is null
   fallbackReasoningTokens?: number; // reasoning ceiling when the model reasons; default maxOutput
   perUserRequestCap?: number; // for the rate-limit mitigation illustration
+  snapshotVersion?: string; // P2-A2: pricing snapshot that priced this exposure (auditability §6/§12)
 }
 
 export interface Mitigation {
@@ -43,9 +44,14 @@ export interface DenialOfWalletResult {
   note: string;
   disclaimer: string; // F-SEC-2: guardrail travels with the number
   vdpUrl: string;
+  snapshotVersion: string; // P2-A2: pricing snapshot id ('unknown' if not supplied), §6/§12 auditability
+  formula: string; // P2-A2: derivation trace for the worst-case figure
 }
 
-const inert = (note: string): DenialOfWalletResult => ({
+const DOW_FORMULA =
+  'worst = requests(x retries) x (contextWindow input + maxOutput + reasoning ceiling) at p_warm=0 (conservativeTotal seam)';
+
+const inert = (note: string, snapshotVersion: string): DenialOfWalletResult => ({
   enabled: false,
   worstCaseMonthly: 0,
   confidence: { low: 0, mid: 0, high: 0, unmodeled: true },
@@ -53,6 +59,8 @@ const inert = (note: string): DenialOfWalletResult => ({
   note,
   disclaimer: DOW_DISCLAIMER,
   vdpUrl: DOW_VDP_URL,
+  snapshotVersion,
+  formula: DOW_FORMULA,
 });
 
 // Price a worst-case posture: p_warm=0 (conservativeTotal), K = requests (no reuse), all cold.
@@ -79,7 +87,8 @@ function worstCase(
 }
 
 export function denialOfWallet(cfg: DenialOfWalletConfig): DenialOfWalletResult {
-  if (cfg.enabled !== true) return inert('disabled: Denial of Wallet is opt-in (kill switch off)');
+  const snap = cfg.snapshotVersion ?? 'unknown';
+  if (cfg.enabled !== true) return inert('disabled: Denial of Wallet is opt-in (kill switch off)', snap);
 
   // P1-A15: non-per_token billing is not modeled by the token cost core — never present a silent $0.
   if (cfg.model.billingUnit !== 'per_token') {
@@ -93,6 +102,8 @@ export function denialOfWallet(cfg: DenialOfWalletConfig): DenialOfWalletResult 
         `A ${cfg.model.billingUnit} SKU (e.g. realtime audio) accrues cost per unit held; size it in that unit.`,
       disclaimer: DOW_DISCLAIMER,
       vdpUrl: DOW_VDP_URL,
+      snapshotVersion: snap,
+      formula: DOW_FORMULA,
     };
   }
 
@@ -146,5 +157,7 @@ export function denialOfWallet(cfg: DenialOfWalletConfig): DenialOfWalletResult 
     note,
     disclaimer: DOW_DISCLAIMER,
     vdpUrl: DOW_VDP_URL,
+    snapshotVersion: snap,
+    formula: DOW_FORMULA,
   };
 }
