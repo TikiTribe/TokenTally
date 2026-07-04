@@ -72,9 +72,9 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 |-------|-------|------|-----------|------|--------|-------|
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
-| 0B | Tokenizer Engine | in progress | - | - | - | IN PROGRESS |
+| 0B | Tokenizer Engine | written+amended (B1-B15) | done (6-perspective, 31 findings) | - | - | IN PROGRESS (implementing) |
 | 0C | Caching + Cost Core | not written | - | - | - | QUEUED |
-| 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**) | not written | - | - | - | QUEUED |
+| 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
 | 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | QUEUED |
@@ -86,6 +86,18 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 - 2026-07-03: Registry keyed on (canonical model, deployment). [spec D9]
 - 2026-07-03: Sole decider = owner; F1 owner/presenter residual explicitly accepted. [spec §13]
 - 2026-07-03: Phase 0 decomposed into 0A-0D (independently testable). [plan scope check]
+- 2026-07-04: **0B: encoding comes from js-tiktoken's `getEncodingNameForModel` oracle, not a hand-rolled table.**
+  Probe-verified: the oracle returns the correct encoding for every known OpenAI id (babbage-002->r50k, gpt-4.5->o200k,
+  davinci-002->p50k, gpt-4->cl100k) and THROWS "Unknown model" on novel/prefixed ids — its rejection is the flagForReview
+  signal. Eliminates the hand-rolled-map drift bug class. [premortem B2, empirically verified]
+- 2026-07-04: **0B: no Exact badge at launch without real provider ground truth.** The spot-check fixture cannot be
+  fabricated (a circular tiktoken-vs-tiktoken gate). OpenAI ships `exact_unverified`; real Exact promotion needs a
+  provenance-carrying `usage` capture done OUT OF BAND with the owner's OpenAI/Anthropic API key (owner action, tracked
+  follow-up — NOT blocking 0B). [premortem B1]
+- 2026-07-04: **0B scope (B15): Approx badge deferred with Transformers.js -> dated 0D-before-demo gate.** 0B ships ~13%
+  Exact-class / 0% Approx / 87% Estimate, NOT the spec's projected 67/15/18. Before the demo, either pull one Gemma
+  tokenizer forward (so Gemini shows Approx) OR amend the §13 cut line to OpenAI-Exact-class + Estimate-only and correct
+  copy. Owner decision at the checkpoint; do not silently ship a demo that violates the cut-line badge floor. [premortem B15]
 - 2026-07-03: **ESLint deferred to 0D.** ESLint 9.39 is installed but the repo has only a legacy
   `.eslintrc.json` (no flat `eslint.config.js`), and the installed plugins (eslint-plugin-security 3.0.1
   etc.) ship flat-only configs that the legacy validator rejects even under `ESLINT_USE_FLAT_CONFIG=false`.
@@ -145,6 +157,23 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
   `npm audit` + the Dependabot dashboard. Do NOT bump deps on `main` directly (main is frozen); fix on the integration
   line and carry through the go-live PR.
 
+## Lessons from the 0B plan premortem (2026-07-04, 6 perspectives, 31 findings)
+
+- A spot-check gate that "verifies" a tokenizer against numbers you fabricated is worse than no gate — under the
+  always-green loop the cheapest fix is to backfill the fixture from the tool's own output, making Exact a
+  tiktoken-vs-tiktoken tautology. NEVER author "captured provider" fixtures without real capture + provenance.
+- When a pinned library already ships the mapping you need (js-tiktoken's `getEncodingNameForModel`), USE IT as the
+  oracle; a hand-rolled parallel copy silently drifts (it already had babbage-002 and gpt-4.5 wrong before a line ran).
+- Honesty is a TYPE-level contract: an Estimate with no `errorBand` field renders as false precision downstream and
+  can't be fixed without a breaking change once 0C consumes it. Put the band on the type before building on it.
+- A `typeof self.postMessage === 'function'` "am I a worker?" guard is TRUE on the main thread; node tests hide it.
+  Guard on `self instanceof WorkerGlobalScope` and add a jsdom test, or the worker hijacks window.onmessage.
+- The fat js-tiktoken main entry inlines all 6 rank tables (~2.58MB gz, ~230MB heap). Set the lite+rank-subpath import
+  path NOW so Phase 2 doesn't inherit it; pull the size-limit gate onto the tokenizer chunk.
+- Front-loading all 5 premortem layers into ONE parallel 6-perspective round (vs sequential rounds) converged well for
+  a plan-sized artifact; empirically resolve any cross-perspective conflict (babbage encoding) against ground truth
+  before amending. The 0B-close-out security+code review is the post-implementation adversarial pass.
+
 ## RESUME HERE (checkpoint, 2026-07-04 — Phase 0A DONE + merged, starting 0B)
 
 State: **Phase 0A is DONE and merged.** PR #5 (`feat/phase-0a-registry` -> `feat/realtime-determinism-engine`)
@@ -162,15 +191,17 @@ VERIFY), an egress test (no network at runtime), and the per-family Exact spot-c
 `exact_unverified` -> `exact`. Tokenizer Option A: Claude uses a local estimate (stays `estimate`).
 
 NEXT ACTIONS (0B loop):
-1. Read spec v1.2.1 (docs/superpowers/specs/2026-07-03-realtime-determinism-engine-design.md) tokenizer sections.
-2. Write Plan 0B (superpowers:writing-plans) decomposed test-first, always-green (new `src/tokenizer` modules only).
-3. Adversarial premortem (full 6-perspective for the sub-spec design choices; focused for the mechanical plan;
-   appsec lens never skipped — WASM/CSP/egress/supply-chain of the tokenizer deps). Fix ALL findings.
-4. Implement test-first; full test:ci + tsc green after each task (and after ANY subagent work, before trusting it).
-5. Security + code review (workflow: appsec/correctness/test-quality → adversarial verify). Fix confirmed findings.
-6. PR `feat/phase-0b-tokenizer` -> integration (NEVER main); merge on green; delete branch.
-7. Update this log; proceed to 0C (Caching + Cost Core), 0D (Deploy/security infra incl ESLint flat-config BEFORE
-   Phase 2, size-limit, refresh Action, dependency-vuln remediation), then Phases 1-4.
+1. DONE — spec read; Plan 0B written (5a4b09d); 6-perspective premortem done (31 findings); amendments B1-B15
+   committed (bb4fa4d). js-tiktoken 1.0.21 API + encoding oracle probe-verified (scratchpad/0b-probe-notes.md).
+2. IMPLEMENT Tasks 1-10 test-first, applying B1-B15 (amendments OVERRIDE task bodies). Full test:ci + tsc green
+   after each task (and after ANY subagent work, before trusting it). Key: use `getEncodingNameForModel` oracle;
+   NO fabricated fixtures (OpenAI = exact_unverified); errorBand on TokenCount; worker-global guard; lite+rank imports;
+   base64-js override; split flagForReview/awaitingAdapter; input clamp; dispatcher sanity-bound + kill switch.
+3. Security + code review (workflow: appsec/correctness/test-quality -> adversarial verify). Fix confirmed findings.
+4. PR `feat/phase-0b-tokenizer` -> integration (NEVER main); merge on green; delete branch; push integration (preview).
+5. Update this log; proceed to 0C (Caching + Cost Core), 0D (Deploy/security infra incl ESLint flat-config BEFORE
+   Phase 2, Transformers.js adapter + Approx-before-demo gate, size-limit, refresh Action, dependency-vuln remediation,
+   real Exact-usage capture with owner key), then Phases 1-4.
 
 END: headed Playwright E2E over every function, appsec pass, resolve the 10 Dependabot vulns, then the SINGLE final
 integration->main go-live PR (flips production), then delete all phase branches. main is untouched until that PR.
