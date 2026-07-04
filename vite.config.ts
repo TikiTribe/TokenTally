@@ -22,5 +22,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    // D3: never inline an asset (font/glyph) as a data: URI in CSS — font-src 'self' has no data: and
+    // would silently drop it. Keep every asset a same-origin file the strict CSP admits.
+    assetsInlineLimit: 0,
   },
 });
