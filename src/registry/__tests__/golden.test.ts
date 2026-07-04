@@ -44,11 +44,13 @@ describe('buildSnapshot golden fixture (A11)', () => {
     expect(ps.inputPrice).toBeCloseTo(0.0001, 12);
   });
 
-  it('detects the dbu billing unit', () => {
+  it('detects the dbu billing unit and stores its rates raw (never x1e6)', () => {
     const dbu = find((m) => m.canonicalId === 'databricks-dbrx-instruct');
     expect(dbu.billingUnit).toBe('dbu');
     expect(dbu.deployment).toBe('databricks');
     expect(dbu.underlyingFamily).toBe('dbrx');
+    expect(dbu.inputPrice).toBeCloseTo(1e-5, 12);
+    expect(dbu.outputPrice).toBeCloseTo(2e-5, 12);
   });
 
   it('keeps a 0/0 model as a free tier', () => {

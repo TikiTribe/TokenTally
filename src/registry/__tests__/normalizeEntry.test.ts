@@ -99,6 +99,53 @@ describe('normalizeEntry', () => {
       }),
     ).toBeNull();
   });
+
+  it('A7 (review): drops a region-route row whose litellm_provider carries a script payload', () => {
+    // deployment (bedrock/us-east-1) and canonicalId are safe, but the provider is not.
+    expect(
+      normalizeEntry('bedrock/us-east-1/anthropic.claude-3-5-sonnet', {
+        input_cost_per_token: 3e-6,
+        output_cost_per_token: 1.5e-5,
+        litellm_provider: '<img src=x onerror=alert(1)>',
+        mode: 'chat',
+      }),
+    ).toBeNull();
+  });
+
+  it('A7 (review): drops a row whose litellm_provider is a prototype-pollution key', () => {
+    expect(
+      normalizeEntry('bedrock/us-east-1/anthropic.claude-3-5-sonnet', {
+        input_cost_per_token: 3e-6,
+        output_cost_per_token: 1.5e-5,
+        litellm_provider: '__proto__',
+        mode: 'chat',
+      }),
+    ).toBeNull();
+  });
+
+  it('A4 (review): drops an insane reasoning-token rate to null', () => {
+    const r = normalizeEntry('o1', {
+      input_cost_per_token: 1.5e-5,
+      output_cost_per_token: 6e-5,
+      output_cost_per_reasoning_token: 1.0, // poisoned/typo (real values ~6e-6)
+      litellm_provider: 'openai',
+      mode: 'chat',
+    });
+    expect(r).not.toBeNull();
+    expect(r!.reasoningPerMToken).toBeNull();
+  });
+
+  it('A4 (review): keeps a sane reasoning-token rate scaled to per-million', () => {
+    const r = normalizeEntry('o1', {
+      input_cost_per_token: 1.5e-5,
+      output_cost_per_token: 6e-5,
+      output_cost_per_reasoning_token: 6e-6,
+      litellm_provider: 'openai',
+      mode: 'chat',
+    });
+    expect(r).not.toBeNull();
+    expect(r!.reasoningPerMToken).toBeCloseTo(6, 10);
+  });
 });
 
 describe('normalizeCatalog', () => {

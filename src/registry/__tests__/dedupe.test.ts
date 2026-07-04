@@ -58,6 +58,16 @@ describe('dedupeRecords (A3 key = canonicalId|deployment)', () => {
     expect(out.conflictCount).toBe(1);
   });
 
+  it('A3: a divergent OUTPUT price (same input) also counts as a conflict', () => {
+    const out = dedupeRecords([
+      base({ canonicalId: 'gpt-4o', deployment: 'openai', inputPrice: 3, outputPrice: 15 }),
+      base({ canonicalId: 'gpt-4o', deployment: 'openai', inputPrice: 3, outputPrice: 30 }),
+    ]);
+    expect(out.models).toHaveLength(1);
+    expect(out.models[0]!.outputPrice).toBe(15); // first wins
+    expect(out.conflictCount).toBe(1);
+  });
+
   it('A3: is order-independent for the surviving set when there are no conflicts', () => {
     const records = [
       base({ canonicalId: 'a', deployment: 'x' }),

@@ -43,4 +43,10 @@ describe('billing unit + price normalization', () => {
     expect(normalizeInputPrice({ input_cost_per_token: 0.0032 }, 'per_token')).toBeCloseTo(3200, 6);
     expect(normalizeOutputPrice({ output_cost_per_token: 0.00971 }, 'per_token')).toBeCloseTo(9710, 6);
   });
+  it('A5: dbu input rate is stored raw, never x1e6', () => {
+    expect(normalizeInputPrice({ input_dbu_cost_per_token: 1e-5 }, 'dbu')).toBeCloseTo(1e-5, 12);
+  });
+  it('A5: dbu output rate is stored raw, never x1e6', () => {
+    expect(normalizeOutputPrice({ output_dbu_cost_per_token: 2e-5 }, 'dbu')).toBeCloseTo(2e-5, 12);
+  });
 });

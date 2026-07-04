@@ -19,7 +19,10 @@ export type CacheArchetype = 'automatic' | 'breakpoint_ttl' | 'storage';
 
 export interface PriceTier {
   thresholdTokens: number;
-  inputPrice: number;                 // per-million units, same unit as ModelRecord.inputPrice
+  // per-million units, same unit as ModelRecord.inputPrice. null = "no above-threshold override for
+  // this rate, fall back to the base rate" (mirrors outputPrice); never 0, so a cache-only or
+  // output-only tier is not misread as free input above the threshold.
+  inputPrice: number | null;
   outputPrice: number | null;
   cacheReadPerMToken?: number;
   cacheWritePerMToken?: number;

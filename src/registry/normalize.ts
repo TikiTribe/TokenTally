@@ -132,17 +132,25 @@ export function parseTiers(e: RawEntry, unit: BillingUnit): PriceTier[] {
     unit === 'per_character'
       ? `output_cost_per_character_above_${label}_tokens`
       : `output_cost_per_token_above_${label}_tokens`;
+  // A4: every tier rate passes the same sanity guard as the base rates; an insane (negative/~1000x)
+  // or typo'd tier value is treated as absent (null), never scaled into the registry. Cache tiers
+  // are always per-token rates. Keys are derived from the hardcoded threshold list, not user input.
+  const saneNum = (v: unknown, u: BillingUnit): number | null => {
+    const n = num(v);
+    return n !== null && sanePrice(n, u) ? n : null;
+  };
   const tiers: PriceTier[] = [];
   for (const [threshold, label] of TIER_THRESHOLDS) {
-    // Keys are derived from the hardcoded threshold list, not user input; the reads are safe.
-    const inp = num(e[inputField(label)]);
-    const out = num(e[outputField(label)]);
-    const cr = num(e[`cache_read_input_token_cost_above_${label}_tokens`]);
-    const cw = num(e[`cache_creation_input_token_cost_above_${label}_tokens`]);
+    const inp = saneNum(e[inputField(label)], unit);
+    const out = saneNum(e[outputField(label)], unit);
+    const cr = saneNum(e[`cache_read_input_token_cost_above_${label}_tokens`], 'per_token');
+    const cw = saneNum(e[`cache_creation_input_token_cost_above_${label}_tokens`], 'per_token');
     if (inp === null && out === null && cr === null && cw === null) continue;
     tiers.push({
       thresholdTokens: threshold,
-      inputPrice: inp === null ? 0 : inp * perUnitScale,
+      // null (not 0) when this tier carries no input override, so the cost core reads it as
+      // "use the base rate" rather than "free above the threshold".
+      inputPrice: inp === null ? null : inp * perUnitScale,
       outputPrice: out === null ? null : out * perUnitScale,
       ...(cr !== null ? { cacheReadPerMToken: cr * PER_MILLION } : {}),
       ...(cw !== null ? { cacheWritePerMToken: cw * PER_MILLION } : {}),
@@ -230,8 +238,16 @@ function isSafeIdComponent(s: string): boolean {
 
 export function normalizeEntry(rawKey: string, e: RawEntry): ModelRecord | null {
   const { canonicalId, deployment, provider } = parseKey(rawKey, e);
-  // A7: drop unsafe ids/deployments up front (counted by normalizeCatalog as a drop).
-  if (!isSafeIdComponent(canonicalId) || !isSafeIdComponent(deployment)) return null;
+  // A7: drop unsafe canonicalId/deployment/provider up front (counted by normalizeCatalog as a drop).
+  // provider comes from litellm_provider and is a rendered/grouping field (and feeds archetype
+  // routing), so it gets the same stored-XSS / proto-pollution firewall as the id and deployment.
+  if (
+    !isSafeIdComponent(canonicalId) ||
+    !isSafeIdComponent(deployment) ||
+    !isSafeIdComponent(provider)
+  ) {
+    return null;
+  }
   const { drop, freeTier } = classifyRow(canonicalId, e);
   if (drop) return null;
   const billingUnit = detectBillingUnit(e);
@@ -240,7 +256,10 @@ export function normalizeEntry(rawKey: string, e: RawEntry): ModelRecord | null 
   const { family, tier } = resolveFamily(canonicalId);
   // classifyRow already proved e.mode is one of the four in-scope modes, so this cast is sound.
   const mode = e.mode as ModelRecord['mode'];
-  const reasoning = num(e.output_cost_per_reasoning_token);
+  // A4: the reasoning-token rate is a per-token price and gets the same sanity guard as every other
+  // price surface, so a poisoned/typo'd rate is nulled rather than scaled into a mis-bill.
+  const reasoningRaw = num(e.output_cost_per_reasoning_token);
+  const reasoning = reasoningRaw !== null && sanePrice(reasoningRaw, 'per_token') ? reasoningRaw : null;
   return {
     canonicalId,
     deployment,
