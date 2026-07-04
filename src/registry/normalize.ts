@@ -274,3 +274,26 @@ export function normalizeCatalog(
   }
   return { models, droppedCount };
 }
+
+// A3: the primary key is (canonicalId, deployment) ONLY. Divergent-price SKUs across deployments
+// are already distinct keys and are kept. Two records that collapse to the same key with an
+// identical price are silent duplicates; the same key with a DIFFERENT price is a genuine upstream
+// anomaly, so the first is kept and the collision is counted (never both, which would break the
+// query API's single-record-per-key invariant).
+export function dedupeRecords(models: ModelRecord[]): {
+  models: ModelRecord[];
+  conflictCount: number;
+} {
+  const seen = new Map<string, ModelRecord>();
+  let conflictCount = 0;
+  for (const m of models) {
+    const key = `${m.canonicalId}|${m.deployment}`;
+    const existing = seen.get(key);
+    if (existing === undefined) {
+      seen.set(key, m);
+    } else if (existing.inputPrice !== m.inputPrice || existing.outputPrice !== m.outputPrice) {
+      conflictCount++; // keep the first (already in the map), count the divergent-price collision
+    }
+  }
+  return { models: [...seen.values()], conflictCount };
+}
