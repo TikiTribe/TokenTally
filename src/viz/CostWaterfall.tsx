@@ -18,7 +18,7 @@ export function CostWaterfall(props: { waterfall: CostWaterfallData }): JSX.Elem
             <span aria-hidden="true" style={{ background: 'var(--surface-2)', borderRadius: 3, height: '0.9rem' }}>
               <span style={{ display: 'block', height: '100%', width: `${((c.cost ?? 0) / max) * 100}%`, background: 'var(--primary)', borderRadius: 3 }} />
             </span>
-            <span style={{ fontSize: '0.85rem', textAlign: 'right' }}>
+            <span data-testid={`waterfall-${c.label}`} style={{ fontSize: '0.85rem', textAlign: 'right' }}>
               {c.cost === null
                 ? `${c.nativeRate ?? '—'} / M ${c.nativeUnit ?? 'unit'}`
                 : money(c.cost)}
