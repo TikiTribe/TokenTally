@@ -6,8 +6,10 @@
 // Version: Phase 1.
 import { monthlyWarmCost } from '@/engine';
 import { composeConfidence } from '@/engine/cost/confidence';
+import { buildWaterfall } from '@/engine/cost/costCore';
+import { effectiveInputRate, effectiveOutputRate } from '@/engine/cost/rates';
 import { detectStraddle, bandedAccumulatedCost } from '@/workloads/tiers';
-import type { WarmScenario, WarmCostResult } from '@/types/engine';
+import type { WarmScenario, WarmCostResult, WaterfallBarInput } from '@/types/engine';
 import type { WorkloadForecast, WorkloadKind, StepProfile } from '@/types/workload';
 
 export interface AssembleParams {
@@ -23,8 +25,69 @@ export interface AssembleParams {
   steps: StepProfile[] | null;
 }
 
+// A non-token-modeled forecast that SURFACES the gap instead of showing a silent $0 (C9 / DoW A15 parity).
+function notModeled(p: AssembleParams, unit: string): WorkloadForecast {
+  return {
+    kind: p.kind,
+    monthlyCost: 0,
+    cost: {
+      applicable: false, warmth: null, centralTotal: 0, conservativeTotal: 0,
+      savingsUpTo: { central: 0, conservativeReference: 0, qualifier: 'up_to' },
+      writesPerMonth: 0, waterfall: { components: [], total: 0 },
+      confidence: { low: 0, mid: 0, high: 0, unmodeled: true }, breakEvenArrivals: null,
+    },
+    arrivalsPerMonth: p.scenario.arrivalsPerMonth,
+    accuracyNote: `not modeled: ${unit} billing is duration/DBU-based — do not read as $0. Size it in its native unit.`,
+    snapshotVersion: p.snapshotVersion,
+    formula: `unmodeled:${unit}`,
+    tierStraddle: false,
+    contextTruncated: p.contextTruncated,
+    steps: null,
+  };
+}
+
+// Non-warm cost for a per_character SKU: no prompt cache, the prefix is re-sent as input each arrival, and
+// dollars come straight from buildWaterfall in the native (character) unit (C3/C9). Owner: engine.
+function perCharacterForecast(p: AssembleParams): WorkloadForecast {
+  const scn = p.scenario;
+  const chars = scn.prefixTokens + scn.perArrivalInputTokens; // "tokens" are characters for this SKU
+  const inRate = effectiveInputRate(scn.model, chars);
+  const outRate = effectiveOutputRate(scn.model, chars) ?? 0;
+  const reasonRate = scn.model.reasoningPerMToken ?? 0;
+  const bars: WaterfallBarInput[] = [
+    { label: 'input', quantity: scn.arrivalsPerMonth * chars, rate: inRate, unit: 'per_character' },
+    { label: 'output', quantity: scn.arrivalsPerMonth * scn.perArrivalOutputTokens, rate: outRate, unit: 'per_character' },
+  ];
+  if (scn.perArrivalReasoningTokens > 0 && reasonRate > 0) {
+    bars.push({ label: 'reasoning', quantity: scn.arrivalsPerMonth * scn.perArrivalReasoningTokens, rate: reasonRate, unit: 'per_character' });
+  }
+  const waterfall = buildWaterfall(bars);
+  return {
+    kind: p.kind,
+    monthlyCost: waterfall.total,
+    cost: {
+      applicable: true, warmth: null, centralTotal: waterfall.total, conservativeTotal: waterfall.total,
+      savingsUpTo: { central: 0, conservativeReference: waterfall.total, qualifier: 'up_to' },
+      writesPerMonth: 0, waterfall,
+      confidence: composeConfidence(waterfall.total, scn.tokenizerBand ?? null, null), breakEvenArrivals: null,
+    },
+    arrivalsPerMonth: scn.arrivalsPerMonth,
+    accuracyNote: `${p.accuracyNote} (per_character billing; no prompt cache)`,
+    snapshotVersion: p.snapshotVersion,
+    formula: `${p.formula} [per_character, no cache]`,
+    tierStraddle: false,
+    contextTruncated: p.contextTruncated,
+    steps: p.steps,
+  };
+}
+
 export function assembleForecast(p: AssembleParams): WorkloadForecast {
   const scn = p.scenario;
+  // Dispatch on billing unit: per_token gets the full warm-cache path; per_character a non-warm char-based
+  // cost; per_second/dbu are duration/DBU-shaped and surfaced as not-modeled (never a silent $0).
+  if (scn.model.billingUnit === 'per_character') return perCharacterForecast(p);
+  if (scn.model.billingUnit !== 'per_token') return notModeled(p, scn.model.billingUnit);
+
   const wc = monthlyWarmCost(scn);
   const straddle =
     wc.applicable && detectStraddle(scn.model, scn.prefixTokens, p.accum.base, p.accum.growth, p.accum.units);
