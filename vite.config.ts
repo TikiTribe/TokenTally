@@ -42,8 +42,8 @@ export default defineConfig({
   // (Vitest config lives in vitest.config.ts — it takes precedence over any test block here.)
   build: {
     outDir: 'dist',
-    // Keep the two heaviest assets out of the entry chunk: React in a stable 'vendor' chunk, recharts (added
-    // in 2D) in its own lazy 'charts' chunk. The engine/registry stay lazy via dynamic import().
+    // Keep React in a stable 'vendor' chunk out of the tiny app-shell entry. The engine/registry/tokenizer
+    // stay lazy via dynamic import()/worker. Charts are hand-rolled SVG (no recharts), so no chart chunk.
     rollupOptions: {
       output: {
         manualChunks: {

@@ -21,7 +21,7 @@
     "policy-fresh": "node scripts/ci/assert-policy-fresh.mjs",
     "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "typecheck:tests": "tsc -p tsconfig.tests.json",
-    "size": "size-limit",
+    "size": "node scripts/ci/assert-size-globs.mjs && size-limit",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -30,7 +30,6 @@
     "jspdf-autotable": "5.0.8",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "recharts": "2.12.7",
     "zustand": "4.5.5"
   },
   "devDependencies": {
@@ -68,7 +67,6 @@
   },
   "overrides": {
     "base64-js": "1.5.1",
-    "lodash": "4.18.1",
     "esbuild": "0.25.12"
   },
   "engines": {
