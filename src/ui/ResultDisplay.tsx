@@ -21,18 +21,18 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
   const band = c.confidence;
   return (
     <div>
-      <output aria-live="polite" style={{ display: 'block', fontSize: '2rem', fontWeight: 700 }}>
+      <output data-testid="headline-cost" aria-live="polite" style={{ display: 'block', fontSize: '2rem', fontWeight: 700 }}>
         {money(f.monthlyCost)} <span style={{ fontSize: '1rem', fontWeight: 400, color: 'var(--text-muted)' }}>/ month</span>
       </output>
-      <p style={{ margin: '0.25rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+      <p data-testid="confidence-line" style={{ margin: '0.25rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
         {band.unmodeled
           ? 'Point estimate; variance unmodeled.'
           : `Range ${money(band.low)} – ${money(band.high)} · conservative (no warm cache) ${money(c.conservativeTotal)}`}
       </p>
-      <p><span className="badge badge-estimate">{f.accuracyNote}</span></p>
+      <p><span className="badge badge-estimate" data-testid="accuracy-badge">{f.accuracyNote}</span></p>
       {/* §13 cut line: the cross-run warm-cache view + break-even. */}
       {c.warmth !== null || c.breakEvenArrivals !== null ? (
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+        <p data-testid="cache-line" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           {c.savingsUpTo.central > 0 ? `Caching saves up to ${money(c.savingsUpTo.central)}/mo. ` : ''}
           {c.breakEvenArrivals !== null && Number.isFinite(c.breakEvenArrivals)
             ? `Warm-cache break-even at ~${Math.round(c.breakEvenArrivals).toLocaleString()} arrivals/mo.`
@@ -42,7 +42,7 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
       <CostWaterfall waterfall={c.waterfall} />
       <StepAccumulationChart steps={f.steps} />
       <TornadoChart bars={tornado} />
-      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+      <p data-testid="formula-line" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         Formula: {f.formula} · priced against snapshot {f.snapshotVersion.slice(0, 8)}
       </p>
     </div>
@@ -62,11 +62,11 @@ function DowResult({ r }: { r: DenialOfWalletResult }): JSX.Element {
       <p style={{ fontSize: '0.85rem' }}>
         Report a vulnerability: <a href={r.vdpUrl} style={{ color: 'var(--primary)' }} rel="noreferrer">{r.vdpUrl}</a>
       </p>
-      <output aria-live="polite" style={{ display: 'block', fontSize: '1.5rem', fontWeight: 700 }}>
+      <output data-testid="dow-exposure" aria-live="polite" style={{ display: 'block', fontSize: '1.5rem', fontWeight: 700 }}>
         Worst-case exposure: {money(r.worstCaseMonthly)} / month
       </output>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{r.note}</p>
-      <ul>
+      <ul data-testid="dow-mitigations">
         {r.mitigations.map((m) => (
           <li key={m.control}>
             {m.control}: saves {money(m.savedMonthly)}/mo

@@ -5,6 +5,8 @@
 import { useAppStore } from '@/store/useAppStore';
 import { NumberField } from '@/ui/NumberField';
 import { ModelSelector } from '@/ui/ModelSelector';
+import { ModeExplainer } from '@/ui/ModeExplainer';
+import { FIELD_HELP, MODEL_HELP } from '@/config/helpContent';
 
 const DISCLAIMER =
   'Defensive planning only. This bounds your own worst-case spend so you can set budget, output, retry, ' +
@@ -20,6 +22,7 @@ export default function DenialOfWalletPanel(): JSX.Element {
   return (
     <div className="card">
       <h2 style={{ marginTop: 0 }}>Denial of Wallet (defensive)</h2>
+      <ModeExplainer mode="denial_of_wallet" />
       <p style={{ color: 'var(--text-muted)' }}>{DISCLAIMER}</p>
       <p>
         Report a vulnerability:{' '}
@@ -38,11 +41,11 @@ export default function DenialOfWalletPanel(): JSX.Element {
 
       {ready ? (
         <>
-          <ModelSelector mode="denial_of_wallet" />
-          <NumberField label="Attacker requests per month" value={i.attackerRequestsPerMonth} onChange={(v) => patch('denial_of_wallet', { attackerRequestsPerMonth: v })} />
-          <NumberField label="Retry ceiling (forced-retry multiplier)" value={i.retryCeiling} min={1} onChange={(v) => patch('denial_of_wallet', { retryCeiling: v })} />
-          <NumberField label="Fallback input cap (tokens, if model exposes none)" value={i.fallbackInputTokens} onChange={(v) => patch('denial_of_wallet', { fallbackInputTokens: v })} />
-          <NumberField label="Fallback output cap (tokens, if model exposes none)" value={i.fallbackOutputTokens} onChange={(v) => patch('denial_of_wallet', { fallbackOutputTokens: v })} />
+          <ModelSelector mode="denial_of_wallet" help={MODEL_HELP} />
+          <NumberField label="Attacker requests per month" value={i.attackerRequestsPerMonth} onChange={(v) => patch('denial_of_wallet', { attackerRequestsPerMonth: v })} help={FIELD_HELP['dow.attackerRequestsPerMonth']} />
+          <NumberField label="Retry ceiling (forced-retry multiplier)" value={i.retryCeiling} min={1} onChange={(v) => patch('denial_of_wallet', { retryCeiling: v })} help={FIELD_HELP['dow.retryCeiling']} />
+          <NumberField label="Fallback input cap (tokens, if model exposes none)" value={i.fallbackInputTokens} onChange={(v) => patch('denial_of_wallet', { fallbackInputTokens: v })} help={FIELD_HELP['dow.fallbackInputTokens']} />
+          <NumberField label="Fallback output cap (tokens, if model exposes none)" value={i.fallbackOutputTokens} onChange={(v) => patch('denial_of_wallet', { fallbackOutputTokens: v })} help={FIELD_HELP['dow.fallbackOutputTokens']} />
         </>
       ) : (
         <p style={{ color: 'var(--text-muted)' }}>Enable both checkboxes above to model exposure.</p>
