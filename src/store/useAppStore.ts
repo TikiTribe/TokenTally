@@ -4,7 +4,7 @@
 // symbols and the first-paint-lean gate stays green. Owner: TokenTally UI. Version: Phase 2A.
 import { create } from 'zustand';
 import type {
-  Mode, ThemeMode, RegistryStatus, ModelSelection, SnapshotMeta, ModeInputs,
+  Mode, ThemeMode, RegistryStatus, ModelSelection, SnapshotMeta, ModeInputs, FieldTokenCount,
 } from '@/store/types';
 
 const DEFAULT_INPUTS: ModeInputs = {
@@ -40,6 +40,7 @@ export interface AppState {
   snapshotMeta: SnapshotMeta | null;
   selection: Record<Mode, ModelSelection>;
   inputs: ModeInputs;
+  tokenCounts: Record<string, FieldTokenCount>; // keyed by fieldId (e.g. 'chatbot.systemPrompt')
   status: 'idle' | 'computing' | 'ready' | 'error';
   error: string | null;
 
@@ -48,6 +49,7 @@ export interface AppState {
   togglePalette(open?: boolean): void;
   setSelection(m: Mode, s: ModelSelection): void;
   patchInputs<M extends Mode>(m: M, patch: Partial<ModeInputs[M]>): void;
+  reportTokenCount(fieldId: string, tc: FieldTokenCount): void;
   ensureRegistry(): Promise<void>;
 }
 
@@ -59,6 +61,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   snapshotMeta: null,
   selection: DEFAULT_SELECTION,
   inputs: DEFAULT_INPUTS,
+  tokenCounts: {},
   status: 'idle',
   error: null,
 
@@ -68,6 +71,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelection: (m, s) => set((state) => ({ selection: { ...state.selection, [m]: s } })),
   patchInputs: (m, patch) =>
     set((state) => ({ inputs: { ...state.inputs, [m]: { ...state.inputs[m], ...patch } } })),
+  reportTokenCount: (fieldId, tc) =>
+    set((state) => ({ tokenCounts: { ...state.tokenCounts, [fieldId]: tc } })),
 
   ensureRegistry: async () => {
     const st = get().registryStatus;

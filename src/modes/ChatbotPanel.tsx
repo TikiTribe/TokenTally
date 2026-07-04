@@ -2,16 +2,19 @@
 import { useAppStore } from '@/store/useAppStore';
 import { NumberField } from '@/ui/NumberField';
 import { ModelSelector } from '@/ui/ModelSelector';
+import { TokenizedTextArea } from '@/ui/TokenizedTextArea';
 import { ResultsPending } from '@/ui/ResultsPending';
 import type { ContextStrategy } from '@/store/types';
 
 export default function ChatbotPanel(): JSX.Element {
   const i = useAppStore((s) => s.inputs.chatbot);
+  const modelId = useAppStore((s) => s.selection.chatbot.canonicalId);
   const patch = useAppStore((s) => s.patchInputs);
   return (
     <div className="card">
       <ModelSelector mode="chatbot" />
-      <NumberField label="System prompt (tokens, live count in the next stage)" value={i.avgUserMessageTokens} onChange={(v) => patch('chatbot', { avgUserMessageTokens: v })} hint="Cached prefix — the caching value lever" />
+      <TokenizedTextArea label="System prompt" fieldId="chatbot.systemPrompt" modelId={modelId} value={i.systemPromptText} onChange={(v) => patch('chatbot', { systemPromptText: v })} hint="Cached prefix — the caching value lever" />
+      <NumberField label="Avg user message (tokens)" value={i.avgUserMessageTokens} onChange={(v) => patch('chatbot', { avgUserMessageTokens: v })} />
       <NumberField label="Avg response (tokens)" value={i.avgResponseTokens} onChange={(v) => patch('chatbot', { avgResponseTokens: v })} />
       <NumberField label="Turns per conversation" value={i.turnsPerConversation} onChange={(v) => patch('chatbot', { turnsPerConversation: v })} />
       <NumberField label="Conversations per month" value={i.conversationsPerMonth} onChange={(v) => patch('chatbot', { conversationsPerMonth: v })} />

@@ -68,6 +68,15 @@ export interface DowInputs {
   fallbackOutputTokens: number;
 }
 
+// A worker-derived token count for a tokenizable field (chatbot system prompt, prompt text). `badge` is the
+// runtime TokenCount.badge (P2-A10) — the honest fidelity of THIS count, not the model's static tier.
+export interface FieldTokenCount {
+  count: number;
+  badge: string;
+  errorBand: { relLow: number; relHigh: number } | null;
+  truncated: boolean;
+}
+
 export interface ModeInputs {
   chatbot: ChatbotInputs;
   prompt: PromptInputs;
