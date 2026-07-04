@@ -12,8 +12,10 @@ import type { RegistrySnapshot, ModelRecord } from '../../src/types/registry';
 
 // A4: pin to a specific upstream commit SHA, never `main`. The refresh Action (Phase 0D) replaces
 // both placeholders atomically with a verified commit + the sha256 of that commit's raw body.
-const PINNED_COMMIT = 'REPLACE_WITH_PINNED_SHA';
-const EXPECTED_SNAPSHOT_SHA256 = 'REPLACE_WITH_EXPECTED_SHA256';
+// Pinned 2026-07-04 (Phase 2A): AgentOps-AI/tokencost model_prices.json @ the 2025-09-01 price update,
+// body hash-verified before parse. Refresh via the Phase-0D pricing Action (bumps both atomically).
+const PINNED_COMMIT = '59042a13a4932cdade3f3f352a81b27ec4b2557a';
+const EXPECTED_SNAPSHOT_SHA256 = '15e09b288901e7a70909992d18aa82ba35b4485107c5a014a5c06b409e6f5359';
 const SNAPSHOT_URL = `https://raw.githubusercontent.com/AgentOps-AI/tokencost/${PINNED_COMMIT}/tokencost/model_prices.json`;
 
 // Deterministic, locale-independent ordering by the primary key (canonicalId, deployment) so the
