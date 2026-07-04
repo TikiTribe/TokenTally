@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "scrape-pricing": "npx tsx scripts/scrape-pricing.ts",
     "update-pricing": "npx tsx scripts/update-pricing-from-csv.ts",
     "test": "vitest run",
@@ -26,6 +26,7 @@
     "zustand": "4.5.5"
   },
   "devDependencies": {
+    "@eslint/js": "9.39.0",
     "@types/cheerio": "0.22.35",
     "@types/node-fetch": "2.6.11",
     "@types/react": "18.3.12",
@@ -41,6 +42,7 @@
     "eslint-plugin-react": "7.37.2",
     "eslint-plugin-react-hooks": "5.0.0",
     "eslint-plugin-security": "3.0.1",
+    "globals": "14.0.0",
     "node-fetch": "3.3.2",
     "postcss": "8.4.49",
     "tailwindcss": "3.4.15",
