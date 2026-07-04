@@ -24,7 +24,7 @@ export function NumberField(props: {
         <label htmlFor={id} style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           {props.label}
         </label>
-        {props.help && tipId ? <HelpTip tipId={tipId} label={props.label} content={props.help} /> : null}
+        {props.help && tipId ? <HelpTip tipId={tipId} content={props.help} /> : null}
       </span>
       <input
         id={id}

@@ -25,7 +25,7 @@ export default function ChatbotPanel(): JSX.Element {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.75rem' }}>
         <span className="field-label-row">
           <label htmlFor="chatbot-ctx" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Context strategy</label>
-          <HelpTip tipId="chatbot-ctx-tip" label="Context strategy" content={fieldHelp('chatbot.contextStrategy')} />
+          <HelpTip tipId="chatbot-ctx-tip" content={fieldHelp('chatbot.contextStrategy')} />
         </span>
         <select id="chatbot-ctx" className="input-field" value={i.contextStrategy} aria-describedby="chatbot-ctx-tip"
           onChange={(e) => patch('chatbot', { contextStrategy: e.target.value as ContextStrategy })}>

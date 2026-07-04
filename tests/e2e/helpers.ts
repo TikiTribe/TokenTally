@@ -39,12 +39,6 @@ export function parseMoney(text: string): number {
   return Number(m[1].replace(/,/g, ''));
 }
 
-// Mirror the app's exact display formatter so expected strings match byte-for-byte (money() in the app is
-// `$` + toLocaleString(maximumFractionDigits: 2)). Kept tiny + identical on purpose.
-export function money(n: number): string {
-  return `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
-}
-
 // The workload headline ("$X / month") in an <output data-testid=headline-cost>.
 export function headline(page: Page): Locator {
   return page.getByTestId('headline-cost');

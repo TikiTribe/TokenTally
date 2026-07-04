@@ -37,7 +37,7 @@ export function ModelSelector(props: { mode: Mode; help?: string }): JSX.Element
         <label htmlFor={id} style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           Model
         </label>
-        {props.help ? <HelpTip tipId={`${id}-tip`} label="Model" content={props.help} /> : null}
+        {props.help ? <HelpTip tipId={`${id}-tip`} content={props.help} /> : null}
       </span>
       <select
         id={id}

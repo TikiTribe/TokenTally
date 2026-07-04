@@ -4,39 +4,55 @@ import { test, expect } from '@playwright/test';
 import { waitReady, selectMode, MODE_TABS } from './helpers';
 
 test.describe('help & tooltips', () => {
+  // NOTE: the closed bubble is sr-only (1x1 clip), so Playwright's bounding-box toBeVisible() reports it
+  // "visible" even when closed. The REAL open signal is aria-expanded on the button + the is-open class on the
+  // bubble — assert those so a broken open path actually fails the test.
   test('field tooltip opens on focus, exposes its content, and dismisses on ESC', async ({ page }) => {
     await waitReady(page);
     const row = page.locator('.field-label-row', { hasText: 'Avg response (tokens)' });
     const btn = row.getByRole('button', { name: 'More information' });
+    const tip = row.getByRole('tooltip');
     await expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await expect(tip).not.toHaveClass(/is-open/);
     await btn.focus();
     await expect(btn).toHaveAttribute('aria-expanded', 'true');
-    // the tooltip content becomes the visible bubble
-    await expect(row.getByRole('tooltip')).toBeVisible();
-    await expect(row.getByRole('tooltip')).toContainText(/Output tokens cost/);
+    await expect(tip).toHaveClass(/is-open/);
+    await expect(tip).toContainText(/Output tokens cost/);
     await page.keyboard.press('Escape');
     await expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await expect(tip).not.toHaveClass(/is-open/);
   });
 
   test('field tooltip also opens on hover (not focus-only)', async ({ page }) => {
     await waitReady(page);
     const row = page.locator('.field-label-row', { hasText: 'Conversations per month' });
-    await row.getByRole('button', { name: 'More information' }).hover();
-    await expect(row.getByRole('tooltip')).toBeVisible();
-    await expect(row.getByRole('tooltip')).toContainText(/top sensitivity factor/);
+    const btn = row.getByRole('button', { name: 'More information' });
+    const tip = row.getByRole('tooltip');
+    await expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await btn.hover();
+    await expect(btn).toHaveAttribute('aria-expanded', 'true'); // the real open signal, not sr-only visibility
+    await expect(tip).toHaveClass(/is-open/);
+    await expect(tip).toContainText(/top sensitivity factor/);
   });
 
-  test('every input field in each mode has an associated help tooltip', async ({ page }) => {
+  test('clicking the help button does not close a hover-opened tooltip (no click/focus race)', async ({ page }) => {
     await waitReady(page);
-    for (const [mode, expected] of [
-      [MODE_TABS.chatbot, 6], // model + system prompt + 4 numbers + context strategy = 7 tips (see note)
-      [MODE_TABS.agent, 6],
-      [MODE_TABS.crew, 4],
+    const row = page.locator('.field-label-row', { hasText: 'Turns per conversation' });
+    const btn = row.getByRole('button', { name: 'More information' });
+    await btn.click(); // click focuses -> opens; must NOT toggle back closed
+    await expect(btn).toHaveAttribute('aria-expanded', 'true');
+    await expect(row.getByRole('tooltip')).toHaveClass(/is-open/);
+  });
+
+  test('every input field in each mode has an associated help tooltip (exact count)', async ({ page }) => {
+    await waitReady(page);
+    for (const [mode, count] of [
+      [MODE_TABS.chatbot, 7], // Model + system prompt + 4 numbers + context strategy
+      [MODE_TABS.agent, 7],   // Model + preset + 5 numbers
+      [MODE_TABS.crew, 5],    // Model + 4 numbers
     ] as const) {
       await selectMode(page, mode);
-      await expect(page.getByRole('tooltip')).not.toHaveCount(0);
-      // at least `expected` help buttons present (model + fields)
-      expect(await page.getByRole('button', { name: 'More information' }).count()).toBeGreaterThanOrEqual(expected);
+      await expect(page.getByRole('button', { name: 'More information' })).toHaveCount(count);
     }
   });
 

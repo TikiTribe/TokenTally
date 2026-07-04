@@ -25,7 +25,7 @@ export default function AgentPanel(): JSX.Element {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.75rem' }}>
         <span className="field-label-row">
           <label htmlFor="agent-preset" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Framework preset (tunable seed)</label>
-          <HelpTip tipId="agent-preset-tip" label="Framework preset (tunable seed)" content={fieldHelp('agent.preset')} />
+          <HelpTip tipId="agent-preset-tip" content={fieldHelp('agent.preset')} />
         </span>
         <select id="agent-preset" className="input-field" value={i.preset} aria-describedby="agent-preset-tip"
           onChange={(e) => patch('agent', { preset: e.target.value as PresetName })}>

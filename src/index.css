@@ -194,7 +194,7 @@
   }
   .help-tip__bubble.is-open {
     position: absolute;
-    top: 1.6rem;
+    top: 1.3rem; /* close to the 1.05rem button; the HelpTip close-delay bridges the remaining gap (SC 1.4.13) */
     left: 0;
     z-index: 30;
     width: max-content;
