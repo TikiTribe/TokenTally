@@ -23,7 +23,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-4xl font-bold text-gray-900">TokenTally</h1>
           <p className="text-gray-600 mt-2">
-            Precision LLM Cost Forecasting - Predict costs within ±5% accuracy
+            LLM Cost Forecasting - Predict costs with precision scoped per model
             for chatbots and batch API operations
           </p>
         </div>
@@ -66,7 +66,7 @@ function App() {
               TokenTally - Built with React, TypeScript, and Tailwind CSS
             </p>
             <p className="mt-2">
-              Target accuracy: ±5% | Pricing data: OpenAI and Anthropic (Jan 2025)
+              Accuracy: scoped per model | Pricing data: OpenAI and Anthropic
             </p>
           </div>
         </div>

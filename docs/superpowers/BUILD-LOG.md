@@ -73,12 +73,36 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
 | 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
-| 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | PR open | CLOSE-OUT (PR -> integration) |
-| 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
+| 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | **YES (PR #7, b08760a)** | **DONE** |
+| 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) + review (3 confirmed, all fixed) | Tasks 1-9 + review fixes (207 tests, audit 0) | pending PR | **DONE (impl) — PR into integration** |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
 | 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | QUEUED |
 | 4 | Hardening: E2E, appsec audit, a11y, load, live deploy | not written | - | - | - | QUEUED |
+
+## Phase 0D owner runbook (D13 — settings/credentials are not code; owner actions, recorded not faked)
+
+These CANNOT be self-enforced by CI/config and are required before/at go-live:
+1. **Branch protection** (require the `ci` check + no direct pushes) on `main` AND `feat/realtime-determinism-engine`:
+   `gh api -X PUT repos/TikiTribe/TokenTally/branches/main/protection` with the `ci` job as a required status check
+   (and the same for the integration branch). CI provides the signal; the enforcement is a repo-admin setting.
+2. **Vercel Project Node version** set to 22 (match `.nvmrc`/CI); enable "wait for CI" / an ignored-build-step so a
+   red CI does not ship production.
+3. **Live CSP smoke check** at go-live/preview: `curl -sI <preview-url>/<deep/spa/route>` and byte-compare the served
+   `Content-Security-Policy` to `vercel.json`'s value on a REWRITTEN path (D2). Only then may "CSP verified enforced" be declared.
+4. **SHA-pin the GitHub Actions** (`actions/checkout`, `actions/setup-node`) at go-live hardening (D13).
+5. **Real Exact-usage capture** (0B B1): run a one-shot capture of OpenAI/Anthropic `usage.prompt_tokens` with the
+   OWNER's API key, commit a provenance-carrying fixture, then `markFamilyExact`. Until then OpenAI stays `exact_unverified`.
+
+## §12 launch-criteria waivers (owner-signed at go-live)
+
+- **§12 "Gemini labeled Approx" — WAIVED for the initial launch (D14 decision, 2026-07-04).** The §13 cut line is
+  amended to **OpenAI-Exact-class + Estimate-only**; no Approx badge ships initially. Reason: registering
+  Transformers.js for open-family Approx requires a RUNTIME WASM-free proof (a static `dist` grep cannot see
+  onnxruntime-web's runtime `WebAssembly.instantiate`), which is infeasible in-sandbox and would silently break the
+  no-`wasm-unsafe-eval` CSP if WASM leaked. Honest alternative shipped: OpenAI real-tiktoken counts + labeled
+  error-banded Estimates for everyone else, with no copy claiming Approx (guarded by the D15 grep gate). Approx is a
+  tracked post-0D deliverable gated on the runtime WASM-free proof. Owner signs this waiver at go-live.
 
 ## Decision log
 
@@ -86,6 +110,17 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 - 2026-07-03: Registry keyed on (canonical model, deployment). [spec D9]
 - 2026-07-03: Sole decider = owner; F1 owner/presenter residual explicitly accepted. [spec §13]
 - 2026-07-03: Phase 0 decomposed into 0A-0D (independently testable). [plan scope check]
+- 2026-07-04: **0D: the §13 "CSP verified enforced / zero egress" floor is NOT declared in 0D.** The real risk
+  surface (charts→inline styles, the tokenizer worker, Transformers.js runtime WASM) is Phase 2, and Vercel's live
+  response isn't testable in-sandbox. 0D ships the config + partial verification against the current tiktoken/chart-less
+  build and EXPLICITLY re-verifies at the Phase-2/go-live gate. Certifying now against the chart-less MVP would be the
+  exact dishonest-"verified" failure §13 exists to prevent. [premortem D1, appsec-core]
+- 2026-07-04: **0D: `style-src 'self' 'unsafe-inline'` (documented spec §5.9 deviation).** Recharts/html2canvas emit
+  inline style= attributes a nonce/hash cannot admit; strict style-src white-screens the Phase-2 charts. Since script-src
+  is locked to 'self', inline-STYLE injection is low-severity. [premortem D3]
+- 2026-07-04: **0D: HSTS ships WITHOUT `preload`** (one-way apex commitment, added at go-live when the domain is final);
+  and the Approx-badge fork (D14) will likely AMEND the §13 cut line to OpenAI-Exact + Estimate-only (Transformers.js
+  runtime-WASM-free proof is hard in-sandbox) — decided via adversarial-premortem-single, with a signed §12 waiver, not defaulted. [premortem D11/D14]
 - 2026-07-04: **0C: spec §5.3 W2 break-even formula is WRONG; implementation uses the corrected one.** The spec's
   `p_warm/(1-p_warm) = cacheWrite/(input-cacheRead)` treats the cache-write cost as an ADD-ON to base input, but
   Anthropic bills a cache write INSTEAD OF base input for those tokens (cold=cacheWrite, warm=cacheRead, no-cache=input).
@@ -211,7 +246,50 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
   a plan-sized artifact; empirically resolve any cross-perspective conflict (babbage encoding) against ground truth
   before amending. The 0B-close-out security+code review is the post-implementation adversarial pass.
 
-## RESUME HERE (checkpoint, 2026-07-04 — Phases 0A + 0B DONE + merged, starting 0C)
+## Lessons from the 0D close-out review (2026-07-04, 3 findings, all confirmed + fixed)
+
+- `build.sourcemap: true` (Vite default-on when set) ships `.js.map` files carrying full `sourcesContent`
+  — the entire annotated TS source — as publicly-served, immutable-cached assets, and lets a claim in a
+  source comment survive in the map after minification stripped it from the `.js`. For a security-venue
+  static launch, set `sourcemap: false`. A CI copy-scanner that only reads `.js/.css/.html` never sees it.
+- A copy-honesty gate is only as good as its file coverage AND its pattern coverage: the `±5%` scanner
+  missed decimal (`±5.0%`) and prose (`±5 percent`) variants and skipped `.map/.svg`. Broaden both — but
+  do NOT add a bare-`5%` adjacency rule; it false-positives on legitimate copy ("a 5% cache hit rate") and
+  on the intentionally-scoped per-badge accuracy text. Ship a must-NOT-flag test alongside the must-flag ones.
+- `security/detect-unsafe-regex` (safe-regex) flags nested quantifiers like `(?:\.0+)?` inside `\s*…\s*`;
+  under `--max-warnings 0` that fails lint. Bounded `\s?` + a single-digit `(?:\.\d)?` is ReDoS-safe on the
+  static CI input and satisfies the linter without a per-line disable.
+
+## RESUME HERE (checkpoint, 2026-07-04 — PHASE 0 COMPLETE; starting Phase 1 Workloads)
+
+State: **the entire Phase 0 is done** — engine (0A registry PR #5/28b0f9a, 0B tokenizer PR #6/9e8780c,
+0C caching+cost PR #7/b08760a) plus **0D deploy/security infra** (branch `feat/phase-0d-deploy-security`,
+impl Tasks 1-9 + close-out review 3-fixed, 207 tests, `npm audit --omit=dev` 0 high+, all CI gates green).
+0D is being PR'd into `feat/realtime-determinism-engine` now. `main` remains the untouched live MVP;
+it stays frozen until the SINGLE final integration->main go-live PR after Phases 1-4 + headed E2E + appsec.
+
+Carry into every later phase (0D deferred items that are NOT done, tracked honestly):
+- **§13 CSP/WASM/egress runtime floor is NOT verified** — the strict CSP is written into vercel.json and the
+  Playwright CSP/egress specs are scaffolded, but browsers can't install in-sandbox, so "CSP enforced" and
+  "zero egress" are re-verified at Phase 2/go-live (D1). Do not declare them done before then.
+- **Approx badge WAIVED for launch** (§12 waiver, D14): cut line is OpenAI-Exact-class + labeled Estimate-only.
+  Transformers.js/Gemma-Approx needs a RUNTIME WASM-free proof (infeasible in-sandbox) — tracked post-0D.
+- **Real Exact-usage capture** (0B B1) needs the OWNER's OpenAI API key (out of band). Until then OpenAI stays
+  `exact_unverified`; do NOT fabricate a captured fixture. Owner runbook items (branch protection, Vercel
+  "wait for CI"/Node 22, live curl CSP smoke, SHA-pin Actions) are recorded in the §0D owner runbook, not faked.
+
+NEXT ACTIONS (Phase 1 = Workloads + Optimization + Denial of Wallet, spec v1.2.1 §? — refine from spec):
+1. Refine the Phase 1 plan (writing-plans skill): refactor the Chatbot + Prompt calculators onto the 0A-0C
+   engine (registry resolve -> tokenizer count -> cost core), then add the Agent, Multi-agent, and Optimization
+   workloads, plus the defensively-framed **Denial-of-Wallet** workload built on the 0C `conservativeTotal`
+   (p_warm=0) seam. Keep the old MVP components untouched until Phase 2 rewrites the UI.
+2. Run adversarial-premortem-complete on the plan (read vs spec v1.2.1 + engine code); fix ALL findings as amendments.
+3. Implement test-first, keep green; security + code review; after any subagent code run full tests + tsc --noEmit
+   before trusting. PR feat/phase-1-workloads -> integration (NEVER main); merge on green; delete branch; push integration.
+END: after Phases 1-4 + headed Playwright E2E (every function) + appsec pass + vuln remediation, the SINGLE final
+integration->main go-live PR flips production, then delete all phase branches.
+
+## RESUME HERE (superseded — Phases 0A+0B DONE+merged, starting 0C)
 
 State: **0A and 0B are DONE and merged** into the integration branch `feat/realtime-determinism-engine`
 (0A = PR #5 / 28b0f9a; 0B = PR #6 / 9e8780c). Integration is green: 141 tests, tsc clean, build green,

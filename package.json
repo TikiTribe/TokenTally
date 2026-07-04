@@ -7,33 +7,42 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "scrape-pricing": "npx tsx scripts/scrape-pricing.ts",
     "update-pricing": "npx tsx scripts/update-pricing-from-csv.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "test:ci": "tsc --noEmit && vitest run --reporter=dot --coverage",
-    "build-registry": "tsx scripts/registry/buildRegistry.ts"
+    "build-registry": "tsx scripts/registry/buildRegistry.ts",
+    "wasm-check": "node scripts/ci/assert-wasm-free.mjs dist",
+    "claims-check": "node scripts/ci/assert-honest-claims.mjs",
+    "policy-fresh": "node scripts/ci/assert-policy-fresh.mjs",
+    "typecheck:scripts": "tsc -p tsconfig.scripts.json",
+    "size": "size-limit",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "js-tiktoken": "1.0.21",
-    "jspdf": "3.0.3",
-    "jspdf-autotable": "5.0.2",
+    "jspdf": "4.2.1",
+    "jspdf-autotable": "5.0.8",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "recharts": "2.12.7",
     "zustand": "4.5.5"
   },
   "devDependencies": {
+    "@eslint/js": "9.39.0",
+    "@playwright/test": "1.56.1",
+    "@size-limit/preset-app": "11.2.0",
     "@types/cheerio": "0.22.35",
     "@types/node-fetch": "2.6.11",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@typescript-eslint/eslint-plugin": "8.15.0",
     "@typescript-eslint/parser": "8.15.0",
-    "@vitejs/plugin-react": "4.7.0",
-    "@vitest/coverage-v8": "2.1.9",
+    "@vitejs/plugin-react": "5.0.4",
+    "@vitest/coverage-v8": "3.2.6",
     "autoprefixer": "10.4.20",
     "cheerio": "1.0.0-rc.12",
     "csv-parse": "5.6.0",
@@ -41,15 +50,22 @@
     "eslint-plugin-react": "7.37.2",
     "eslint-plugin-react-hooks": "5.0.0",
     "eslint-plugin-security": "3.0.1",
+    "globals": "14.0.0",
     "node-fetch": "3.3.2",
-    "postcss": "8.4.49",
+    "postcss": "8.5.16",
+    "size-limit": "11.2.0",
     "tailwindcss": "3.4.15",
     "tsx": "4.19.2",
     "typescript": "5.6.3",
-    "vite": "6.4.1",
-    "vitest": "2.1.9"
+    "vite": "7.3.6",
+    "vitest": "3.2.6"
   },
   "overrides": {
-    "base64-js": "1.5.1"
+    "base64-js": "1.5.1",
+    "lodash": "4.18.1",
+    "esbuild": "0.25.12"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

@@ -233,7 +233,7 @@ export function generatePDFReport(
     `• Later turns cost: $${breakdown.assumptions.laterTurnCost.toFixed(4)}`,
     '• Pricing data: Official OpenAI and Anthropic rates as of January 2025',
     '• Token estimates: Based on character-to-token conversion (~4 chars = 1 token)',
-    '• Accuracy target: ±5% of actual costs for production chatbots',
+    '• Accuracy: scoped per model — exact where a verified tokenizer exists, estimates otherwise',
   ];
 
   assumptions.forEach((assumption) => {
@@ -557,7 +557,7 @@ export function generatePromptPDFReport(
   assumptions.push(
     '• Pricing data: Official OpenAI and Anthropic rates as of January 2025',
     '• Token estimates: Based on character-to-token conversion (~4 chars = 1 token)',
-    '• Accuracy target: ±5% of actual costs for production usage',
+    '• Accuracy: scoped per model — exact where a verified tokenizer exists, estimates otherwise',
   );
 
   assumptions.forEach((assumption) => {

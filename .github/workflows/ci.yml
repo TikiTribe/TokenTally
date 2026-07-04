@@ -1,0 +1,50 @@
+# CI gate (spec §5.9, premortem D6/D8/D9/D13). Blocks a PR on ANY failing OR skipped/only/todo test, a lint
+# or typecheck failure, a build break, a bundle-size regression, a WASM/honest-claims/policy-staleness
+# violation, or a high/critical vulnerability in the SHIPPED deps. Branch protection making this a required
+# check is an owner runbook step (settings are not code — see the BUILD-LOG runbook). No untrusted
+# github.event.* input is ever interpolated into a run: command (injection-safe).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [feat/realtime-determinism-engine]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      # D13: SHA-pin these actions as a go-live hardening step (recorded in the runbook); version tags for now.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+
+      - name: No skipped / only / todo tests (D6 — CI blocks on any)
+        run: |
+          if grep -rEn '\.(skip|only|todo)\s*\(|\bxit\s*\(|describe\.(skip|only)' src scripts --include='*.test.ts'; then
+            echo "::error::skipped/only/todo tests are not allowed"; exit 1
+          fi
+
+      - run: npm run typecheck
+      - run: npm run typecheck:scripts
+      - run: npm run lint
+      - run: npm run test:ci
+      - run: npm run build
+
+      - name: Bundle size budget (D9)
+        run: npm run size
+      - name: WASM-free dist (D4)
+        run: npm run wasm-check
+      - name: Honest accuracy claims (D15)
+        run: npm run claims-check
+      - name: Cache-policy freshness (D16)
+        run: npm run policy-fresh
+
+      - name: Dependency audit - shipped deps, zero high/critical (D8)
+        run: npm audit --omit=dev --audit-level=high
