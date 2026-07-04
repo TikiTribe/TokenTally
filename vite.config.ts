@@ -1,10 +1,30 @@
-import { defineConfig } from 'vite';
+/// <reference types="vitest/config" />
+import { defineConfig, type Plugin } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { writeFileSync } from 'node:fs';
 import path from 'path';
+
+// P2-A7: write the entry chunk's REAL (pre-minification) module ids so assert-first-paint-lean.mjs can gate
+// on them — the identifier grep it replaces is blind to esbuild minification. Non-throwing: writes the
+// report; the CI script is the gate. Security F3 fix: write to a REPO-ROOT path (NOT dist/, so it is never
+// served) and strip the absolute prefix to repo-relative ids (no dev-home-dir disclosure).
+function firstPaintLeanGuard(): Plugin {
+  return {
+    name: 'first-paint-lean-guard',
+    writeBundle(_options, bundle) {
+      const root = process.cwd();
+      const entry = Object.values(bundle).find((c) => c.type === 'chunk' && c.isEntry);
+      const moduleIds = (entry && entry.type === 'chunk' ? Object.keys(entry.modules) : []).map((id) =>
+        id.startsWith(root) ? id.slice(root.length) : id,
+      );
+      writeFileSync(path.join(root, '.first-paint-entry-modules.json'), JSON.stringify(moduleIds));
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), firstPaintLeanGuard()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -19,8 +39,25 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  // (Vitest config lives in vitest.config.ts — it takes precedence over any test block here.)
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Keep React in a stable 'vendor' chunk out of the tiny app-shell entry. The engine/registry/tokenizer
+    // stay lazy via dynamic import()/worker. Charts are hand-rolled SVG (no recharts), so no chart chunk.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+        },
+      },
+    },
+    // Do NOT ship source maps to production (security-venue launch): sourcemap:true published .js.map with
+    // full sourcesContent (the entire annotated original TS source) as immutable-cached, publicly-served
+    // assets, and let an unqualified claim in a source comment survive in the map after minification stripped
+    // it from the .js. Off for the shipped build. [0D review]
+    sourcemap: false,
+    // D3: never inline an asset (font/glyph) as a data: URI in CSS — font-src 'self' has no data: and
+    // would silently drop it. Keep every asset a same-origin file the strict CSP admits.
+    assetsInlineLimit: 0,
   },
 });

@@ -1,30 +1,38 @@
 # TokenTally
 
-**Precision LLM Cost Forecasting Tool**
+**LLM cost forecasting — precision scoped per model, honest ranges everywhere.**
 
-Predict monthly operating costs within ±5% accuracy for chatbots and batch API operations across Claude and OpenAI models.
+Forecast the monthly cost of LLM workloads across 1,300+ models. Accuracy is scoped per model, never a
+single global number: token counts are **exact** where a verified tokenizer exists (OpenAI via tiktoken) and
+**labeled estimates with error bands** otherwise; every forecast carries an accuracy badge, a confidence
+range, and a link to its formula and the pricing snapshot it was priced against.
 
-## 🎯 Features
+## Features
 
-### Dual Calculator System
-- **Chatbot Calculator**: Conversation-specific cost modeling with context accumulation
-- **Prompt Calculator**: Batch API operations with optional multi-turn simulation
+### Five workloads on one engine
+- **Chatbot** — conversation cost with context accumulation + cross-run warm-cache modeling
+- **Prompt / Batch** — batch API operations, optional multi-turn
+- **Agent** — tool-loop cost with per-step accumulation
+- **Multi-agent** — crew cost (per-member + shared transcript)
+- **Denial of Wallet** — a *defensive*, opt-in worst-case exposure estimator (bounded, with a dual-use
+  disclaimer and a vulnerability-reporting link)
 
-### Core Capabilities
-- **16 LLM Models**: OpenAI (GPT-5 series, GPT-4.1 series, GPT-4o series) + Claude (4.5, 4.1, 4, and 3 series)
-- **Prompt Caching Support**: Claude models with 90% cost savings on cached system prompts
-- **Cost Optimization**: AI-generated recommendations for $500-$5,000/month savings
-- **Professional Reports**: PDF and CSV export for both calculators
-- **Real-Time Calculations**: <100ms updates as you adjust configuration
-- **CSV-Driven Pricing Updates**: Quarterly pricing updates via automated utility (<100ms execution)
-- **Security-First**: OWASP A03:2021 compliant, 0 vulnerabilities, privacy-by-design
+### Core capabilities
+- **1,300+ models** from a hash-verified, committed pricing snapshot (community-mirrored LiteLLM data;
+  prices are not independently verified against provider billing — the accuracy badge reflects token-count
+  fidelity only)
+- **Prompt-cache modeling** (Claude, GPT-4o family) with a warm-cache break-even view
+- **Provider-agnostic optimization**: model/deployment switches, TTL tuning, tornado sensitivity, budget solve
+- **Exports** (CSV / PDF) with CSV formula-injection protection; a config-only shareable permalink (prompt
+  text is never encoded)
+- **Real-time** (< 100 ms) via an in-browser tokenizer web worker
+- **Client-side only** — prompt text is tokenized in the browser and never transmitted; strict enforced CSP,
+  WCAG AA, light/dark
+- **Security**: 0 npm vulnerabilities; exact-pinned dependencies; a committed, hash-verified pricing snapshot
 
-### Quality Metrics ✅
-- **Accuracy**: 0.00% - 3.90% variance (exceeds ±5% target)
-- **Test Coverage**: 22/22 scenarios passing (100%)
-- **Bundle Size**: 305 KB gzipped (40% under target)
-- **TypeScript**: 0 errors with 11 strict flags
-- **Security**: 0 vulnerabilities (npm audit clean)
+Accuracy claims are honest by construction: precision is stated per model badge, never as a single global
+figure, and test scenarios are hand-verified against hand math (not exhaustively counted). Where a
+deterministic tokenizer exists, cost scenarios reconcile to within 1% of hand math.
 
 ## Quick Start
 
@@ -49,12 +57,17 @@ Visit `http://localhost:5173` to see the application.
 
 ## Technology Stack
 
-- **Frontend**: React 18.3+ with TypeScript 5.6+
-- **Build Tool**: Vite 6.4
-- **Styling**: Tailwind CSS 3.4
+- **Frontend**: React 18.3 + TypeScript 5.6 (strict)
+- **Build Tool**: Vite 7
+- **Styling**: Tailwind CSS 3.4 + CSS custom properties (light/dark)
 - **State**: Zustand 4.5
-- **Charts**: Recharts 2.12
-- **Exports**: jsPDF 3.0 + jsPDF-AutoTable 5.0
+- **Charts**: hand-rolled SVG (no chart dependency — CSP-safe, a11y-first)
+- **Tokenizer**: js-tiktoken in a web worker
+- **Exports**: jsPDF 4 (lazy-loaded); CSV via Blob
+
+> Note: sections below (project structure, "CSV-driven pricing", the older formula walkthrough) describe the
+> pre-overhaul MVP and are being refreshed. The pricing catalog is now a committed, hash-verified registry
+> snapshot (`src/config/registry.generated.json`), refreshed via a reviewed PR — not the old CSV utility.
 
 ## Project Structure
 
@@ -67,7 +80,7 @@ src/
 │   ├── PromptInput.tsx          # Multi-line prompt input
 │   └── ...                      # Other UI components
 ├── config/
-│   └── pricingData.ts           # LLM pricing configuration (16 models, auto-generated)
+│   └── pricingData.ts           # LLM pricing configuration (generated from the pinned registry snapshot)
 ├── store/
 │   └── useCalculatorStore.ts    # Zustand state (both calculators)
 ├── types/
@@ -155,7 +168,7 @@ TokenTally uses a **CSV-driven pricing update system** for quarterly maintenance
 - **OpenAI**: https://openai.com/api/pricing/ (as of Jan 2025)
 - **Claude**: https://www.anthropic.com/pricing (as of Jan 2025)
 
-Pricing last updated: **November 1, 2025** (16 models)
+Pricing last updated: **November 1, 2025** (1,300+ models)
 
 ## Known Limitations
 
@@ -189,7 +202,7 @@ Run these 5 test scenarios to validate accuracy:
 2. **Single-Turn**: 1 turn → No caching benefit for Claude
 3. **High-Volume Caching**: 1000t system prompt, 10K conversations/month, Claude → Verify 90% cache savings
 4. **Context Accumulation**: Full vs Minimal strategy → Validate cost difference
-5. **Model Comparison**: Same config across all 16 models → Verify cheapest model identified
+5. **Model Comparison**: Same config across all catalog models → Verify cheapest model identified
 
 Hand-calculate at least 2 scenarios and compare to tool output (must be within 1%).
 

@@ -1,0 +1,32 @@
+[
+  {
+    "name": "first-paint entry (shell + state only, gzipped)",
+    "path": "dist/assets/index-*.js",
+    "limit": "16 KB",
+    "gzip": true
+  },
+  {
+    "name": "react vendor chunk (first-load)",
+    "path": "dist/assets/vendor-*.js",
+    "limit": "60 KB",
+    "gzip": true
+  },
+  {
+    "name": "engine (workloads + optimization, lazy)",
+    "path": "dist/assets/engineClient-*.js",
+    "limit": "18 KB",
+    "gzip": true
+  },
+  {
+    "name": "registry catalog (lazy)",
+    "path": "dist/assets/bootstrapRegistry-*.js",
+    "limit": "200 KB",
+    "gzip": true
+  },
+  {
+    "name": "tokenizer worker (tiktoken ranks, lazy worker chunk — lazy-per-encoding is a Phase-4 optimization, P2-A14)",
+    "path": "dist/assets/tokenizer.worker-*.js",
+    "limit": "2.3 MB",
+    "gzip": true
+  }
+]
