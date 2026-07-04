@@ -6,9 +6,10 @@
 import { useId, useMemo } from 'react';
 import { listByMode } from '@/registry';
 import { useAppStore } from '@/store/useAppStore';
+import { HelpTip } from '@/ui/HelpTip';
 import type { Mode, ModelSelection } from '@/store/types';
 
-export function ModelSelector(props: { mode: Mode }): JSX.Element {
+export function ModelSelector(props: { mode: Mode; help?: string }): JSX.Element {
   const id = useId();
   const registryStatus = useAppStore((s) => s.registryStatus);
   const selection = useAppStore((s) => s.selection[props.mode]);
@@ -32,14 +33,18 @@ export function ModelSelector(props: { mode: Mode }): JSX.Element {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.75rem' }}>
-      <label htmlFor={id} style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-        Model
-      </label>
+      <span className="field-label-row">
+        <label htmlFor={id} style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          Model
+        </label>
+        {props.help ? <HelpTip tipId={`${id}-tip`} label="Model" content={props.help} /> : null}
+      </span>
       <select
         id={id}
         className="input-field"
         value={currentKey}
         disabled={registryStatus !== 'ready'}
+        aria-describedby={props.help ? `${id}-tip` : undefined}
         onChange={(e) => onChange(e.target.value)}
       >
         {registryStatus !== 'ready' ? (
