@@ -73,7 +73,7 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
 | 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
-| 0C | Caching + Cost Core | written+amended (C1-C16) | done (6-perspective, 38 findings, 1 CRITICAL) | Tasks 1-8 green (180 tests, 3 scenarios <1%) | no | IN PROGRESS ~90% (review running) |
+| 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | PR open | CLOSE-OUT (PR -> integration) |
 | 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
@@ -163,6 +163,20 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
   high/critical vulns at release). Handle in 0D (or a dedicated dependency-hardening pass) before go-live; audit via
   `npm audit` + the Dependabot dashboard. Do NOT bump deps on `main` directly (main is frozen); fix on the integration
   line and carry through the go-live PR.
+
+## Lessons from the 0C close-out code review (2026-07-04, 3 lenses x verify, 11 confirmed / 2 rejected)
+
+- The plan-level premortem cannot catch INTEGRATION bugs; the post-implementation review is essential. It caught:
+  (a) `writeRateForTtl` was built in Task 1 but never wired into `monthlyWarmCost` — the whole C6 1-hr derivation
+  was DEAD CODE and hr1 scenarios silently billed the 5-min rate; (b) my C2 onset term `arrivals·(1-p)+onsets·K`
+  double-counted and could push writes ABOVE total arrivals (physically impossible), making central > conservative
+  and the "up to" saving NEGATIVE. Corrected: `min(arrivals, onsets·K + max(0, arrivals-onsets·K)·(1-p))`.
+- Guard the RESULT of an arithmetic op, not just its inputs (rate*quantity can overflow to Infinity even when both
+  are finite). Clamp NEGATIVE magnitude inputs, not only NaN/Infinity. Clamp a "saving" to >=0 defensively.
+- When you build a helper for an amendment, add a test that drives it THROUGH the public entry point, not only in
+  isolation — a unit-tested-but-unwired function passes its own test while the feature is broken end to end.
+- Cross-perspective conflicts and arithmetic slips happen even in the reviewers: one confirmed finding had the right
+  sign but wrong magnitude ($-11 vs the true $-5); the verify step recomputed and kept the real defect, dropped the bad number.
 
 ## Lessons from the 0B close-out code review (2026-07-04, 3 lenses x verify, 6 confirmed / 8 rejected)
 
