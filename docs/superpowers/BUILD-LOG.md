@@ -317,7 +317,33 @@ These CANNOT be self-enforced by CI/config and are required before/at go-live:
   actually running eslint. Verify a "known broken" claim before trusting it; [[eslint-broken-flat-config]]
   updated to RESOLVED.
 
-## GO-LIVE STATUS (2026-07-04) — CODE LIVE ON `main`; PUBLIC CUTOVER IS OWNER-GATED
+## LIVE ✅ (2026-07-04) — tokentally.ai serving the new engine; POST-LAUNCH v1.1 in progress
+
+**PUBLICLY LIVE.** The owner completed the Vercel cutover; `https://tokentally.ai/` now serves the new
+determinism engine with the full `vercel.json` CSP **verified enforced on the real origin** — byte-identical
+on the root AND a rewritten deep SPA route (HSTS `max-age=63072000; includeSubDomains`, no preload, as
+designed). That closes the last go-live item (F5). NOTE: my earlier `tokentally.griffen.codes` finding below
+was a stale/unrelated alias — the real production domain is `tokentally.ai`; I did not touch it. Good.
+
+### Post-launch v1.1 (branch `feat/e2e-and-help`, PR to `main` = production)
+User asked for (1) detailed instructions/tooltips throughout, and (2) a genuinely complete headed E2E.
+- **Comprehensive headed E2E (was previously only a smoke suite).** 31 new Playwright specs (real Chromium,
+  served under the production CSP) → **44 total, all green**: 6 hand-computed MATH oracles across all 5
+  workloads (chatbot $143.75, prompt $300, model-swap output $100→$6, system-prompt cold cache-write into the
+  conservative total, agent step $0.0055→$0.0045, DoW $483,840) proving the SHIPPED math is correct end to
+  end, not just "a number rendered"; 8 field/clamp/edge-case; 9 interaction; 4 visualization; 4 tooltip. Added
+  inert `data-testid` hooks (recon found none + no waterfall label↔value link).
+- **Instructions + accessible tooltips throughout.** CSP-safe `HelpTip` (React handlers + document ESC
+  listener, WCAG 1.4.13, sr-only-when-closed so aria-describedby always resolves), per-mode `<details>`
+  explainers, 25 field tooltips + token-conversion copy grounded in the real cost model. axe (both themes) +
+  CSP + first-paint-lean + size all still green; 348 unit tests green; 0 vulns.
+- **Finding surfaced:** crew member cap (>64) is applied silently in `mapCrew` (the array-safety clamp), so
+  crew.ts's "capped at 64" note never reaches the user — documented in the memberCount tooltip.
+- Adversarial 3-lens review (security / a11y+content / code+tests) run before the production PR.
+
+---
+
+## GO-LIVE STATUS (2026-07-04, superseded by the LIVE section above) — CODE LIVE ON `main`; PUBLIC CUTOVER WAS OWNER-GATED
 
 **Done (autonomous, all green):** The single go-live PR **#14** (`feat/realtime-determinism-engine` → `main`,
 121 commits / 224 files) is **MERGED**. `main` HEAD = merge commit `80b06ba`. CI + **CodeQL** + Vercel build all
