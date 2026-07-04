@@ -30,3 +30,12 @@ export interface CostWaterfall {
   components: CostComponentEntry[];
   total: number; // sum of the non-null component costs only
 }
+
+// C3: `quantity` is in the unit's NATIVE denomination — tokens for per_token, CHARACTERS for
+// per_character — so a per-character SKU is not mis-billed on a token count.
+export interface WaterfallBarInput {
+  label: string;
+  quantity: number;
+  rate: number;
+  unit: BillingUnit;
+}
