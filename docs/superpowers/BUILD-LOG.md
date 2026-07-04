@@ -75,7 +75,7 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
 | 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | **YES (PR #7, b08760a)** | **DONE** |
 | 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) + review (3 confirmed, all fixed) | Tasks 1-9 + review fixes (207 tests, audit 0) | **YES (PR #8, 0bdcef7)** | **DONE — PHASE 0 COMPLETE** |
-| 1 | Workloads + Optimization + Denial of Wallet | written+amended (P1-A1..A30) | done (6-perspective, 40 findings, 6 confirmed-convergent) | Tasks 0-10 DONE (283 tests, tsc x3 + lint + build + audit 0 + all gates green) | no | IMPL DONE — review running |
+| 1 | Workloads + Optimization + Denial of Wallet | written+amended (P1-A1..A30) | done (6-perspective, 40 findings) + review (2 lenses, 5 confirmed, all fixed) | Tasks 0-10 + review fixes (287 tests, tsc x3 + lint + build + audit 0 + all gates green) | pending PR | **IMPL+REVIEW DONE — PR into integration** |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
 | 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | QUEUED |
 | 4 | Hardening: E2E, appsec audit, a11y, load, live deploy | not written | - | - | - | QUEUED |
@@ -93,6 +93,9 @@ These CANNOT be self-enforced by CI/config and are required before/at go-live:
 4. **SHA-pin the GitHub Actions** (`actions/checkout`, `actions/setup-node`) at go-live hardening (D13).
 5. **Real Exact-usage capture** (0B B1): run a one-shot capture of OpenAI/Anthropic `usage.prompt_tokens` with the
    OWNER's API key, commit a provenance-carrying fixture, then `markFamilyExact`. Until then OpenAI stays `exact_unverified`.
+6. **Enable Private Vulnerability Reporting** (repo Settings → Security) so the Denial-of-Wallet `DOW_VDP_URL`
+   (`github.com/TikiTribe/TokenTally/security/advisories/new`) resolves for external reporters (Phase-1 security review F-3).
+   The `security@rockcyber.com` backup in SECURITY.md carries the VDP if PVR is left off, but enabling PVR is the intended path.
 
 ## §12 launch-criteria waivers (owner-signed at go-live)
 
@@ -259,6 +262,27 @@ These CANNOT be self-enforced by CI/config and are required before/at go-live:
 - `security/detect-unsafe-regex` (safe-regex) flags nested quantifiers like `(?:\.0+)?` inside `\s*…\s*`;
   under `--max-warnings 0` that fails lint. Bounded `\s?` + a single-digit `(?:\.\d)?` is ReDoS-safe on the
   static CI input and satisfies the linter without a per-line disable.
+
+## Lessons from the Phase 1 close-out review (2026-07-04, 2 lenses [security + code] x hand-verify, 5 confirmed + fixed)
+
+- A CORRECTION that fixes one term must fix ALL correlated terms: the tier-straddle fix banded input/output but
+  left the PREFIX at the mean tier, silently breaking the A11 step-reconciliation invariant it shipped alongside
+  (~7.6% chart-vs-headline divergence on a cache-null tiered agent). Whenever you ship an invariant AND an
+  approximation that can violate it, add a test that exercises them TOGETHER (the reconciliation test only used
+  the non-tiered model; the straddle test only checked a loose lower bound). [C1]
+- A clamp is only real on the path it actually reaches: A9's window clamp guarded the SCENARIO scalar but not the
+  step-chart array or the straddle `accum` descriptor, so both billed tokens past the context window. And A13's
+  `bounded()` covered volume inputs but not the per-turn/step COUNT and GROWTH inputs, so `turns=1e300, growth=1e200`
+  overflowed to `$Infinity` (or, when contextWindow was null, `nonNeg(Infinity)=0` silently zeroed the cost). Clamp
+  at the boundary AND on every derived quantity; a finite-guard on the final product that falls back to the
+  engine-guarded value is the backstop. [C2, F-1, F-3]
+- The engine's `nonNeg(Infinity)=0` turns an overflow into a SILENT UNDERSTATE (worse than a loud $Infinity) — the
+  DoW fallback tokens hit exactly this. Route every attacker-controlled magnitude through `bounded()` (Infinity->CEIL)
+  before the engine sees it, so overflow reads as "large" not "$0". [F-3]
+- A gate that isn't wired into CI is decoration: the first-paint-lean script existed and passed locally but was never
+  added to ci.yml. A defense you don't run is not a defense. [F-2]
+- The reviewers earned their keep by HAND-verifying against the shipped fixtures (recomputing 7.272 vs 7.872) rather
+  than trusting green tests — the same class of "correct-but-vacuous oracle" the 0B/0C/DS3 lessons warned about.
 
 ## Lessons from the Phase 1 plan premortem (2026-07-04, 6 perspectives one round, 40 findings, 30 amendments)
 
