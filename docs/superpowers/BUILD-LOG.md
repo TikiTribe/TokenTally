@@ -75,7 +75,7 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 | 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
 | 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | **YES (PR #7, b08760a)** | **DONE** |
 | 0D | Deploy/security infra | written+amended (D1-D16) | done (6-perspective, 37 findings, 3 CRITICAL) + review (3 confirmed, all fixed) | Tasks 1-9 + review fixes (207 tests, audit 0) | **YES (PR #8, 0bdcef7)** | **DONE — PHASE 0 COMPLETE** |
-| 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
+| 1 | Workloads + Optimization + Denial of Wallet | written+amended (P1-A1..A30) | done (6-perspective, 40 findings, 6 confirmed-convergent) | not started | no | IN PROGRESS (implementing) |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
 | 3 | Workflow (permalink, import, saved, examples, exports) | not written | - | - | - | QUEUED |
 | 4 | Hardening: E2E, appsec audit, a11y, load, live deploy | not written | - | - | - | QUEUED |
@@ -260,6 +260,39 @@ These CANNOT be self-enforced by CI/config and are required before/at go-live:
   under `--max-warnings 0` that fails lint. Bounded `\s?` + a single-digit `(?:\.\d)?` is ReDoS-safe on the
   static CI input and satisfies the linter without a per-line disable.
 
+## Lessons from the Phase 1 plan premortem (2026-07-04, 6 perspectives one round, 40 findings, 30 amendments)
+
+- The mean-accumulation "exact because cost is linear in tokens" claim is FALSE at a 128k/200k tier
+  boundary: `effectiveInputRate` is a step function of `prefix + perArrivalInput`, so folding to the mean
+  mis-prices a straddle (worked: 41.5% understatement for long-context agent/RAG). Fix = per-tier-band
+  decomposition (O(tiers), not O(units) — no DoS), exact within each band. Never claim global linearity
+  through a piecewise-linear rate. [P1-A7]
+- The bursty warm-cache seam needs a REAL `activeFraction`: `f=1` collapses the within-burst rate to the
+  monthly average and bills within-conversation turns 2+ as cold, understating caching savings ~75% at the
+  SMB volumes the product sells on. Derive `f` from the burst structure (`arrivals·gapSeconds /
+  SECONDS_PER_MONTH`), don't default it to 1. And pass per-prefix bursts (`conversations/K`), because the
+  engine's `writesPerMonth` multiplies onsets by K. [P1-A6, P1-A10]
+- A vacuous oracle ships all of the above green: every hand-verified scenario used `cache:null, tiers:[],
+  per_token`, exercising none of the warm-cache/tier/reasoning/non-token paths. Write the cache-capable +
+  tiered-straddle + per_character oracles FIRST as failing tests (same lesson as 0B/0C). [P1-A8]
+- vitest (esbuild) ERASES type assertions and eslint can't validate them, so `as Record<string,number>`
+  (TS2352) and a `noUncheckedIndexedAccess` deref (TS18048) stay invisible until the ONE `tsc` run at the
+  final task. Put `npx tsc --noEmit` (base + scripts + a NEW `tsconfig.tests.json`, since tests are excluded
+  from the base program) AND `npm run lint` in EVERY task's green gate. [P1-A3, P1-A4, P1-A24]
+- A dual-use feature (Denial of Wallet) needs its guardrail STRUCTURAL, not decorative: a bare
+  `DOW_VDP_URL='SECURITY.md'` is a dead link (no `public/`, catch-all SPA rewrite, and SECURITY.md had no
+  reporting contact) — 4 of 6 perspectives converged on it. Point at the GitHub Security-Advisory URL, move
+  disclaimer+VDP INTO the result payload, and refuse to enable without a resolvable VDP. Worst-case must
+  include the adversarial reasoning term (o-series bill reasoning at up to 5.83× output) and must not return
+  a silent `$0` for `per_second` (realtime audio — the canonical wallet-attack target). [P1-A1, A14, A15]
+- Unbounded per-step loops are a client-side DoS the moment Phase 3 adds a permalink (`stepsPerRun: 1e9`
+  freezes the tab). The monthly cost is O(1) via `meanAccumulated`; only the CHART array needs the loop, so
+  cap+downsample it (MAX_PLOTTED_STEPS) and clamp oversized numerics (CEIL) before the engine overflows to
+  `$Infinity`/`NaN%`. [P1-A12, A13]
+- ESLint memory was STALE (marked broken; 0D fixed it repo-wide) — the ML-Engineer lens caught it by
+  actually running eslint. Verify a "known broken" claim before trusting it; [[eslint-broken-flat-config]]
+  updated to RESOLVED.
+
 ## RESUME HERE (checkpoint, 2026-07-04 — PHASE 0 COMPLETE; starting Phase 1 Workloads)
 
 State: **the entire Phase 0 is done** — engine (0A registry PR #5/28b0f9a, 0B tokenizer PR #6/9e8780c,
@@ -279,14 +312,29 @@ Carry into every later phase (0D deferred items that are NOT done, tracked hones
   `exact_unverified`; do NOT fabricate a captured fixture. Owner runbook items (branch protection, Vercel
   "wait for CI"/Node 22, live curl CSP smoke, SHA-pin Actions) are recorded in the §0D owner runbook, not faked.
 
-NEXT ACTIONS (Phase 1 = Workloads + Optimization + Denial of Wallet, spec v1.2.1 §? — refine from spec):
-1. Refine the Phase 1 plan (writing-plans skill): refactor the Chatbot + Prompt calculators onto the 0A-0C
-   engine (registry resolve -> tokenizer count -> cost core), then add the Agent, Multi-agent, and Optimization
-   workloads, plus the defensively-framed **Denial-of-Wallet** workload built on the 0C `conservativeTotal`
-   (p_warm=0) seam. Keep the old MVP components untouched until Phase 2 rewrites the UI.
-2. Run adversarial-premortem-complete on the plan (read vs spec v1.2.1 + engine code); fix ALL findings as amendments.
-3. Implement test-first, keep green; security + code review; after any subagent code run full tests + tsc --noEmit
-   before trusting. PR feat/phase-1-workloads -> integration (NEVER main); merge on green; delete branch; push integration.
+Phase 1 STATUS: branch **`feat/phase-1-workloads`** (off integration). Plan written (500cc56) + premortem
+amendments P1-A1..A30 applied (8b71a31). 6-perspective adversarial-premortem-complete DONE (40 findings;
+convergences: VDP ×4, DoW-retry-$0 ×3, tier-straddle ×3, crew-optimizer ×2, honest-claims-blind ×2). Plan
++ amendments at docs/superpowers/plans/2026-07-04-phase1-workloads.md. NOT yet implemented.
+
+NEXT ACTIONS (implement Phase 1 test-first, applying the amendments; revised order in the plan's amendment tail):
+1. **A8 oracles FIRST** (failing): cache-capable Claude (sparse 500 + saturated 100k conv/mo, hand p_warm),
+   tiered-straddle agent, per_character, crew-additivity, DoW≥central. These red tests gate A6/A7.
+2. Task 0 types (add snapshotVersion/formula A16, assumptionsSource A17, avgTurn/StepGapSeconds A6, contextTruncated
+   A9, tierStraddle A7; drop CrewConfig from WorkloadConfig A22) + strict-lint globs. Task 1 accumulate + CEIL clamp
+   (A13). Task 1b `tiers.ts` per-band pricing (A7).
+3. Tasks 2-9 with their amendments (Chatbot A5/A6/A10; Agent A6/A10/A11/A12; Optimize A3/A18/A20/A21/A22/A28;
+   DoW A1/A2/A14/A15). `npx tsc --noEmit` (base + scripts + NEW tsconfig.tests.json) + `npm run lint` in EVERY
+   task green step (A24) — vitest erases types so type breaks otherwise hide until the end.
+4. Task 10 reconciliation + barrels (A23) + first-paint grep (A25) + honesty-string unit test (A26).
+5. Security + code review of the diff; after any subagent code run full tests + tsc + review before trusting.
+   PR feat/phase-1-workloads -> integration (NEVER main); merge on green; delete branch; push integration for preview.
+
+Carry into every later phase (0D deferred, tracked honestly): §13 CSP/WASM/egress runtime floor NOT verified
+(re-verify Phase 2/go-live, D1); Approx badge WAIVED (§12/D14); real Exact-usage capture needs owner key (0B B1);
+owner runbook items (branch protection, Vercel wait-for-CI/Node 22, live CSP curl, SHA-pin Actions) recorded not faked.
+Phase-1-specific carry-forward: text-node-only render contract for optimizer/DoW strings (A29, enforce in Phase 2);
+runtime kill-switch operator surface is Phase 2 (A27); Crew/DoW build-time feature flag for descope is Phase 2 (A19).
 END: after Phases 1-4 + headed Playwright E2E (every function) + appsec pass + vuln remediation, the SINGLE final
 integration->main go-live PR flips production, then delete all phase branches.
 
