@@ -72,8 +72,8 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 |-------|-------|------|-----------|------|--------|-------|
 | Design | Spec v1.2.1 | - | 2 rounds done | - | pending | DONE (docs) |
 | 0A | Test harness + types + Registry | written+amended | done (A1-A12) + review (6 fixed) | Tasks 1-12 + fixes (84 tests) | **YES (PR #5, 28b0f9a)** | **DONE** |
-| 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | PR open | CLOSE-OUT (PR -> integration) |
-| 0C | Caching + Cost Core | not written | - | - | - | QUEUED |
+| 0B | Tokenizer Engine | written+amended (B1-B15) | done (premortem 31 + review 6, all fixed) | Tasks 1-10 + review fixes (141 tests) | **YES (PR #6, 9e8780c)** | **DONE** |
+| 0C | Caching + Cost Core | written+amended (C1-C16) | done (premortem 38 + review 11, all fixed) | Tasks 1-8 + review fixes (189 tests) | PR open | CLOSE-OUT (PR -> integration) |
 | 0D | Deploy/security infra (CSP, CI, pins, size-limit, refresh Action, **ESLint flat-config migration**, Transformers.js adapter + self-host + license-check + WASM-free dist grep + egress Playwright + IndexedDB, tokenizer-chunk size-limit + dynamic rank import, Dependabot-vuln remediation, real Exact-usage capture w/ owner key, Approx-before-demo gate) | not written | - | - | - | QUEUED |
 | 1 | Workloads + Optimization + Denial of Wallet | not written | - | - | - | QUEUED |
 | 2 | UI + dataviz (light/dark, command palette) | not written | - | - | - | QUEUED |
@@ -86,6 +86,13 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
 - 2026-07-03: Registry keyed on (canonical model, deployment). [spec D9]
 - 2026-07-03: Sole decider = owner; F1 owner/presenter residual explicitly accepted. [spec §13]
 - 2026-07-03: Phase 0 decomposed into 0A-0D (independently testable). [plan scope check]
+- 2026-07-04: **0C: spec §5.3 W2 break-even formula is WRONG; implementation uses the corrected one.** The spec's
+  `p_warm/(1-p_warm) = cacheWrite/(input-cacheRead)` treats the cache-write cost as an ADD-ON to base input, but
+  Anthropic bills a cache write INSTEAD OF base input for those tokens (cold=cacheWrite, warm=cacheRead, no-cache=input).
+  Correct break-even: `p* = (cacheWrite-input)/(cacheWrite-cacheRead)` = 0.2174 (λ*≈2118/mo), NOT 0.5814 (λ*≈7524).
+  Verified numerically (at p=0.30 the cache path 2.715 < no-cache 3.0, so caching already saves — the spec's 0.581
+  would wrongly tell users NOT to cache). The frozen spec is NOT edited; the implementation and the §12 break-even use
+  the corrected formula. Caught by the 0C premortem (5 of 6 perspectives, CRITICAL). [premortem C1, §13 correctness floor]
 - 2026-07-04: **0B: encoding comes from js-tiktoken's `getEncodingNameForModel` oracle, not a hand-rolled table.**
   Probe-verified: the oracle returns the correct encoding for every known OpenAI id (babbage-002->r50k, gpt-4.5->o200k,
   davinci-002->p50k, gpt-4->cl100k) and THROWS "Unknown model" on novel/prefixed ids — its rejection is the flagForReview
@@ -157,6 +164,20 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
   `npm audit` + the Dependabot dashboard. Do NOT bump deps on `main` directly (main is frozen); fix on the integration
   line and carry through the go-live PR.
 
+## Lessons from the 0C close-out code review (2026-07-04, 3 lenses x verify, 11 confirmed / 2 rejected)
+
+- The plan-level premortem cannot catch INTEGRATION bugs; the post-implementation review is essential. It caught:
+  (a) `writeRateForTtl` was built in Task 1 but never wired into `monthlyWarmCost` — the whole C6 1-hr derivation
+  was DEAD CODE and hr1 scenarios silently billed the 5-min rate; (b) my C2 onset term `arrivals·(1-p)+onsets·K`
+  double-counted and could push writes ABOVE total arrivals (physically impossible), making central > conservative
+  and the "up to" saving NEGATIVE. Corrected: `min(arrivals, onsets·K + max(0, arrivals-onsets·K)·(1-p))`.
+- Guard the RESULT of an arithmetic op, not just its inputs (rate*quantity can overflow to Infinity even when both
+  are finite). Clamp NEGATIVE magnitude inputs, not only NaN/Infinity. Clamp a "saving" to >=0 defensively.
+- When you build a helper for an amendment, add a test that drives it THROUGH the public entry point, not only in
+  isolation — a unit-tested-but-unwired function passes its own test while the feature is broken end to end.
+- Cross-perspective conflicts and arithmetic slips happen even in the reviewers: one confirmed finding had the right
+  sign but wrong magnitude ($-11 vs the true $-5); the verify step recomputed and kept the real defect, dropped the bad number.
+
 ## Lessons from the 0B close-out code review (2026-07-04, 3 lenses x verify, 6 confirmed / 8 rejected)
 
 - A "sanity bound" that compares an EXACT engine to a ROUGH heuristic is unsound: on whitespace/repetitive
@@ -190,7 +211,35 @@ default) in Phase 0D via `.nvmrc`, `package.json` engines, and CI. Vite 6 + Vite
   a plan-sized artifact; empirically resolve any cross-perspective conflict (babbage encoding) against ground truth
   before amending. The 0B-close-out security+code review is the post-implementation adversarial pass.
 
-## RESUME HERE (checkpoint, 2026-07-04 — Phase 0A DONE + merged, starting 0B)
+## RESUME HERE (checkpoint, 2026-07-04 — Phases 0A + 0B DONE + merged, starting 0C)
+
+State: **0A and 0B are DONE and merged** into the integration branch `feat/realtime-determinism-engine`
+(0A = PR #5 / 28b0f9a; 0B = PR #6 / 9e8780c). Integration is green: 141 tests, tsc clean, build green,
+Vercel previews built on both PRs. Now on branch **`feat/phase-0c-caching-cost`** (off integration).
+`main` remains the untouched live MVP.
+
+Available to 0C: the Registry (`src/registry`: getModel/getDeployments/listByMode, CacheSpec, PriceTier,
+billingUnit, tiers, reasoningPerMToken) and the Tokenizer (`src/tokenizer`: countTokens -> TokenCount with
+count/badge/errorBand/awaitingAdapter/truncated). Both are pure, tested, always-green modules.
+
+Phase 0C = Caching Model + Cost Core (spec §5.3, §5.4). Scope:
+- Caching Model: 3 archetypes (A automatic prefix cache no-write; B breakpoint+TTL write cost, 5min/1hr
+  multipliers as cited constants; C hourly storage) via a cache-field resolver; the closed-form cross-run
+  WARM cache with distinct-prefixes K, steady (p_warm=1-e^(-lambda_p*T)) and bursty (busy/idle f) profiles,
+  Archetype-A best-effort as a BOUNDED RANGE, writes/month, and the NUMERICALLY-DEFINED break-even
+  (p_warm/(1-p_warm) = cacheWriteRate/(inputRate-cacheReadRate)).
+- Cost Core: pure TS, provider-agnostic, billing-unit-aware; normalizes by unit, applies 128k/200k tiers,
+  null-output for embeddings, reasoning bar from reasoningPerMToken; composes a confidence range from the
+  tokenizer errorBand (systematic bias) + input variance; emits the waterfall (prefix, cache write, cache
+  reads, input, output, reasoning, context). Never coerces a non-token unit to $0.
+
+NEXT ACTIONS (0C loop): read spec §5.3/§5.4 (+ CacheSpec/PriceTier in src/types/registry.ts); write Plan 0C
+(superpowers:writing-plans, test-first, always-green new modules e.g. src/engine/caching + src/engine/cost);
+adversarial premortem (full for the closed-form warmth/break-even math + cost composition; appsec lens kept);
+fix findings; implement test-first (hand-verify >=3 scenarios within 1% per spec §8); security + code review;
+PR -> integration (NEVER main); merge; delete; then 0D.
+
+## RESUME HERE (superseded — Phase 0A DONE + merged, starting 0B)
 
 State: **Phase 0A is DONE and merged.** PR #5 (`feat/phase-0a-registry` -> `feat/realtime-determinism-engine`)
 merged as commit 28b0f9a; phase branch deleted (local + remote); Vercel preview built green. Integration branch
