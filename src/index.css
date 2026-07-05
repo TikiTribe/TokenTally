@@ -684,4 +684,57 @@
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   }
+
+  /* Token stream: per-token colored spans (alternating tints so boundaries are visible), whitespace preserved
+     (pre-wrap) so whitespace tokens show. The spans are aria-hidden decoration; the summary + readout are the
+     accessible text. */
+  .tokenstream__summary {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0 0 0.35rem;
+  }
+  .tokenstream__stream {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px;
+    max-height: 12rem;
+    overflow-y: auto;
+    padding: 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+  }
+  .tok {
+    white-space: pre-wrap;
+    padding: 0 1px;
+    border-radius: 2px;
+    background: var(--surface-2);
+  }
+  .tok[data-odd='1'] {
+    background: color-mix(in srgb, var(--primary) 16%, var(--surface-2));
+  }
+  .tok--hover {
+    outline: 2px solid var(--primary);
+  }
+  .tok--more {
+    background: none;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .tokenstream__readout {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    margin: 0.35rem 0 0;
+    min-height: 1.2em;
+  }
+  .tokenstream > summary {
+    font-size: 0.75rem;
+    color: var(--primary);
+    cursor: pointer;
+  }
 }
