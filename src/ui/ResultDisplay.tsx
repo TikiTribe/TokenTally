@@ -3,17 +3,21 @@
 // estimate, variance unmodeled" when unmodeled), the accuracy note, the waterfall, and a trust line linking
 // the formula + snapshotVersion (§6/§12). NEVER a silent $0: 'unavailable' and DoW-disabled/unmodeled/zero
 // render honest text (P2-A9/A20). Owner: TokenTally UI. Version: Phase 2C.
+import { lazy, Suspense } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
 import { TornadoChart } from '@/viz/TornadoChart';
-import { WhatIfPanel } from '@/ui/WhatIfPanel';
 import { ExportButtons } from '@/ui/ExportButtons';
 import { HelpTip } from '@/ui/HelpTip';
 import { money } from '@/ui/format';
 import type { WorkloadForecast } from '@/workloads';
 import type { ConfidenceRange } from '@/types/engine';
 import type { DenialOfWalletResult, TornadoBar } from '@/optimization';
+
+// Lazy: the what-if sliders only render after a forecast computes, so they stay out of the first-paint entry
+// chunk (D9 size budget). Named export -> default shim for React.lazy.
+const WhatIfPanel = lazy(() => import('@/ui/WhatIfPanel').then((m) => ({ default: m.WhatIfPanel })));
 
 // Plain-language definitions for the jargon each summary line uses, surfaced on hover/focus via HelpTip so a
 // non-expert can decode "point estimate", "warm cache", "break-even", and the DoW ceiling (audit #8/#9/#10/#20/#21).
@@ -79,7 +83,9 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
       <CostWaterfall waterfall={c.waterfall} />
       <StepAccumulationChart steps={f.steps} />
       <TornadoChart bars={tornado} central={f.monthlyCost} />
-      <WhatIfPanel bars={tornado} />
+      <Suspense fallback={null}>
+        <WhatIfPanel bars={tornado} />
+      </Suspense>
       <p data-testid="formula-line" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         Formula: {f.formula} · priced against snapshot {f.snapshotVersion.slice(0, 8)}
       </p>
