@@ -7,27 +7,14 @@ import { useAppStore } from '@/store/useAppStore';
 import { chartTheme } from '@/ui/charts/chartTheme';
 import { money } from '@/ui/format';
 import { VizFigure } from '@/viz/vizA11y';
+import type { WarmthPoint } from '@/store/engineClient';
 
-export interface WarmthPoint {
-  arrivals: number;
-  central: number;
-  low: number;
-  high: number;
-  conservative: number;
-}
-
-// SKELETON DATA for the Task A2 CSP/first-paint proof. Replaced by the real warmthCurve() series in Task B2.
-const SKELETON: WarmthPoint[] = [
-  { arrivals: 1000, central: 120, low: 110, high: 140, conservative: 150 },
-  { arrivals: 100000, central: 60, low: 50, high: 75, conservative: 150 },
-];
-
-export function CacheWarmthCurve(props: { points?: WarmthPoint[] | null; breakEven?: number | null }): JSX.Element | null {
+export function CacheWarmthCurve(props: { points: WarmthPoint[] | null; breakEven: number | null }): JSX.Element | null {
   // Re-read the resolved theme colors whenever the store theme flips (recharts needs concrete colors).
   const theme = useAppStore((s) => s.theme);
   void theme;
   const t = chartTheme();
-  const points = props.points === undefined ? SKELETON : props.points;
+  const points = props.points;
   if (points === null) {
     return (
       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '1.25rem 0 0' }}>

@@ -12,6 +12,7 @@ import { ExportButtons } from '@/ui/ExportButtons';
 import { HelpTip } from '@/ui/HelpTip';
 import { money } from '@/ui/format';
 import type { WorkloadForecast } from '@/workloads';
+import type { WarmthPoint } from '@/store/engineClient';
 import type { ConfidenceRange } from '@/types/engine';
 import type { DenialOfWalletResult, TornadoBar } from '@/optimization';
 
@@ -54,7 +55,7 @@ function confidenceLine(low: number, high: number, conservative: number): string
   return `Range ${money(low)} to ${money(high)} · conservative, no warm cache ${money(conservative)}`;
 }
 
-function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoBar[] }): JSX.Element {
+function WorkloadResult({ f, tornado, warmthSeries }: { f: WorkloadForecast; tornado: TornadoBar[]; warmthSeries: WarmthPoint[] | null }): JSX.Element {
   const c = f.cost;
   if (!c.applicable) {
     return <p style={{ color: 'var(--text-muted)' }}>{f.accuracyNote}</p>; // non-per_token etc - honest note, not $0
@@ -88,10 +89,13 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
       <Suspense fallback={null}>
         <WhatIfPanel bars={tornado} />
       </Suspense>
-      {/* Task A2 CSP/first-paint proof: recharts renders under script-src 'self'. Gated to real data + modes in B2. */}
-      <Suspense fallback={null}>
-        <CacheWarmthCurveLazy />
-      </Suspense>
+      {/* Cache-warmth curve: only chatbot/prompt have an arrivals axis. For a non-caching config warmthSeries is
+          null and the chart renders honest text instead of a fake curve. */}
+      {f.kind === 'chatbot' || f.kind === 'prompt' ? (
+        <Suspense fallback={null}>
+          <CacheWarmthCurveLazy points={warmthSeries} breakEven={f.cost.breakEvenArrivals} />
+        </Suspense>
+      ) : null}
       <p data-testid="formula-line" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         Formula: {f.formula} · priced against snapshot {f.snapshotVersion.slice(0, 8)}
       </p>
@@ -151,7 +155,7 @@ export function ResultDisplay(): JSX.Element {
       ) : result.kind === 'unavailable' ? (
         <p style={{ color: 'var(--text-muted)' }}>{result.reason}</p>
       ) : result.kind === 'workload' ? (
-        <WorkloadResult f={result.forecast} tornado={result.tornado} />
+        <WorkloadResult f={result.forecast} tornado={result.tornado} warmthSeries={result.warmthSeries} />
       ) : (
         <DowResult r={result.result} />
       )}

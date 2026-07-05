@@ -1,7 +1,7 @@
 // 2C engine-client integration (node): resolve a real model from the pinned registry and run each mode;
 // verify never-$0 branches (bad model -> unavailable; non-per_token -> honest note, not $0).
 import { describe, it, expect, beforeAll } from 'vitest';
-import { runForecast } from '@/store/engineClient';
+import { runForecast, warmthCurve } from '@/store/engineClient';
 import { loadRegistry, listByMode } from '@/registry';
 import registrySnapshot from '@/config/registry.generated.json';
 import type { RegistrySnapshot, ModelRecord } from '@/types/registry';
@@ -17,6 +17,7 @@ const INPUTS: ModeInputs = {
 
 let perToken: ModelRecord;
 let perChar: ModelRecord | undefined;
+let caching: ModelRecord | undefined;
 
 beforeAll(() => {
   loadRegistry(registrySnapshot as unknown as RegistrySnapshot);
@@ -25,6 +26,7 @@ beforeAll(() => {
   // intent is "a real model with real pricing yields a positive forecast").
   perToken = chat.find((m) => m.billingUnit === 'per_token' && (m.inputPrice ?? 0) > 0 && (m.outputPrice ?? 0) > 0)!;
   perChar = chat.find((m) => m.billingUnit === 'per_character');
+  caching = chat.find((m) => m.billingUnit === 'per_token' && m.cache !== null && (m.inputPrice ?? 0) > 0);
 });
 
 const sel = (m: ModelRecord) => ({ canonicalId: m.canonicalId, deployment: m.deployment });
@@ -57,5 +59,37 @@ describe('engineClient.runForecast (2C)', () => {
     const r = runForecast('prompt', INPUTS, sel(perChar), {}, 'snap');
     // per_character is COSTED (applicable) by the engine's per_character path; per_second would be not-modeled.
     expect(r.kind).toBe('workload');
+  });
+});
+
+describe('warmthCurve (B1 sweep producer)', () => {
+  // A cached prefix: the system prompt tokenizes to a real prefix, which a caching model reuses across arrivals.
+  const prefix = { 'chatbot.systemPrompt': { count: 3000, badge: 'exact', errorBand: null, truncated: false } };
+
+  it('returns null when there is no warm-cache dynamic (no cached prefix)', () => {
+    // default INPUTS has an empty system prompt -> no prefix -> nothing to warm, even on a caching model.
+    expect(warmthCurve('chatbot', INPUTS, sel(perToken), {}, 'snap')).toBeNull();
+  });
+
+  it('returns null for modes with no arrivals axis (agent, crew)', () => {
+    expect(warmthCurve('agent', INPUTS, sel(perToken), {}, 'snap')).toBeNull();
+    expect(warmthCurve('crew', INPUTS, sel(perToken), {}, 'snap')).toBeNull();
+  });
+
+  it('returns a bounded, monotonic, sensibly-ordered series for a caching model with a cached prefix', () => {
+    if (!caching) throw new Error('registry has no caching per-token model'); // there are many; fail loudly if not
+    const series = warmthCurve('chatbot', INPUTS, sel(caching), prefix, 'snap');
+    expect(series).not.toBeNull();
+    if (!series) return;
+    expect(series).toHaveLength(16);
+    for (const p of series) {
+      expect(p.arrivals).toBeGreaterThanOrEqual(1);
+      expect(p.low).toBeLessThanOrEqual(p.central + 1e-6);
+      expect(p.central).toBeLessThanOrEqual(p.high + 1e-6);
+      expect(p.central).toBeLessThanOrEqual(p.conservative + 1e-6); // warm cache only ever reduces cost
+    }
+    for (let i = 1; i < series.length; i++) {
+      expect(series[i]!.arrivals).toBeGreaterThanOrEqual(series[i - 1]!.arrivals); // log-spaced, non-decreasing
+    }
   });
 });

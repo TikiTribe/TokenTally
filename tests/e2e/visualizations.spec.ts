@@ -3,7 +3,7 @@
 // TABLES (the values the chart encodes) + presence/absence per mode + the tornado ordering. Value-level math
 // for the step table is covered in math.spec.ts (oracle E); here we assert structure, gating, and sort order.
 import { test, expect } from '@playwright/test';
-import { waitReady, selectMode, MODE_TABS } from './helpers';
+import { waitReady, selectMode, selectModel, MODE_TABS } from './helpers';
 
 const parseMoney = (s: string): number => Number((s.match(/\$([\d.,]+)/)?.[1] ?? '0').replace(/,/g, ''));
 
@@ -63,5 +63,18 @@ test.describe('visualizations', () => {
     await selectMode(page, MODE_TABS.crew);
     await expect(page.getByRole('group', { name: /monthly cost breakdown/i })).toBeVisible({ timeout: 8000 });
     await expect(page.getByRole('group', { name: /sensitivity/i })).toHaveCount(0);
+  });
+
+  test('cache-warmth curve renders for chatbot (incl. a caching model + prompt) and is absent for agent', async ({ page }) => {
+    await waitReady(page);
+    // chatbot has an arrivals axis and the default model models warm-cache dynamics -> the curve renders
+    await expect(page.getByRole('img', { name: /cache warmth/i })).toBeVisible({ timeout: 8000 });
+    // a caching model (Claude) + a real system prompt is the strong-warming case -> still renders
+    await selectModel(page, 'claude-opus-4-8|anthropic');
+    await page.getByLabel('System prompt').fill('You are a careful, concise customer-support assistant for an online bookstore.');
+    await expect(page.getByRole('img', { name: /cache warmth/i })).toBeVisible({ timeout: 8000 });
+    // agent mode has no arrivals axis -> no warmth section at all (the honest-text fallback is unit-tested)
+    await selectMode(page, MODE_TABS.agent);
+    await expect(page.getByRole('img', { name: /cache warmth/i })).toHaveCount(0);
   });
 });
