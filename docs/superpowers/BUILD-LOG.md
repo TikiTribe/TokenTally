@@ -562,3 +562,29 @@ the panel present at a $0 forecast).
 
 State: all green — 354 unit, both tsc configs, lint, build, 63 headed E2E incl. axe (light + dark). NEXT: push
 `feat/result-charts-and-explain` and open a PR to main; merge on green CI.
+
+### Branch `feat/complete-visualizations` (off main) — the missing §2D visualizations + real tooltips
+
+Origin: user reported the hover tooltips still showed nothing (native `title` was invisible) and that the app
+was supposed to have more than the 2-3 charts. Going back to the record: the Phase 2 UI plan (§2D) and spec §5.7
+decided on SEVEN visualizations; only three (waterfall, tornado, step) were ever built. recharts (the planned
+chart lib) was never installed. User chose (AskUserQuestion): use recharts, build all four missing + fix tooltips.
+
+Plan: docs/superpowers/plans/2026-07-05-complete-visualizations.md.
+
+- Phase A (5b4d70d) — recharts 2.15.4 pinned; proved CSP-safe (renders a <path> under script-src 'self', zero
+  violations, csp.spec waits for the svg), lazy `charts` chunk out of first-paint (index 15.5 KB), 165 KB charts
+  budget, chartTheme + VizFigure (role=img + a11y table).
+- Phase C1 (472a6c1) — ChartTip: visible/immediate hover+focus tooltip replacing native title on waterfall +
+  tornado. The reported "hover a tornado row shows nothing" is now a passing regression test.
+- Phase C2 (dee4af9) — step chart -> recharts LineChart; Tooltip fires on hover ANYWHERE over the plot (fixes
+  "hover a point on the line shows nothing"). ResizeObserver stub added for jsdom.
+- Phase B1+B2 (8407883) — cache-warmth curve: warmthCurve() sweeps arrivals (16 forecasts) -> recharts
+  ComposedChart (band + central + conservative + break-even). Honest text when no warm-cache dynamic.
+- Phase B4 (38e05ee) — Denial-of-Wallet blast-radius radial from the DoW result (recharts RadialBarChart).
+- Phase B3 (95b1d7e) — cost-vs-context scatter: contextSweep() (12 forecasts) -> recharts ScatterChart with a
+  truncated-at-window marker.
+
+State: all green — 367 unit, both tsc configs, lint, build, size, first-paint, 66 headed E2E incl. axe (light +
+dark). Adversarial review running. **Phase D (token stream) deferred to a follow-up PR** (needs a tokenizer
+segment-exposure change). NEXT: address review findings, push, PR #1 to main, merge on green; then Phase D.

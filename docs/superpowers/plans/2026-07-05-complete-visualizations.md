@@ -4,6 +4,8 @@
 
 **Goal:** Ship the four visualizations the Phase 2 UI plan (§2D) specified but never built (cache-warmth curve, cost-vs-context scatter, blast-radius radial, token stream), and replace the broken native-`title` hover with real interactive tooltips on every chart.
 
+**STATUS (2026-07-05):** Phases A, C1, C2, B1-B4 DONE on `feat/complete-visualizations` (recharts infra + CSP proof, interactive tooltips, step->recharts, cache-warmth curve, cost-vs-context scatter, blast-radius radial). Shipping as PR #1. **Phase D (token stream) is deferred to a focused follow-up PR** because it needs a tokenizer-pipeline change (adapter -> worker -> client -> hook -> store) with real semantic nuance (exact only for OpenAI, length cap, XSS-safe segment text) and warrants its own review.
+
 **Architecture:** Follow the §2D hybrid split verbatim. recharts 2.15.4 (lazy, its own `charts` chunk, never in first-paint) renders warmth-curve / scatter / step / blast-radius, each with recharts' built-in `<Tooltip>`. Hand-rolled SVG/DOM stays for waterfall / tornado / token-stream, and those get a new CSP-safe `ChartTooltip` (visible on hover AND focus, immediate, styled) that replaces `title`. The two curve charts get their series from UI-side sweeps that re-invoke the existing `runForecast` at varied inputs (no engine-core changes); blast-radius reads the DoW result; token-stream needs a small tokenizer→worker→store change to expose per-token segments.
 
 **Tech Stack:** React 18.3.1 + TS 5.6 strict, Zustand 4.5, Vite 7 (worker ES modules + manualChunks), recharts 2.15.4 (lazy), Vitest + Testing Library + Playwright (headed, in-sandbox), @axe-core/playwright.
