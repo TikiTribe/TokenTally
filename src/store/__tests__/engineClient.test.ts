@@ -64,7 +64,7 @@ describe('engineClient.runForecast (2C)', () => {
 
 describe('warmthCurve (B1 sweep producer)', () => {
   // A cached prefix: the system prompt tokenizes to a real prefix, which a caching model reuses across arrivals.
-  const prefix = { 'chatbot.systemPrompt': { count: 3000, badge: 'exact', errorBand: null, truncated: false } };
+  const prefix = { 'chatbot.systemPrompt': { count: 3000, badge: 'exact', errorBand: null, truncated: false, segments: null } };
 
   it('returns null when there is no warm-cache dynamic (no cached prefix)', () => {
     // default INPUTS has an empty system prompt -> no prefix -> nothing to warm, even on a caching model.

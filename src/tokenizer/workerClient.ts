@@ -48,6 +48,7 @@ function fallback(id: number, modelId: string, text: string): TokenizeResponse {
   return {
     id, count: r.count, badge: r.badge, engine: r.engine,
     flagForReview: r.flagForReview, awaitingAdapter: r.awaitingAdapter, errorBand: r.errorBand, truncated: r.truncated,
+    segments: r.segments,
   };
 }
 

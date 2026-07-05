@@ -8,7 +8,7 @@ const model = { canonicalId: 'm', deployment: 'x', billingUnit: 'per_token', con
 describe('modeMapping (2C)', () => {
   it('chatbot: contextStrategy -> growth, token count -> systemPromptTokens, band threaded', () => {
     const i: ChatbotInputs = { systemPromptText: 'x', avgUserMessageTokens: 50, avgResponseTokens: 200, turnsPerConversation: 5, contextStrategy: 'moderate', conversationsPerMonth: 10000, ttl: 'min5' };
-    const tc: FieldTokenCount = { count: 1234, badge: 'exact', errorBand: { relLow: -0.05, relHigh: 0.05 }, truncated: false };
+    const tc: FieldTokenCount = { count: 1234, badge: 'exact', errorBand: { relLow: -0.05, relHigh: 0.05 }, truncated: false, segments: null };
     const cfg = mapChatbot(i, model, tc, 'snap1');
     expect(cfg.contextGrowthPerTurn).toBe(150);
     expect(cfg.systemPromptTokens).toBe(1234);

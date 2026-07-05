@@ -34,7 +34,16 @@ describe('handleTokenizeMessage', () => {
       awaitingAdapter: direct.awaitingAdapter,
       errorBand: direct.errorBand,
       truncated: direct.truncated,
+      segments: direct.segments,
     });
+  });
+
+  it('returns real token segments for a tiktoken model and null for a heuristic model', () => {
+    const exact = handleTokenizeMessage({ id: 1, modelId: 'gpt-4o', text: 'hello world' });
+    expect(Array.isArray(exact.segments)).toBe(true);
+    expect((exact.segments ?? []).join('')).toBe('hello world');
+    const heuristic = handleTokenizeMessage({ id: 2, modelId: 'claude-opus-4-8', text: 'hello world' });
+    expect(heuristic.segments).toBeNull();
   });
 });
 

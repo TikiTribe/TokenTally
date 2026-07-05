@@ -35,6 +35,11 @@ test('driving the worker + engine (type + mode switch) raises no CSP violation',
   await page.getByLabel('Prompt', { exact: true }).fill('the quick brown fox jumps over the lazy dog');
   await expect(page.getByText(/\d+ tokens ·/)).toBeVisible({ timeout: 10000 });
 
+  // Exercise the token stream (DOM text-node spans) under the CSP - it renders user text, so prove it draws
+  // without a violation.
+  await page.locator('details.tokenstream summary').first().click();
+  await expect(page.locator('details.tokenstream .tok').first()).toBeVisible({ timeout: 8000 });
+
   // Switch to Agent: exercises the engine dynamic import + a fresh forecast render.
   await page.getByRole('tab', { name: /^Agent$/ }).click();
   await expect(page.getByTestId('headline-cost')).toContainText('/ month', { timeout: 10000 });

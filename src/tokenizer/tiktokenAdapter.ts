@@ -26,6 +26,30 @@ export function tiktokenCount(text: string, encoding: TiktokenEncoding): number 
   return encoder(encoding).encode(text).length;
 }
 
+// The per-token text pieces of `text` (first `cap` tokens), for the token-stream visualizer. A byte-level BPE
+// token can be a FRAGMENT of a multibyte code point (e.g. an emoji spans several tokens), so decoding an id in
+// isolation yields U+FFFD garbage. Accumulate ids and only emit a piece once the buffer decodes cleanly (no
+// replacement char), merging the fragment-tokens of a split code point into one visible piece. join('') of the
+// pieces then reconstructs the first `cap` tokens' text (verified for emoji/flags/ZWJ/CJK), never "".
+export function tiktokenSegments(text: string, encoding: TiktokenEncoding, cap: number): string[] {
+  if (text.length === 0 || cap <= 0) return [];
+  const enc = encoder(encoding);
+  const ids = enc.encode(text);
+  const take = Math.min(ids.length, cap);
+  const out: string[] = [];
+  let buf: number[] = [];
+  for (let i = 0; i < take; i++) {
+    buf.push(ids[i]!);
+    const piece = enc.decode(buf);
+    if (!piece.includes('�')) {
+      out.push(piece);
+      buf = [];
+    }
+  }
+  if (buf.length > 0) out.push(enc.decode(buf)); // flush a code point split exactly at the cap boundary (rare)
+  return out;
+}
+
 export const tiktokenAdapter: TokenizerAdapter = {
   engine: 'tiktoken',
   available: true,
@@ -34,5 +58,9 @@ export const tiktokenAdapter: TokenizerAdapter = {
       throw new Error('tiktokenAdapter requires a non-null encoding');
     }
     return tiktokenCount(text, resolution.encoding);
+  },
+  segments(text: string, resolution: TokenizerResolution, cap: number): string[] {
+    if (resolution.encoding === null) return [];
+    return tiktokenSegments(text, resolution.encoding, cap);
   },
 };

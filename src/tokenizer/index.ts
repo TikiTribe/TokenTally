@@ -76,8 +76,13 @@ function degrade(res: TokenizerResolution, est: HeuristicEstimate, truncated: bo
     awaitingAdapter: true,
     errorBand: estimateBand(est),
     truncated,
+    segments: null, // heuristic path has no real tokens; the UI shows a labeled approximation
   };
 }
+
+// Cap the token-stream pieces so a long prompt never decodes/stores thousands of strings (the UI renders a
+// "+N more" marker beyond this).
+const SEGMENT_CAP = 400;
 
 export function countTokens(modelId: string, text: string): TokenCount {
   const truncated = text.length > MAX_TOKENIZE_CHARS;
@@ -101,6 +106,8 @@ export function countTokens(modelId: string, text: string): TokenCount {
           !res.flagForReview && key !== null && exactKeys.has(key) ? 'exact' : res.tier;
         // tiktoken exact content count carries no band; a transformers proxy (0D) does.
         const errorBand = res.engine === 'tiktoken' ? null : estimateBand(est);
+        // Real per-token pieces for the stream, only when a real tokenizer ran (tiktoken exposes segments()).
+        const segments = res.engine === 'tiktoken' && adapter.segments ? adapter.segments(input, res, SEGMENT_CAP) : null;
         return {
           count,
           badge,
@@ -110,6 +117,7 @@ export function countTokens(modelId: string, text: string): TokenCount {
           awaitingAdapter: false,
           errorBand,
           truncated,
+          segments,
         };
       }
     } catch {
@@ -129,6 +137,7 @@ export function countTokens(modelId: string, text: string): TokenCount {
       awaitingAdapter: false,
       errorBand: estimateBand(est),
       truncated,
+      segments: null, // heuristic path has no real tokens; the UI shows a labeled approximation
     };
   }
   // engine is tiktoken/transformers but no usable adapter (or forced off): degrade.

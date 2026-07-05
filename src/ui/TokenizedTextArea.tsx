@@ -5,6 +5,7 @@ import { useId } from 'react';
 import { useTokenizer } from '@/hooks/useTokenizer';
 import { useAppStore } from '@/store/useAppStore';
 import { HelpTip } from '@/ui/HelpTip';
+import { TokenStream } from '@/viz/TokenStream';
 
 export function TokenizedTextArea(props: {
   label: string;
@@ -49,6 +50,14 @@ export function TokenizedTextArea(props: {
       </span>
       {props.hint ? (
         <span id={hintId} style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{props.hint}</span>
+      ) : null}
+      {/* Live token stream: a closed-by-default reveal so the input stays uncluttered. Only when there is text
+          AND a count to visualize. Updates as you type (value + tokenCounts are live). */}
+      {props.value.length > 0 && tc ? (
+        <details className="tokenstream">
+          <summary>Show tokens ({tc.count.toLocaleString()})</summary>
+          <TokenStream text={props.value} count={tc.count} segments={tc.segments} badge={tc.badge} />
+        </details>
       ) : null}
     </div>
   );

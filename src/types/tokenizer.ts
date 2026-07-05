@@ -30,6 +30,9 @@ export interface TokenCount {
   // estimate/approx count carries a band so downstream never renders false precision.
   errorBand: { relLow: number; relHigh: number } | null;
   truncated: boolean;                  // B10: input was clamped at the security boundary
+  // The per-token text pieces (capped) for the live token-stream visualizer, when a real tokenizer ran;
+  // null on the heuristic path (no real tokens - the UI renders a labeled approximation instead).
+  segments: string[] | null;
 }
 
 export interface TokenizerAdapter {
@@ -38,6 +41,8 @@ export interface TokenizerAdapter {
   // Pure token count for `text` under `resolution`. Throws only on an internal engine failure,
   // which the dispatcher catches and degrades to the heuristic.
   count(text: string, resolution: TokenizerResolution): number;
+  // Optional: the per-token text pieces of `text` (first `cap` tokens). Only real tokenizers implement it.
+  segments?(text: string, resolution: TokenizerResolution, cap: number): string[];
 }
 
 // B1: a spot-check case MUST carry capture provenance so a self-generated number can never

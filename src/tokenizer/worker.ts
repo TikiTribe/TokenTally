@@ -23,6 +23,7 @@ export interface TokenizeResponse {
   awaitingAdapter: boolean;
   errorBand: { relLow: number; relHigh: number } | null;
   truncated: boolean;
+  segments: string[] | null;
 }
 
 export function handleTokenizeMessage(req: TokenizeRequest): TokenizeResponse {
@@ -36,6 +37,7 @@ export function handleTokenizeMessage(req: TokenizeRequest): TokenizeResponse {
     awaitingAdapter: r.awaitingAdapter,
     errorBand: r.errorBand,
     truncated: r.truncated,
+    segments: r.segments,
   };
 }
 
