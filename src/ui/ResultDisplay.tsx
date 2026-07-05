@@ -7,6 +7,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
 import { TornadoChart } from '@/viz/TornadoChart';
+import { WhatIfPanel } from '@/ui/WhatIfPanel';
 import { ExportButtons } from '@/ui/ExportButtons';
 import { HelpTip } from '@/ui/HelpTip';
 import { money } from '@/ui/format';
@@ -78,6 +79,7 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
       <CostWaterfall waterfall={c.waterfall} />
       <StepAccumulationChart steps={f.steps} />
       <TornadoChart bars={tornado} central={f.monthlyCost} />
+      <WhatIfPanel bars={tornado} />
       <p data-testid="formula-line" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         Formula: {f.formula} · priced against snapshot {f.snapshotVersion.slice(0, 8)}
       </p>

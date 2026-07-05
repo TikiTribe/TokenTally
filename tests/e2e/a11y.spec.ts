@@ -11,6 +11,27 @@ async function seriousViolations(page: Page): Promise<{ id: string; impact: stri
     .map((v) => ({ id: v.id, impact: v.impact }));
 }
 
+// Under CPU contention (the full parallel suite) getComputedStyle can return a heading's inherited var(--text)
+// color from BEFORE the theme's style recalc has propagated down the cascade - a stale frame axe reads as a
+// dark-on-dark contrast failure even though the painted UI is correct. Wait until the section-heading colors
+// stop changing across consecutive samples (the cascade has settled) before letting axe scan. No assumption
+// about the "correct" color, so it works for the themed heads, the white CTA head, and the gradient title.
+async function waitThemeSettled(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      const w = window as unknown as { __a11yColors?: string };
+      const cur = Array.from(document.querySelectorAll('.lp-h2, .lp-title'))
+        .map((h) => getComputedStyle(h as HTMLElement).color)
+        .join('|');
+      const stable = cur.length > 0 && w.__a11yColors === cur;
+      w.__a11yColors = cur;
+      return stable;
+    },
+    undefined,
+    { timeout: 8000, polling: 250 },
+  );
+}
+
 for (const theme of ['light', 'dark'] as const) {
   test(`a11y: landing + all calculator modes have no serious/critical WCAG violations (${theme})`, async ({ page }) => {
     await page.addInitScript((t) => {
@@ -23,6 +44,7 @@ for (const theme of ['light', 'dark'] as const) {
     // 1) the marketing landing (home view)
     await page.goto('/');
     await page.waitForSelector('.lp-hero', { timeout: 10000 });
+    await waitThemeSettled(page); // let the themed heading colors settle so axe reads the real UI, not a recalc frame
     const lv = await seriousViolations(page);
     expect(lv, `${theme} / landing: ${JSON.stringify(lv)}`).toEqual([]);
 

@@ -116,4 +116,39 @@ test.describe('interaction coverage', () => {
     await btn.click();
     await expect(page.getByRole('button', { name: /Link copied/ })).toBeVisible({ timeout: 4000 });
   });
+
+  test('what-if slider on a top driver reprices the headline live and mirrors the number field', async ({ page }) => {
+    await waitReady(page);
+    await selectMode(page, MODE_TABS.chatbot);
+    const before = await headlineValue(page);
+    const slider = page.getByRole('slider', { name: 'Conversations / month' });
+    await expect(slider).toBeVisible({ timeout: 8000 });
+    // End jumps the range to its max (a "what if this were much higher") -> more conversations, higher cost.
+    await slider.focus();
+    await page.keyboard.press('End');
+    await expect.poll(() => headlineValue(page), { timeout: 6000 }).toBeGreaterThan(before);
+    // The slider writes the same store field the number input reads: the two views stay in sync.
+    const maxVal = await slider.inputValue();
+    await expect(page.getByLabel('Conversations per month')).toHaveValue(maxVal);
+    // Home jumps to 0 -> a legitimate $0 forecast (never a stale/blank value).
+    await page.keyboard.press('Home');
+    await expect.poll(() => headlineValue(page), { timeout: 6000 }).toBe(0);
+  });
+
+  test('what-if sliders are gated to editable numeric drivers and skip the enum/derived factors', async ({ page }) => {
+    await waitReady(page);
+    await selectMode(page, MODE_TABS.chatbot);
+    // At most 3 sliders (the top numeric drivers); contextGrowthPerTurn is driven by the context-strategy enum,
+    // so it has no scrubbable number and must not appear as a slider.
+    const sliders = page.getByRole('slider');
+    await expect(sliders.first()).toBeVisible({ timeout: 8000 });
+    const n = await sliders.count();
+    expect(n).toBeGreaterThan(0);
+    expect(n).toBeLessThanOrEqual(3);
+    await expect(page.getByRole('slider', { name: 'Context growth / turn' })).toHaveCount(0);
+    // Crew defers sensitivity (no tornado), so no what-if sliders there either.
+    await selectMode(page, MODE_TABS.crew);
+    await expect(page.getByRole('group', { name: /monthly cost breakdown/i })).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole('slider')).toHaveCount(0);
+  });
 });

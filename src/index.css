@@ -619,4 +619,34 @@
     color: var(--text-muted);
     margin: 0.25rem 0 0 4rem;
   }
+
+  /* What-if sliders: one row per top driver, laid out like the tornado (name / control / value). */
+  .whatif__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  .whatif__row {
+    display: grid;
+    grid-template-columns: 10rem 1fr 5rem;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .whatif__name {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .whatif__range {
+    width: 100%;
+    accent-color: var(--primary); /* themes the native track/thumb, CSP-safe (no custom pseudo-elements needed) */
+  }
+  .whatif__val {
+    font-size: 0.85rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
 }
