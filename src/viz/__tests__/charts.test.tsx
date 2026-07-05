@@ -19,7 +19,7 @@ describe('StepAccumulationChart', () => {
       { step: 2, inputTokens: 500, outputTokens: 50, reasoningTokens: 0, cost: 0.03 },
     ];
     render(<StepAccumulationChart steps={steps} />);
-    expect(screen.getByRole('img', { name: /cost per agent step/i })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /cost per agent step/i })).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
   it('returns null (no fake geometry) for null / single-step', () => {
@@ -48,7 +48,7 @@ describe('TornadoChart', () => {
 describe('CacheWarmthCurve', () => {
   it('renders honest text and no chart when there is no warm-cache dynamic', () => {
     render(<CacheWarmthCurve points={null} breakEven={null} />);
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByRole('group', { name: /cache warmth/i })).toBeNull(); // no chart, just honest text
     expect(screen.getByText(/no warm-cache dynamics/i)).toBeInTheDocument();
   });
   it('renders a labeled figure + data table for a series', () => {
@@ -57,7 +57,7 @@ describe('CacheWarmthCurve', () => {
       { arrivals: 100000, central: 60, low: 50, high: 75, conservative: 150 },
     ];
     render(<CacheWarmthCurve points={points} breakEven={5000} />);
-    expect(screen.getByRole('img', { name: /cache warmth/i })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /cache warmth/i })).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
 });
@@ -77,7 +77,7 @@ describe('CostVsContextScatter', () => {
         ]}
       />,
     );
-    expect(screen.getByRole('img', { name: /cost vs context/i })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /cost vs context/i })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'yes' })).toBeInTheDocument(); // the truncated point
   });
 });
@@ -97,7 +97,7 @@ describe('BlastRadiusRadial', () => {
         ]}
       />,
     );
-    expect(screen.getByRole('img', { name: /blast radius/i })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /blast radius/i })).toBeInTheDocument();
     // worst case + 2 mitigations = 3 rows in the a11y table
     expect(screen.getAllByRole('row')).toHaveLength(4); // header + 3
   });

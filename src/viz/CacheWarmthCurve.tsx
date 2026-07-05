@@ -33,7 +33,12 @@ export function CacheWarmthCurve(props: { points: WarmthPoint[] | null; breakEve
       rows={points.map((p) => [p.arrivals.toLocaleString('en-US'), money(p.central), money(p.low), money(p.high), money(p.conservative)])}
     >
       <ResponsiveContainer width="100%" height={200}>
-        <ComposedChart data={points} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+        {/* bandFloor + bandHeight are a stacked pair so the shaded band spans [low, high], NOT [0, high] - an
+            area anchored at $0 would falsely imply the cost could fall to zero (review L1). */}
+        <ComposedChart
+          data={points.map((p) => ({ ...p, bandFloor: p.low, bandHeight: Math.max(0, p.high - p.low) }))}
+          margin={{ top: 8, right: 12, bottom: 4, left: 4 }}
+        >
           <XAxis dataKey="arrivals" tick={{ fill: t.axis, fontSize: 11 }} stroke={t.grid} tickFormatter={(v) => Number(v).toLocaleString('en-US')} />
           <YAxis tick={{ fill: t.axis, fontSize: 11 }} stroke={t.grid} tickFormatter={(v) => money(Number(v))} width={64} />
           <Tooltip
@@ -41,8 +46,8 @@ export function CacheWarmthCurve(props: { points: WarmthPoint[] | null; breakEve
             formatter={(value: number, name: string) => [money(Number(value)), name]}
             labelFormatter={(v) => `${Number(v).toLocaleString('en-US')} arrivals/mo`}
           />
-          <Area type="monotone" dataKey="high" stroke="none" fill={t.band} fillOpacity={0.6} name="High" />
-          <Area type="monotone" dataKey="low" stroke="none" fill={t.band} fillOpacity={0} name="Low" />
+          <Area type="monotone" dataKey="bandFloor" stackId="band" stroke="none" fill="none" fillOpacity={0} legendType="none" />
+          <Area type="monotone" dataKey="bandHeight" stackId="band" stroke="none" fill={t.band} fillOpacity={0.55} name="Range (low to high)" />
           <Line type="monotone" dataKey="central" stroke={t.central} strokeWidth={2} dot={false} name="Central" />
           <Line type="monotone" dataKey="conservative" stroke={t.conservative} strokeWidth={1.5} strokeDasharray="5 4" dot={false} name="Conservative (cold cache)" />
           {props.breakEven != null && Number.isFinite(props.breakEven) ? (

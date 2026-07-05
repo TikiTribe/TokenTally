@@ -1,10 +1,12 @@
 // Accessibility wrapper for the recharts charts. The rendered SVG is decorative (aria-hidden); the accessible
 // representation is a visually-hidden data table plus a visible caption, so a screen-reader user gets the exact
-// values and a sighted user gets a labeled figure. role="img" + aria-label names the whole figure. Owner: TokenTally UI.
+// values and a sighted user gets a labeled figure. role="group" + aria-label names the figure WITHOUT pruning
+// its children (role="img" is children-presentational and would hide the data table from a screen reader). This
+// matches the hand-rolled charts (CostWaterfall/TornadoChart use role="group" for the same reason). Owner: TokenTally UI.
 import type { ReactNode } from 'react';
 
 export function VizFigure(props: {
-  label: string; // the figure's accessible name (role=img aria-label)
+  label: string; // the figure's accessible name (role=group aria-label)
   caption: string; // visible caption
   subcaption?: string; // optional muted explainer beside the caption
   columns: string[];
@@ -12,7 +14,7 @@ export function VizFigure(props: {
   children: ReactNode; // the recharts chart (decorative SVG)
 }): JSX.Element {
   return (
-    <figure role="img" aria-label={props.label} style={{ margin: '1.25rem 0 0' }}>
+    <figure role="group" aria-label={props.label} style={{ margin: '1.25rem 0 0' }}>
       <figcaption className="viz__caption">
         {props.caption}
         {props.subcaption ? <span className="viz__subcaption">{props.subcaption}</span> : null}

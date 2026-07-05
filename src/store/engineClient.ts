@@ -68,6 +68,7 @@ export function warmthCurve(
   if (mode === 'chatbot') current = inputs.chatbot.conversationsPerMonth;
   else if (mode === 'prompt') current = inputs.prompt.callsPerMonth;
   else return null;
+  if (!Number.isFinite(current)) return null; // defense in depth against a NaN arrivals input
 
   // No warm-cache dynamics at the current config -> no curve (honest text in the UI).
   if (priceAt(Math.max(1, Math.round(current))).cost.warmth === null) return null;
@@ -124,12 +125,16 @@ export function contextSweep(
   }
 
   const win = model.contextWindow;
-  const maxGrowth = Math.max(100, Math.round((win * 1.5) / turns)); // sweep until accumulation truncates at the window
+  if (!Number.isFinite(win) || win <= 0) return null;
+  // Accumulated input is ~context*(turns-1)/2, so sweep to ~3*window of accumulation to carry the sweep PAST the
+  // engine's real truncation point (the knee). turns===1 has no accumulation, so the scatter is honestly flat.
+  const maxGrowth = Math.max(100, Math.round((win * 3) / Math.max(1, turns - 1)));
   const points: ContextPoint[] = [];
   for (let i = 0; i < CONTEXT_POINTS; i++) {
     const context = Math.round((i / (CONTEXT_POINTS - 1)) * maxGrowth);
     const f = forecastFn({ ...base, contextGrowthPerTurn: context } as WorkloadConfig);
-    points.push({ context, central: f.cost.centralTotal, truncated: context * turns > win });
+    // Use the engine's own truncation flag, not a re-derived formula that disagreed with it (review M2).
+    points.push({ context, central: f.cost.centralTotal, truncated: f.contextTruncated });
   }
   return points;
 }

@@ -25,10 +25,10 @@ test.describe('visualizations', () => {
   test('step-accumulation chart renders for agent (one row per step) but NOT for chatbot', async ({ page }) => {
     await waitReady(page);
     // chatbot: no per-step accumulation chart
-    await expect(page.getByRole('img', { name: /cost per agent step/i })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: /cost per agent step/i })).toHaveCount(0);
     // agent: 6 rows (default stepsPerRun), columns Step / Input tokens / Output tokens / Cost
     await selectMode(page, MODE_TABS.agent);
-    const step = page.getByRole('img', { name: /cost per agent step/i });
+    const step = page.getByRole('group', { name: /cost per agent step/i });
     const table = step.locator('table');
     await expect(table.locator('tbody tr')).toHaveCount(6);
     const head = (await table.locator('thead').textContent()) ?? '';
@@ -68,29 +68,29 @@ test.describe('visualizations', () => {
   test('cache-warmth curve renders for chatbot (incl. a caching model + prompt) and is absent for agent', async ({ page }) => {
     await waitReady(page);
     // chatbot has an arrivals axis and the default model models warm-cache dynamics -> the curve renders
-    await expect(page.getByRole('img', { name: /cache warmth/i })).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole('group', { name: /cache warmth/i })).toBeVisible({ timeout: 8000 });
     // a caching model (Claude) + a real system prompt is the strong-warming case -> still renders
     await selectModel(page, 'claude-opus-4-8|anthropic');
     await page.getByLabel('System prompt').fill('You are a careful, concise customer-support assistant for an online bookstore.');
-    await expect(page.getByRole('img', { name: /cache warmth/i })).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole('group', { name: /cache warmth/i })).toBeVisible({ timeout: 8000 });
     // agent mode has no arrivals axis -> no warmth section at all (the honest-text fallback is unit-tested)
     await selectMode(page, MODE_TABS.agent);
-    await expect(page.getByRole('img', { name: /cache warmth/i })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: /cache warmth/i })).toHaveCount(0);
   });
 
   test('cost-vs-context scatter renders for chatbot and is absent for agent', async ({ page }) => {
     await waitReady(page);
-    await expect(page.getByRole('img', { name: /cost vs context/i })).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole('group', { name: /cost vs context/i })).toBeVisible({ timeout: 8000 });
     await selectMode(page, MODE_TABS.agent);
-    await expect(page.getByRole('img', { name: /cost vs context/i })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: /cost vs context/i })).toHaveCount(0);
   });
 
   test('blast-radius radial appears in Denial of Wallet only after both gates', async ({ page }) => {
     await waitReady(page);
     await selectMode(page, MODE_TABS.dow);
-    await expect(page.getByRole('img', { name: /blast radius/i })).toHaveCount(0); // gated
+    await expect(page.getByRole('group', { name: /blast radius/i })).toHaveCount(0); // gated
     await page.getByLabel(/Enable Denial-of-Wallet/).check();
     await page.getByLabel(/authorized to test/).check();
-    await expect(page.getByRole('img', { name: /blast radius/i })).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole('group', { name: /blast radius/i })).toBeVisible({ timeout: 8000 });
   });
 });

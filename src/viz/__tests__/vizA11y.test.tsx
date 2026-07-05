@@ -11,11 +11,13 @@ describe('VizFigure', () => {
         <svg data-testid="chart" />
       </VizFigure>,
     );
-    const fig = screen.getByRole('img', { name: 'Cost curve' });
+    // role="group" (not "img"): "img" is children-presentational and would hide the data table from a screen
+    // reader, defeating the point of the a11y table (review M1).
+    const fig = screen.getByRole('group', { name: 'Cost curve' });
     expect(fig).toBeInTheDocument();
     // the chart is decorative (wrapped in an aria-hidden container)
     expect(screen.getByTestId('chart').closest('[aria-hidden="true"]')).not.toBeNull();
-    // the values are reachable as a real table
+    // the values are reachable as a real table (NOT pruned by a presentational role)
     const table = within(fig).getByRole('table');
     expect(within(table).getByRole('cell', { name: '$120.00' })).toBeInTheDocument();
     expect(within(table).getByRole('columnheader', { name: 'Arrivals' })).toBeInTheDocument();

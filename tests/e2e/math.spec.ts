@@ -83,7 +83,7 @@ test.describe('math validation (rendered $ == hand-computed $)', () => {
     // defaults: toolSchema 1500 (prefix), perStepUserSeed 100, obsGrowth 350, actionOutput 150, 6 steps.
     // step1 (cold write $2.5/M prefix): (1500*2.5 + 100*2.5 + 150*10)/1e6 = 5500/1e6 = $0.0055
     // step2 (warm read $1.25/M prefix, input 100+350=450): (1500*1.25 + 450*2.5 + 150*10)/1e6 = 4500/1e6 = $0.0045
-    const figure = page.getByRole('img', { name: /cost per agent step/i });
+    const figure = page.getByRole('group', { name: /cost per agent step/i });
     const tableText = (await figure.locator('table').textContent()) ?? '';
     expect(tableText).toContain('$0.0055');
     expect(tableText).toContain('$0.0045');
