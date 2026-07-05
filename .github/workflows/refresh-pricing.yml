@@ -2,9 +2,9 @@
 # committed snapshot, and OPENS A PR (never auto-merges) so a human reviews the model/price deltas. Runs the
 # quick gate (typecheck + unit) before opening the PR; the PR itself runs full CI via branch protection.
 #
-# NOTE: for the PR's CI to run, this must push with a PAT (a PR opened by the default GITHUB_TOKEN does NOT
-# trigger workflows). Add a fine-grained PAT as the repo secret REFRESH_PAT (Contents: read/write, Pull
-# requests: read/write). Without it the PR still opens, but you must push an empty commit to trigger CI.
+# CI on the bot PR is triggered explicitly via workflow_dispatch. A PR opened by the built-in GITHUB_TOKEN
+# does NOT fire pull_request, but workflow_dispatch is the documented exception the token IS allowed to
+# trigger, so no PAT or extra secret is needed.
 #
 # SECURITY: every value derived from the upstream API (commit sha, date) is validated in refresh.mjs, then
 # passed to shell steps only via env: and referenced as quoted "$VARS" (no ${{ }} interpolation inside run:),
@@ -19,6 +19,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write # to dispatch the ci workflow on the bot PR branch (GITHUB_TOKEN can trigger workflow_dispatch)
 
 concurrency:
   group: refresh-pricing
@@ -29,8 +30,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.REFRESH_PAT || github.token }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -49,9 +48,9 @@ jobs:
         run: npm run test:ci
 
       - if: steps.refresh.outputs.changed == 'true'
-        name: Open the refresh PR
+        name: Open the refresh PR + trigger its CI
         env:
-          GH_TOKEN: ${{ secrets.REFRESH_PAT || github.token }}
+          GH_TOKEN: ${{ github.token }}
           R_SHORT: ${{ steps.refresh.outputs.short }}
           R_DATE: ${{ steps.refresh.outputs.date }}
           R_ANCHOR: ${{ steps.refresh.outputs.anchor_changed }}
@@ -70,3 +69,5 @@ jobs:
             TITLE="$TITLE [ANCHOR PRICE CHANGED - update the E2E oracles]"
           fi
           gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"
+          # A GITHUB_TOKEN-opened PR does not trigger pull_request CI; workflow_dispatch is the exception.
+          gh workflow run ci.yml --ref "$BRANCH"
