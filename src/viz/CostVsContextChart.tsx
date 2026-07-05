@@ -48,7 +48,9 @@ export function CostVsContextChart(props: { points: ContextPoint[] | null }): JS
             formatter={(value: number) => [money(Number(value)), 'Cost']}
             labelFormatter={(v) => `${Number(v).toLocaleString('en-US')} context tokens/turn`}
           />
-          <Line type="monotone" dataKey="central" stroke={t.central} strokeWidth={2} dot={renderDot} activeDot={{ r: 5 }} name="Cost" />
+          {/* isAnimationActive=false: the chart re-renders on every debounced recompute, and recharts' default
+              entrance animation would wipe + redraw the line/dots each keystroke (visible flicker). */}
+          <Line type="monotone" dataKey="central" stroke={t.central} strokeWidth={2} dot={renderDot} activeDot={{ r: 5 }} name="Cost" isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </VizFigure>

@@ -45,7 +45,9 @@ export function BlastRadiusRadial(props: {
         <RadialBarChart data={rings} innerRadius="25%" outerRadius="100%" startAngle={90} endAngle={-270}>
           {/* domain [0, worstCase] so each arc length is proportional to its exposure. */}
           <PolarAngleAxis type="number" domain={[0, props.worstCase]} tick={false} />
-          <RadialBar dataKey="value" background={{ fill: t.grid }} cornerRadius={4} />
+          {/* No entrance animation: it re-renders when the DoW inputs change; the default would re-sweep the
+              rings each time (flicker). */}
+          <RadialBar dataKey="value" background={{ fill: t.grid }} cornerRadius={4} isAnimationActive={false} />
           <Tooltip
             contentStyle={t.tooltip}
             formatter={(value: number, _n, item: { payload?: { name: string } }) => [money(Number(value)), item.payload?.name ?? '']}

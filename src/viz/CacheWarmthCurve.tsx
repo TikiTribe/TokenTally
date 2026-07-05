@@ -46,10 +46,12 @@ export function CacheWarmthCurve(props: { points: WarmthPoint[] | null; breakEve
             formatter={(value: number, name: string) => [money(Number(value)), name]}
             labelFormatter={(v) => `${Number(v).toLocaleString('en-US')} arrivals/mo`}
           />
-          <Area type="monotone" dataKey="bandFloor" stackId="band" stroke="none" fill="none" fillOpacity={0} legendType="none" />
-          <Area type="monotone" dataKey="bandHeight" stackId="band" stroke="none" fill={t.band} fillOpacity={0.55} name="Range (low to high)" />
-          <Line type="monotone" dataKey="central" stroke={t.central} strokeWidth={2} dot={false} name="Central" />
-          <Line type="monotone" dataKey="conservative" stroke={t.conservative} strokeWidth={1.5} strokeDasharray="5 4" dot={false} name="Conservative (cold cache)" />
+          {/* No entrance animation: the chart re-renders on every recompute; recharts' default would re-draw
+              the band + lines each time (flicker). */}
+          <Area type="monotone" dataKey="bandFloor" stackId="band" stroke="none" fill="none" fillOpacity={0} legendType="none" isAnimationActive={false} />
+          <Area type="monotone" dataKey="bandHeight" stackId="band" stroke="none" fill={t.band} fillOpacity={0.55} name="Range (low to high)" isAnimationActive={false} />
+          <Line type="monotone" dataKey="central" stroke={t.central} strokeWidth={2} dot={false} name="Central" isAnimationActive={false} />
+          <Line type="monotone" dataKey="conservative" stroke={t.conservative} strokeWidth={1.5} strokeDasharray="5 4" dot={false} name="Conservative (cold cache)" isAnimationActive={false} />
           {props.breakEven != null && Number.isFinite(props.breakEven) ? (
             <ReferenceLine x={props.breakEven} stroke={t.marker} strokeDasharray="3 3" label={{ value: 'break-even', fill: t.marker, fontSize: 10, position: 'top' }} />
           ) : null}
