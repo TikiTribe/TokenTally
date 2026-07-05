@@ -7,6 +7,7 @@ import { TornadoChart } from '@/viz/TornadoChart';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { CacheWarmthCurve } from '@/viz/CacheWarmthCurve';
 import { BlastRadiusRadial } from '@/viz/BlastRadiusRadial';
+import { CostVsContextScatter } from '@/viz/CostVsContextScatter';
 import type { StepProfile } from '@/workloads';
 import type { TornadoBar } from '@/optimization';
 import type { WarmthPoint } from '@/store/engineClient';
@@ -58,6 +59,26 @@ describe('CacheWarmthCurve', () => {
     render(<CacheWarmthCurve points={points} breakEven={5000} />);
     expect(screen.getByRole('img', { name: /cache warmth/i })).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+});
+
+describe('CostVsContextScatter', () => {
+  it('renders nothing for a null/short series', () => {
+    const { container } = render(<CostVsContextScatter points={null} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+  it('renders a labeled figure + a row per point, flagging truncation', () => {
+    render(
+      <CostVsContextScatter
+        points={[
+          { context: 0, central: 10, truncated: false },
+          { context: 5000, central: 30, truncated: false },
+          { context: 200000, central: 45, truncated: true },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('img', { name: /cost vs context/i })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'yes' })).toBeInTheDocument(); // the truncated point
   });
 });
 

@@ -78,6 +78,13 @@ test.describe('visualizations', () => {
     await expect(page.getByRole('img', { name: /cache warmth/i })).toHaveCount(0);
   });
 
+  test('cost-vs-context scatter renders for chatbot and is absent for agent', async ({ page }) => {
+    await waitReady(page);
+    await expect(page.getByRole('img', { name: /cost vs context/i })).toBeVisible({ timeout: 8000 });
+    await selectMode(page, MODE_TABS.agent);
+    await expect(page.getByRole('img', { name: /cost vs context/i })).toHaveCount(0);
+  });
+
   test('blast-radius radial appears in Denial of Wallet only after both gates', async ({ page }) => {
     await waitReady(page);
     await selectMode(page, MODE_TABS.dow);

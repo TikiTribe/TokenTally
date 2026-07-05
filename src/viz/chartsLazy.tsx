@@ -14,3 +14,7 @@ export const StepAccumulationChartLazy = lazy(() =>
 export const BlastRadiusRadialLazy = lazy(() =>
   import('@/viz/BlastRadiusRadial').then((m) => ({ default: m.BlastRadiusRadial })),
 );
+
+export const CostVsContextScatterLazy = lazy(() =>
+  import('@/viz/CostVsContextScatter').then((m) => ({ default: m.CostVsContextScatter })),
+);

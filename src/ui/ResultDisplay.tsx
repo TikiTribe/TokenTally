@@ -7,12 +7,12 @@ import { lazy, Suspense } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { TornadoChart } from '@/viz/TornadoChart';
-import { CacheWarmthCurveLazy, StepAccumulationChartLazy, BlastRadiusRadialLazy } from '@/viz/chartsLazy';
+import { CacheWarmthCurveLazy, StepAccumulationChartLazy, BlastRadiusRadialLazy, CostVsContextScatterLazy } from '@/viz/chartsLazy';
 import { ExportButtons } from '@/ui/ExportButtons';
 import { HelpTip } from '@/ui/HelpTip';
 import { money } from '@/ui/format';
 import type { WorkloadForecast } from '@/workloads';
-import type { WarmthPoint } from '@/store/engineClient';
+import type { WarmthPoint, ContextPoint } from '@/store/engineClient';
 import type { ConfidenceRange } from '@/types/engine';
 import type { DenialOfWalletResult, TornadoBar } from '@/optimization';
 
@@ -55,7 +55,17 @@ function confidenceLine(low: number, high: number, conservative: number): string
   return `Range ${money(low)} to ${money(high)} · conservative, no warm cache ${money(conservative)}`;
 }
 
-function WorkloadResult({ f, tornado, warmthSeries }: { f: WorkloadForecast; tornado: TornadoBar[]; warmthSeries: WarmthPoint[] | null }): JSX.Element {
+function WorkloadResult({
+  f,
+  tornado,
+  warmthSeries,
+  contextSeries,
+}: {
+  f: WorkloadForecast;
+  tornado: TornadoBar[];
+  warmthSeries: WarmthPoint[] | null;
+  contextSeries: ContextPoint[] | null;
+}): JSX.Element {
   const c = f.cost;
   if (!c.applicable) {
     return <p style={{ color: 'var(--text-muted)' }}>{f.accuracyNote}</p>; // non-per_token etc - honest note, not $0
@@ -94,6 +104,7 @@ function WorkloadResult({ f, tornado, warmthSeries }: { f: WorkloadForecast; tor
       {f.kind === 'chatbot' || f.kind === 'prompt' ? (
         <Suspense fallback={null}>
           <CacheWarmthCurveLazy points={warmthSeries} breakEven={f.cost.breakEvenArrivals} />
+          <CostVsContextScatterLazy points={contextSeries} />
         </Suspense>
       ) : null}
       <p data-testid="formula-line" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -158,7 +169,7 @@ export function ResultDisplay(): JSX.Element {
       ) : result.kind === 'unavailable' ? (
         <p style={{ color: 'var(--text-muted)' }}>{result.reason}</p>
       ) : result.kind === 'workload' ? (
-        <WorkloadResult f={result.forecast} tornado={result.tornado} warmthSeries={result.warmthSeries} />
+        <WorkloadResult f={result.forecast} tornado={result.tornado} warmthSeries={result.warmthSeries} contextSeries={result.contextSeries} />
       ) : (
         <DowResult r={result.result} />
       )}

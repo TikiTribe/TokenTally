@@ -1,7 +1,7 @@
 // 2C engine-client integration (node): resolve a real model from the pinned registry and run each mode;
 // verify never-$0 branches (bad model -> unavailable; non-per_token -> honest note, not $0).
 import { describe, it, expect, beforeAll } from 'vitest';
-import { runForecast, warmthCurve } from '@/store/engineClient';
+import { runForecast, warmthCurve, contextSweep } from '@/store/engineClient';
 import { loadRegistry, listByMode } from '@/registry';
 import registrySnapshot from '@/config/registry.generated.json';
 import type { RegistrySnapshot, ModelRecord } from '@/types/registry';
@@ -91,5 +91,27 @@ describe('warmthCurve (B1 sweep producer)', () => {
     for (let i = 1; i < series.length; i++) {
       expect(series[i]!.arrivals).toBeGreaterThanOrEqual(series[i - 1]!.arrivals); // log-spaced, non-decreasing
     }
+  });
+});
+
+describe('contextSweep (B3 sweep producer)', () => {
+  it('returns null for modes with no context axis (agent, crew)', () => {
+    expect(contextSweep('agent', INPUTS, sel(perToken), {}, 'snap')).toBeNull();
+    expect(contextSweep('crew', INPUTS, sel(perToken), {}, 'snap')).toBeNull();
+  });
+
+  it('sweeps context growth, is non-decreasing in cost, and marks truncation at the window', () => {
+    const series = contextSweep('chatbot', INPUTS, sel(perToken), {}, 'snap');
+    expect(series).not.toBeNull();
+    if (!series) return;
+    expect(series).toHaveLength(12);
+    for (let i = 0; i < series.length; i++) {
+      expect(series[i]!.context).toBeGreaterThanOrEqual(0);
+      expect(series[i]!.central).toBeGreaterThanOrEqual(0);
+      if (i > 0) expect(series[i]!.context).toBeGreaterThanOrEqual(series[i - 1]!.context); // context increases
+    }
+    // the sweep runs to 1.5x the window, so the last point must be truncated and the first must not be.
+    expect(series[0]!.truncated).toBe(false);
+    expect(series[series.length - 1]!.truncated).toBe(true);
   });
 });
