@@ -7,9 +7,10 @@ import type { ModelRecord } from '@/types/registry';
 import type { TokenizerBand, WorkloadForecast, WorkloadKind } from '@/types/workload';
 
 export function accuracyNoteFor(model: ModelRecord, band: TokenizerBand, assumptionsSource?: string): string {
+  // relLow is already signed negative (e.g. -0.3), so DON'T prefix another '-' (that rendered "--30%").
   const bandStr =
     band && (band.relLow !== 0 || band.relHigh !== 0)
-      ? ` (token band -${Math.round(band.relLow * 100)}%/+${Math.round(band.relHigh * 100)}%)`
+      ? ` (token band ${Math.round(band.relLow * 100)}%/+${Math.round(band.relHigh * 100)}%)`
       : '';
   let base: string;
   switch (model.accuracyTier) {

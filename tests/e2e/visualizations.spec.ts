@@ -1,7 +1,7 @@
-// VISUALIZATION VALIDATION - each hand-rolled SVG chart is decorative (aria-hidden) and paired with a
-// visually-hidden data table that IS the accessible representation. We validate the TABLES (the values the
-// chart encodes) + presence/absence per mode + the tornado ordering. Value-level math for the step table is
-// covered in math.spec.ts (oracle E); here we assert structure, gating, and sort order.
+// VISUALIZATION VALIDATION - each chart is now readable to sighted users (visible caption, labels, axis, and
+// per-point hover) with a visually-hidden data table kept as a redundant screen-reader aid. We validate the
+// TABLES (the values the chart encodes) + presence/absence per mode + the tornado ordering. Value-level math
+// for the step table is covered in math.spec.ts (oracle E); here we assert structure, gating, and sort order.
 import { test, expect } from '@playwright/test';
 import { waitReady, selectMode, MODE_TABS } from './helpers';
 
@@ -12,8 +12,13 @@ test.describe('visualizations', () => {
     await waitReady(page);
     const wf = page.getByRole('group', { name: /monthly cost breakdown/i });
     await expect(wf).toBeVisible({ timeout: 8000 });
-    for (const label of ['cacheWrite', 'cacheReads', 'input', 'output']) {
+    // Default chatbot has an empty system prompt (prefix 0), so only the paid rows render; the zero-cost cache
+    // rows are hidden (#16), not shown as "$0" noise.
+    for (const label of ['input', 'output']) {
       await expect(page.getByTestId(`waterfall-${label}`)).toHaveCount(1);
+    }
+    for (const label of ['cacheWrite', 'cacheReads']) {
+      await expect(page.getByTestId(`waterfall-${label}`)).toHaveCount(0);
     }
   });
 
@@ -37,7 +42,8 @@ test.describe('visualizations', () => {
     const tornado = page.getByRole('group', { name: /sensitivity/i });
     const table = tornado.locator('table');
     const bodyText = (await table.textContent()) ?? '';
-    for (const f of ['conversationsPerMonth', 'avgResponseTokens', 'contextGrowthPerTurn', 'turnsPerConversation']) {
+    // The table renders human factor labels now, not raw engine ids (#5/#18).
+    for (const f of ['Conversations / month', 'Avg response tokens', 'Context growth / turn', 'Turns / conversation']) {
       expect(bodyText).toContain(f);
     }
     // Swing is the last column; read each row's swing and assert non-increasing order.

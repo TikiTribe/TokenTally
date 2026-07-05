@@ -8,10 +8,26 @@ import { CostWaterfall } from '@/viz/CostWaterfall';
 import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
 import { TornadoChart } from '@/viz/TornadoChart';
 import { ExportButtons } from '@/ui/ExportButtons';
+import { money } from '@/ui/format';
 import type { WorkloadForecast } from '@/workloads';
 import type { DenialOfWalletResult, TornadoBar } from '@/optimization';
 
-const money = (n: number): string => `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+// Accuracy badge colour tracks the model's tier, read from the note prefix (#22: it was always "estimate").
+function badgeClass(note: string): string {
+  if (note.startsWith('exact')) return 'badge badge-exact';
+  if (note.startsWith('approx')) return 'badge badge-approx';
+  return 'badge badge-estimate';
+}
+
+function confidenceLine(low: number, high: number, conservative: number): string {
+  // #23: no fake "Range $X to $X" when the band collapses (exact tokenizer + no cache variance).
+  if (low === high) {
+    return conservative > high
+      ? `Point estimate · conservative, no warm cache ${money(conservative)}`
+      : 'Point estimate (no modeled cost variance).';
+  }
+  return `Range ${money(low)} to ${money(high)} · conservative, no warm cache ${money(conservative)}`;
+}
 
 function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoBar[] }): JSX.Element {
   const c = f.cost;
@@ -25,11 +41,9 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
         {money(f.monthlyCost)} <span style={{ fontSize: '1rem', fontWeight: 400, color: 'var(--text-muted)' }}>/ month</span>
       </output>
       <p data-testid="confidence-line" style={{ margin: '0.25rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-        {band.unmodeled
-          ? 'Point estimate. Variance unmodeled.'
-          : `Range ${money(band.low)} to ${money(band.high)} · conservative (no warm cache) ${money(c.conservativeTotal)}`}
+        {band.unmodeled ? 'Point estimate. Variance unmodeled.' : confidenceLine(band.low, band.high, c.conservativeTotal)}
       </p>
-      <p><span className="badge badge-estimate" data-testid="accuracy-badge">{f.accuracyNote}</span></p>
+      <p><span className={badgeClass(f.accuracyNote)} data-testid="accuracy-badge">{f.accuracyNote}</span></p>
       {/* §13 cut line: the cross-run warm-cache view + break-even. */}
       {c.warmth !== null || c.breakEvenArrivals !== null ? (
         <p data-testid="cache-line" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -41,7 +55,7 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
       ) : null}
       <CostWaterfall waterfall={c.waterfall} />
       <StepAccumulationChart steps={f.steps} />
-      <TornadoChart bars={tornado} />
+      <TornadoChart bars={tornado} central={f.monthlyCost} />
       <p data-testid="formula-line" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         Formula: {f.formula} · priced against snapshot {f.snapshotVersion.slice(0, 8)}
       </p>

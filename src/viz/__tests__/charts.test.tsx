@@ -30,12 +30,13 @@ describe('TornadoChart', () => {
       { factor: 'conversationsPerMonth', low: 100, high: 300, swing: 200 },
       { factor: 'avgResponseTokens', low: 180, high: 220, swing: 40 },
     ];
-    render(<TornadoChart bars={bars} />);
+    render(<TornadoChart bars={bars} central={200} />);
     expect(screen.getByRole('group', { name: /sensitivity/i })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: /conversationsPerMonth/ })).toBeInTheDocument();
+    // The table renders human factor labels now, not raw engine ids (#5/#18).
+    expect(screen.getByRole('cell', { name: /Conversations \/ month/ })).toBeInTheDocument();
   });
   it('returns null when all swings are zero (allowlist-rejected factors)', () => {
-    const { container } = render(<TornadoChart bars={[{ factor: 'x', low: 0, high: 0, swing: 0 }]} />);
+    const { container } = render(<TornadoChart bars={[{ factor: 'x', low: 0, high: 0, swing: 0 }]} central={0} />);
     expect(container).toBeEmptyDOMElement();
   });
 });

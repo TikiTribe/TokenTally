@@ -21,12 +21,15 @@ test.describe('math validation (rendered $ == hand-computed $)', () => {
     await expectHeadline(page, '$143.75');
     expect(await headlineValue(page)).toBeCloseTo(143.75, 2);
     expect(await waterfallValue(page, 'input')).toBe('$43.75');
-    expect(await waterfallValue(page, 'output')).toBe('$100');
-    expect(await waterfallValue(page, 'cacheWrite')).toBe('$0');
-    expect(await waterfallValue(page, 'cacheReads')).toBe('$0');
-    // prefix 0 => central == conservative, band collapses
+    expect(await waterfallValue(page, 'output')).toBe('$100.00');
+    // prefix 0 => no cache activity: the zero-cost cache rows are hidden (#16), not shown as "$0" noise.
+    await expect(page.getByTestId('waterfall-cacheWrite')).toHaveCount(0);
+    await expect(page.getByTestId('waterfall-cacheReads')).toHaveCount(0);
+    // prefix 0 => central == conservative, band collapses to a clean point estimate. #23: no redundant
+    // "conservative $143.75" line when it would only repeat the headline; that reference appears in oracle D
+    // where a system prompt makes conservative > central.
     await expect(page.getByTestId('confidence-line'))
-      .toContainText('conservative (no warm cache) $143.75');
+      .toContainText('Point estimate (no modeled cost variance).');
   });
 
   test('B. prompt/batch (gpt-4o) = $300/month for 100k calls x 300 output tokens', async ({ page }) => {
@@ -39,7 +42,7 @@ test.describe('math validation (rendered $ == hand-computed $)', () => {
     // output = 100000*300*10/1e6 = $300 ; total = $300
     await expectHeadline(page, '$300');
     expect(await headlineValue(page)).toBeCloseTo(300, 2);
-    expect(await waterfallValue(page, 'output')).toBe('$300');
+    expect(await waterfallValue(page, 'output')).toBe('$300.00');
   });
 
   test('C. model swap gpt-4o -> gpt-4o-mini reprices output $100 -> $6 and drops the headline', async ({ page }) => {
@@ -48,7 +51,7 @@ test.describe('math validation (rendered $ == hand-computed $)', () => {
     await selectModel(page, 'gpt-4o-mini|openai');
     // output = 50000*200*0.6/1e6 = $6 (clean) ; input = 50000*350*0.15/1e6 = $2.625 -> displays "$2.63"
     // total = 8.625 -> money() rounds half-up to "$8.63" (assert the DISPLAYED, already-rounded value)
-    await expect(page.getByTestId('waterfall-output')).toHaveText('$6', { timeout: 8000 });
+    await expect(page.getByTestId('waterfall-output')).toHaveText('$6.00', { timeout: 8000 });
     expect(await waterfallValue(page, 'input')).toBe('$2.63');
     const after = await headlineValue(page);
     expect(after).toBeLessThan(before);
@@ -66,7 +69,7 @@ test.describe('math validation (rendered $ == hand-computed $)', () => {
     await expect(page.getByTestId('waterfall-cacheWrite')).not.toHaveText('$0', { timeout: 8000 });
     const readConservative = async (): Promise<number> => {
       const line = (await page.getByTestId('confidence-line').textContent()) ?? '';
-      const m = line.match(/conservative \(no warm cache\) \$([\d.,]+)/);
+      const m = line.match(/conservative, no warm cache \$([\d.,]+)/);
       return m ? Number(m[1].replace(/,/g, '')) : 0;
     };
     await expect.poll(readConservative, { timeout: 8000 }).toBeCloseTo(expectedConservative, 1);
