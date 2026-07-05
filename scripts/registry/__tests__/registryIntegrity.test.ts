@@ -10,7 +10,7 @@ import type { RawEntry } from '../../../src/registry/normalize';
 
 const vendored = new URL(`../vendor/model_prices.${PINNED_COMMIT.slice(0, 8)}.json`, import.meta.url);
 const generated = new URL('../../../src/config/registry.generated.json', import.meta.url);
-const SNAPSHOT_DATE = '2025-09-01';
+const SNAPSHOT_DATE = '2026-07-03'; // must equal the SNAPSHOT_DATE used to regenerate registry.generated.json
 
 describe('registry integrity (P2-A6)', () => {
   it('the vendored raw body matches the pinned sha256', () => {

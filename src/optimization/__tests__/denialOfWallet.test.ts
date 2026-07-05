@@ -76,7 +76,7 @@ describe('denialOfWallet', () => {
     expect(DOW_VDP_URL).toMatch(/^https:\/\//);
   });
 
-  // P2-A2: auditability parity — the result carries a snapshotVersion + formula on every exit path.
+  // P2-A2: auditability parity - the result carries a snapshotVersion + formula on every exit path.
   it('P2-A2: carries snapshotVersion + formula (enabled, disabled, and non-per_token)', () => {
     const enabled = denialOfWallet({ model: gpt4o, attackerRequestsPerMonth: 1000, enabled: true, snapshotVersion: 'snap-x' });
     expect(enabled.snapshotVersion).toBe('snap-x');

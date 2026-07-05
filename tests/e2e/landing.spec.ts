@@ -1,4 +1,4 @@
-// LANDING + ROUTING — '/' is the marketing landing; the CTAs route into the calculator (#calculator); the
+// LANDING + ROUTING - '/' is the marketing landing; the CTAs route into the calculator (#calculator); the
 // brand link routes back; deep-links work. Complements the calculator specs (which enter at #calculator).
 import { test, expect } from '@playwright/test';
 
@@ -6,7 +6,7 @@ test.describe('landing page', () => {
   test('renders the hero, workloads, features, and CTAs on the home route', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: /Know what your LLM feature costs/ })).toBeVisible();
-    // hero product preview (decorative mock) + stats render — assert structure, not the mock's literal value
+    // hero product preview (decorative mock) + stats render - assert structure, not the mock's literal value
     await expect(page.locator('.lp-preview__money')).toBeVisible();
     await expect(page.locator('.lp-stat')).toHaveCount(4);
     // 5 workload cards + 6 feature cards

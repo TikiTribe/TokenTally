@@ -39,7 +39,7 @@ export function registerAdapter(adapter: TokenizerAdapter): void {
 export function resetAdapters(): void {
   adapters.clear();
 }
-// B3: promotion is bound to proof — a passing SpotCheckResult for a specific (family, encoding).
+// B3: promotion is bound to proof - a passing SpotCheckResult for a specific (family, encoding).
 export function markFamilyExact(
   family: TokenizerFamily,
   encoding: TiktokenEncoding,

@@ -1,7 +1,7 @@
 // Denial of Wallet (DEFENSIVE). Bounds the worst-case monthly spend an adversary can force by filling the
 // context window, maxing output AND reasoning (P1-A14: reasoning models bill reasoning separately, up to
 // ~5.83x output), and forcing retries, under the worst cache posture (p_warm=0: every request pays cold,
-// never a warm read — the conservativeTotal seam, C12). Shipped with a confidence range and an honest tier
+// never a warm read - the conservativeTotal seam, C12). Shipped with a confidence range and an honest tier
 // note, never false-precise. Framed for defenders: each mitigation (output cap, retry ceiling, per-user rate
 // limit, context cap) shows the dollars it removes. Opt-in (enabled defaults FALSE; above the launch cut
 // line) and kill-switch gated. The dual-use disclaimer + a REAL VDP link travel INSIDE the result (P1-A1 /
@@ -90,7 +90,7 @@ export function denialOfWallet(cfg: DenialOfWalletConfig): DenialOfWalletResult 
   const snap = cfg.snapshotVersion ?? 'unknown';
   if (cfg.enabled !== true) return inert('disabled: Denial of Wallet is opt-in (kill switch off)', snap);
 
-  // P1-A15: non-per_token billing is not modeled by the token cost core — never present a silent $0.
+  // P1-A15: non-per_token billing is not modeled by the token cost core - never present a silent $0.
   if (cfg.model.billingUnit !== 'per_token') {
     return {
       enabled: true,
@@ -98,7 +98,7 @@ export function denialOfWallet(cfg: DenialOfWalletConfig): DenialOfWalletResult 
       confidence: { low: 0, mid: 0, high: 0, unmodeled: true },
       mitigations: [],
       note:
-        `not modeled for ${cfg.model.billingUnit} billing — do not read as $0 exposure. ` +
+        `not modeled for ${cfg.model.billingUnit} billing - do not read as $0 exposure. ` +
         `A ${cfg.model.billingUnit} SKU (e.g. realtime audio) accrues cost per unit held; size it in that unit.`,
       disclaimer: DOW_DISCLAIMER,
       vdpUrl: DOW_VDP_URL,
@@ -108,7 +108,7 @@ export function denialOfWallet(cfg: DenialOfWalletConfig): DenialOfWalletResult 
   }
 
   const usedFallback = cfg.model.contextWindow === null || cfg.model.maxOutput === null;
-  // Review fix (security F-3): route fallback token counts through bounded() too — Math.max(0, Infinity)
+  // Review fix (security F-3): route fallback token counts through bounded() too - Math.max(0, Infinity)
   // passes Infinity into the engine, which clamps it to 0 and SILENTLY drops the exposure. bounded() maps
   // Infinity/huge to the CEIL so the worst case stays a large-but-finite figure.
   const inputTokens = cfg.model.contextWindow ?? bounded(cfg.fallbackInputTokens ?? 0);
@@ -141,7 +141,7 @@ export function denialOfWallet(cfg: DenialOfWalletConfig): DenialOfWalletResult 
   const tierNote =
     cfg.model.accuracyTier === 'exact'
       ? ''
-      : ` Underlying token cost is ${cfg.model.accuracyTier}-tier — a bounded estimate, not a precise figure.`;
+      : ` Underlying token cost is ${cfg.model.accuracyTier}-tier - a bounded estimate, not a precise figure.`;
   const reasonNote = reasoningTokens > 0 ? ` + ${reasoningTokens} reasoning tok` : '';
   const fbNote = usedFallback ? ' Used explicit fallback caps (model exposes no contextWindow/maxOutput).' : '';
   const note =

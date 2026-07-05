@@ -1,7 +1,7 @@
 // Numerically-defined cache break-even (§5.3 W2), CORRECTED per premortem C1. A cache WRITE is billed
 // INSTEAD OF base input for those tokens (cold = cacheWrite, warm = cacheRead, no-cache = input), so
 // caching beats no-caching when (1-p)·cacheWrite + p·cacheRead < input. The break-even warmth is
-// therefore p* = (cacheWrite - input)/(cacheWrite - cacheRead) — using the INCREMENTAL write penalty
+// therefore p* = (cacheWrite - input)/(cacheWrite - cacheRead) - using the INCREMENTAL write penalty
 // (cacheWrite - input), not the full cacheWrite the spec text literally states. Owner: TokenTally engine.
 import { SECONDS_PER_MONTH } from '@/engine/caching/policy';
 

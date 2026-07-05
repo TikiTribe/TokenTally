@@ -1,7 +1,7 @@
 // Shared forecast assembly: run one WarmScenario through monthlyWarmCost, and when the accumulation
 // straddles a 128k/200k price tier (P1-A7), correct the input/output/reasoning dollars via exact per-band
 // pricing while keeping the warm-cache prefix cost from the engine. The IOR cost is identical in the central
-// and conservative (p_warm=0) worlds — only the prefix cache differs — so the conservative correction is the
+// and conservative (p_warm=0) worlds - only the prefix cache differs - so the conservative correction is the
 // same additive warm-cache delta, and the confidence band recomposes exactly. Pure. Owner: engine.
 // Version: Phase 1.
 import { monthlyWarmCost } from '@/engine';
@@ -45,7 +45,7 @@ function notModeled(p: AssembleParams, unit: string): WorkloadForecast {
       confidence: { low: 0, mid: 0, high: 0, unmodeled: true }, breakEvenArrivals: null,
     },
     arrivalsPerMonth: p.scenario.arrivalsPerMonth,
-    accuracyNote: `not modeled: ${unit} billing is duration/DBU-based — do not read as $0. Size it in its native unit.`,
+    accuracyNote: `not modeled: ${unit} billing is duration/DBU-based - do not read as $0. Size it in its native unit.`,
     snapshotVersion: p.snapshotVersion,
     formula: `unmodeled:${unit}`,
     tierStraddle: false,
@@ -98,7 +98,7 @@ export function assembleForecast(p: AssembleParams): WorkloadForecast {
 
   const wc = monthlyWarmCost(scn);
   // C2 review fix: when the context window truncated the accumulation, the window cap already bounds the
-  // cost and the accumulation plateaus at the cap (no real per-band straddle) — skip the correction.
+  // cost and the accumulation plateaus at the cap (no real per-band straddle) - skip the correction.
   const straddle =
     wc.applicable &&
     !p.contextTruncated &&

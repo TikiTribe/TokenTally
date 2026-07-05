@@ -1,4 +1,4 @@
-// D2: serve dist/ with the EXACT security headers parsed from vercel.json — single source of truth, so
+// D2: serve dist/ with the EXACT security headers parsed from vercel.json - single source of truth, so
 // the Playwright CSP test can never drift from what production ships. Used by the CSP/egress specs and as
 // the go-live pre-flight target. Owner: TokenTally CI. Version: 0D.
 import { readFileSync, existsSync, statSync } from 'node:fs';

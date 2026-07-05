@@ -26,7 +26,7 @@ describe('agent presets', () => {
   });
 
   it('unknown preset falls back to custom (A4: standalone const, no undefined deref)', () => {
-    // @ts-expect-error deliberate bad name — now validated by typecheck:tests (P1-A24)
+    // @ts-expect-error deliberate bad name - now validated by typecheck:tests (P1-A24)
     const cfg = applyPreset('nope', model, {});
     expect(cfg.stepsPerRun).toBeGreaterThan(0);
   });

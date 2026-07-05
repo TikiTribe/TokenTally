@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Phase 2A theme tokens (P2-A16): CSS custom properties in this same-origin stylesheet — no inline <style>,
+/* Phase 2A theme tokens (P2-A16): CSS custom properties in this same-origin stylesheet - no inline <style>,
    no inline theme <script> (script-src 'self' forbids it). Light is the pre-JS default via
    prefers-color-scheme so the frame before ThemeController runs is correct; [data-theme] overrides win once
-   the controller stamps it. Contrast pairs are WCAG-AA (text >=4.5:1, UI/badges >=3:1) — verified by a unit
+   the controller stamps it. Contrast pairs are WCAG-AA (text >=4.5:1, UI/badges >=3:1) - verified by a unit
    test (P2-A21). */
 @layer base {
   :root {
@@ -15,8 +15,8 @@
     --text: #0f172a;
     --text-muted: #475569; /* 7.5:1 on --surface */
     --border: #cbd5e1;
-    --input-border: #64748b; /* 4.8:1 on white — functional boundary (WCAG 1.4.11) */
-    --primary: #1d4ed8; /* 6.3:1 on white — safe as text/link */
+    --input-border: #64748b; /* 4.8:1 on white - functional boundary (WCAG 1.4.11) */
+    --primary: #1d4ed8; /* 6.3:1 on white - safe as text/link */
     --primary-hover: #1e3a8a;
     --primary-contrast: #ffffff;
     --focus: #2563eb;
@@ -350,6 +350,63 @@
   .field-label-row {
     display: flex;
     align-items: center;
+  }
+  .field-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Searchable model combobox (ModelSelector.tsx). */
+  .combo {
+    position: relative;
+  }
+  .combo__list {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 320px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0.25rem;
+    list-style: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+  }
+  .combo__group {
+    position: sticky;
+    top: -0.25rem;
+    padding: 0.4rem 0.6rem 0.2rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--brand);
+    background: var(--surface);
+  }
+  .combo__opt {
+    padding: 0.45rem 0.6rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .combo__opt.is-active {
+    background: var(--surface-3);
+  }
+  .combo__opt[aria-selected='true'] {
+    font-weight: 600;
+  }
+  .combo__more,
+  .combo__list--msg {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
   }
 
   /* Calculator (app) view shell. */

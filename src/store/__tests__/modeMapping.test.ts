@@ -48,7 +48,7 @@ describe('modeMapping (2C)', () => {
     const huge: CrewInputs = { memberCount: 1e9, runsPerMonth: 1, stepsPerMember: 1, sharedTranscriptGrowthPerStep: 0 };
     const t0 = performance.now();
     const cfg = mapCrew(huge, model, 's');
-    expect(cfg.agents.length).toBeLessThanOrEqual(64); // MAX_CREW_MEMBERS — never allocates 1e9 objects
+    expect(cfg.agents.length).toBeLessThanOrEqual(64); // MAX_CREW_MEMBERS - never allocates 1e9 objects
     expect(performance.now() - t0).toBeLessThan(200);
   });
 

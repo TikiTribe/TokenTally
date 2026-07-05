@@ -116,7 +116,7 @@ export function monthlyWarmCost(scn: WarmScenario): WarmCostResult {
   // p_warm=0 reference (W6) + DoW seam (C12). Uses the same rates so it is a true upper bound.
   const conservative = waterfallAt(scn, rates, coldPrefixRate, warmPrefixRate, 0, 0);
 
-  // C4: convert the warmth uncertainty into an input-variance band on the cost — the cost can degrade
+  // C4: convert the warmth uncertainty into an input-variance band on the cost - the cost can degrade
   // up to the conservative (no-warm) total, so the interval widens UP for an uncertain cache.
   const warmthRelHigh = central.total > 0 ? Math.max(0, (conservative.total - central.total) / central.total) : 0;
   const confidence = composeConfidence(central.total, scn.tokenizerBand ?? null, {

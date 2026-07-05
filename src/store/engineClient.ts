@@ -36,7 +36,7 @@ export function runForecast(
 ): EngineResult {
   const model = getModel(selection.canonicalId, selection.deployment);
   if (!model) {
-    return { kind: 'unavailable', reason: `Model "${selection.canonicalId}" (${selection.deployment}) is not in the catalog — select another model.` };
+    return { kind: 'unavailable', reason: `Model "${selection.canonicalId}" (${selection.deployment}) is not in the catalog - select another model.` };
   }
   switch (mode) {
     case 'chatbot': {

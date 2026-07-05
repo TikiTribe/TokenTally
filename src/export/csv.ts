@@ -1,5 +1,5 @@
 // §5.8: build a CSV of the current forecast. Every cell goes through sanitizeForCSV (formula-injection
-// safe). Pure — takes the already-computed result + labels. Owner: TokenTally export. Version: Phase 3.
+// safe). Pure - takes the already-computed result + labels. Owner: TokenTally export. Version: Phase 3.
 import { csvRow } from '@/export/sanitize';
 import type { EngineResult } from '@/store/engineClient';
 

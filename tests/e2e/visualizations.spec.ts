@@ -1,4 +1,4 @@
-// VISUALIZATION VALIDATION — each hand-rolled SVG chart is decorative (aria-hidden) and paired with a
+// VISUALIZATION VALIDATION - each hand-rolled SVG chart is decorative (aria-hidden) and paired with a
 // visually-hidden data table that IS the accessible representation. We validate the TABLES (the values the
 // chart encodes) + presence/absence per mode + the tornado ordering. Value-level math for the step table is
 // covered in math.spec.ts (oracle E); here we assert structure, gating, and sort order.

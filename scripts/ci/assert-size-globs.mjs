@@ -11,7 +11,7 @@ for (const c of configs) {
   const dir = dirname(c.path); // e.g. dist/assets
   const pattern = basename(c.path); // e.g. index-*.js
   if (!existsSync(dir)) {
-    console.error(`assert-size-globs: ${dir} missing — run \`npm run build\` first.`);
+    console.error(`assert-size-globs: ${dir} missing - run \`npm run build\` first.`);
     process.exit(1);
   }
   // match the simple `prefix-*.suffix` glob with startsWith/endsWith (no RegExp needed; all budgets use one *).
@@ -20,7 +20,7 @@ for (const c of configs) {
   const suffix = pattern.slice(star + 1);
   const matches = readdirSync(dir).filter((f) => f.startsWith(prefix) && f.endsWith(suffix) && f.length >= prefix.length + suffix.length);
   if (matches.length === 0) {
-    console.error(`assert-size-globs FAILED — budget "${c.name}" glob "${c.path}" matched ZERO files (chunk renamed?).`);
+    console.error(`assert-size-globs FAILED - budget "${c.name}" glob "${c.path}" matched ZERO files (chunk renamed?).`);
     failed = true;
   }
 }

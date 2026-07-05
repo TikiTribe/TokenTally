@@ -1,8 +1,8 @@
 # TokenTally
 
-**LLM cost forecasting — precision scoped per model, honest ranges everywhere.**
+**LLM cost forecasting - precision scoped per model, honest ranges everywhere.**
 
-Forecast the monthly cost of LLM workloads across 1,300+ models. Accuracy is scoped per model, never a
+Forecast the monthly cost of LLM workloads across 2,300+ models. Accuracy is scoped per model, never a
 single global number: token counts are **exact** where a verified tokenizer exists (OpenAI via tiktoken) and
 **labeled estimates with error bands** otherwise; every forecast carries an accuracy badge, a confidence
 range, and a link to its formula and the pricing snapshot it was priced against.
@@ -10,23 +10,23 @@ range, and a link to its formula and the pricing snapshot it was priced against.
 ## Features
 
 ### Five workloads on one engine
-- **Chatbot** — conversation cost with context accumulation + cross-run warm-cache modeling
-- **Prompt / Batch** — batch API operations, optional multi-turn
-- **Agent** — tool-loop cost with per-step accumulation
-- **Multi-agent** — crew cost (per-member + shared transcript)
-- **Denial of Wallet** — a *defensive*, opt-in worst-case exposure estimator (bounded, with a dual-use
+- **Chatbot** - conversation cost with context accumulation + cross-run warm-cache modeling
+- **Prompt / Batch** - batch API operations, optional multi-turn
+- **Agent** - tool-loop cost with per-step accumulation
+- **Multi-agent** - crew cost (per-member + shared transcript)
+- **Denial of Wallet** - a *defensive*, opt-in worst-case exposure estimator (bounded, with a dual-use
   disclaimer and a vulnerability-reporting link)
 
 ### Core capabilities
-- **1,300+ models** from a hash-verified, committed pricing snapshot (community-mirrored LiteLLM data;
-  prices are not independently verified against provider billing — the accuracy badge reflects token-count
+- **2,300+ models** from a hash-verified, committed pricing snapshot (community-mirrored LiteLLM data;
+  prices are not independently verified against provider billing - the accuracy badge reflects token-count
   fidelity only)
 - **Prompt-cache modeling** (Claude, GPT-4o family) with a warm-cache break-even view
 - **Provider-agnostic optimization**: model/deployment switches, TTL tuning, tornado sensitivity, budget solve
 - **Exports** (CSV / PDF) with CSV formula-injection protection; a config-only shareable permalink (prompt
   text is never encoded)
 - **Real-time** (< 100 ms) via an in-browser tokenizer web worker
-- **Client-side only** — prompt text is tokenized in the browser and never transmitted; strict enforced CSP,
+- **Client-side only** - prompt text is tokenized in the browser and never transmitted; strict enforced CSP,
   WCAG AA, light/dark
 - **Security**: 0 npm vulnerabilities; exact-pinned dependencies; a committed, hash-verified pricing snapshot
 
@@ -61,13 +61,13 @@ Visit `http://localhost:5173` to see the application.
 - **Build Tool**: Vite 7
 - **Styling**: Tailwind CSS 3.4 + CSS custom properties (light/dark)
 - **State**: Zustand 4.5
-- **Charts**: hand-rolled SVG (no chart dependency — CSP-safe, a11y-first)
+- **Charts**: hand-rolled SVG (no chart dependency - CSP-safe, a11y-first)
 - **Tokenizer**: js-tiktoken in a web worker
 - **Exports**: jsPDF 4 (lazy-loaded); CSV via Blob
 
 > Note: sections below (project structure, "CSV-driven pricing", the older formula walkthrough) describe the
 > pre-overhaul MVP and are being refreshed. The pricing catalog is now a committed, hash-verified registry
-> snapshot (`src/config/registry.generated.json`), refreshed via a reviewed PR — not the old CSV utility.
+> snapshot (`src/config/registry.generated.json`), refreshed via a reviewed PR - not the old CSV utility.
 
 ## Project Structure
 
@@ -168,7 +168,7 @@ TokenTally uses a **CSV-driven pricing update system** for quarterly maintenance
 - **OpenAI**: https://openai.com/api/pricing/ (as of Jan 2025)
 - **Claude**: https://www.anthropic.com/pricing (as of Jan 2025)
 
-Pricing last updated: **November 1, 2025** (1,300+ models)
+Pricing snapshot: **LiteLLM @ 8bb4e624, 2026-07-03** (2,300+ models)
 
 ## Known Limitations
 

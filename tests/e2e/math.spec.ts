@@ -1,4 +1,4 @@
-// COMPREHENSIVE MATH VALIDATION — drive known configs through the real UI and assert the rendered dollar
+// COMPREHENSIVE MATH VALIDATION - drive known configs through the real UI and assert the rendered dollar
 // figures equal INDEPENDENTLY HAND-COMPUTED values (arithmetic shown per test). This is what the smoke suite
 // lacked: it proves the shipped pipeline (inputs -> tokenizer -> engine -> render) is numerically correct,
 // not merely that "a number appeared". Reference pricing (registry snapshot):

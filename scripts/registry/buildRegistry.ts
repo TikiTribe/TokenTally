@@ -11,13 +11,16 @@ import { normalizeEntry, dedupeRecords, type RawEntry } from '../../src/registry
 import type { RegistrySnapshot, ModelRecord } from '../../src/types/registry';
 
 // A4/P2-A3: pin to a specific upstream commit SHA, never `main`. The raw upstream body is VENDORED into the
-// repo (scripts/registry/vendor/model_prices.<sha>.json) and hash-verified from disk — the build never
+// repo (scripts/registry/vendor/model_prices.<sha>.json) and hash-verified from disk - the build never
 // fetches at deploy time (P2-A4: a deleted/GC'd upstream commit can never break a production deploy). A
 // refresh re-vendors the file + bumps both constants via a reviewed PR (the only place the network fetch may
 // live is a manual/CI refresh job, never `npm run build`). Provenance URL kept for that refresh:
-// https://raw.githubusercontent.com/AgentOps-AI/tokencost/<PINNED_COMMIT>/tokencost/model_prices.json
-export const PINNED_COMMIT = '59042a13a4932cdade3f3f352a81b27ec4b2557a';
-export const EXPECTED_SNAPSHOT_SHA256 = '15e09b288901e7a70909992d18aa82ba35b4485107c5a014a5c06b409e6f5359';
+// https://raw.githubusercontent.com/BerriAI/litellm/<PINNED_COMMIT>/model_prices_and_context_window.json
+// (source is LiteLLM's canonical pricing file; the same schema tokencost mirrors, but current - the mirror lags.)
+// Refreshed 2026-07-04 from LiteLLM @ 8bb4e624 (2026-07-03): 2932 upstream entries, adds Opus 4.5-4.8,
+// Sonnet 4.5/4.6/5, Haiku 4.5, Fable 5, GPT-5.x, Gemini 2.5, Qwen3, etc. gpt-4o/gpt-4o-mini pricing unchanged.
+export const PINNED_COMMIT = '8bb4e624126bd02dbc5190cdc40e520ba93502c9';
+export const EXPECTED_SNAPSHOT_SHA256 = '9c171fc839cbac7a9ca8ee5f13cc810e8bfa57b10f3bd41b1fa8d77159c3f44b';
 const VENDORED_SNAPSHOT = new URL(`./vendor/model_prices.${PINNED_COMMIT.slice(0, 8)}.json`, import.meta.url);
 
 // Deterministic, locale-independent ordering by the primary key (canonicalId, deployment) so the

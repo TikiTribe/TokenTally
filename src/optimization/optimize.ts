@@ -1,7 +1,7 @@
 // Provider-agnostic optimizer: price the base workload, price each candidate transform, and rank the
 // strictly-positive dollar savings. P1-A18: each recommendation carries a saving BAND (propagated from both
 // forecasts' confidence) and a structured `overlaps` flag, and a rec whose saving band straddles zero is
-// down-ranked — so a "saving" between two wide Estimate ranges is disclosed, never headlined as precise.
+// down-ranked - so a "saving" between two wide Estimate ranges is disclosed, never headlined as precise.
 // solveBudget returns BOTH a central and a conservative arrival ceiling. Pure. Owner: engine. Version: Phase 1.
 //
 // SECURITY (P1-A29): label/rationale are display-as-text-only (DOM text nodes, never innerHTML).
@@ -43,7 +43,7 @@ export function optimize(base: OptimizationBase): Recommendation[] {
       savingsPct: baseline.monthlyCost > 0 ? (savings / baseline.monthlyCost) * 100 : 0,
       overlaps,
       rationale: overlaps
-        ? `${c.rationale}. Note: confidence ranges overlap — saving is directional, not precise.`
+        ? `${c.rationale}. Note: confidence ranges overlap - saving is directional, not precise.`
         : c.rationale,
     });
   }

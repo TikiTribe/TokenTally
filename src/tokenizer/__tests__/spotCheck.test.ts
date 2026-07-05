@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { spotCheckFamily } from '@/tokenizer/spotCheck';
 import type { SpotCheckCase } from '@/types/tokenizer';
 
-// B1: SYNTHETIC mechanics fixtures — NOT captured provider usage. These test the harness LOGIC only.
+// B1: SYNTHETIC mechanics fixtures - NOT captured provider usage. These test the harness LOGIC only.
 // A real Exact promotion requires a provenance-carrying capture done out-of-band with a real API key;
 // none is fabricated here, and the dispatcher leaves OpenAI at exact_unverified in 0B.
 const SYNTH: SpotCheckCase[] = [

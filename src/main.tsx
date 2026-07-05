@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { initTheme } from '@/shell/ThemeController';
-// Self-hosted Inter (variable) — bundled woff2 served same-origin, so it satisfies the strict CSP font-src 'self'.
+// Self-hosted Inter (variable) - bundled woff2 served same-origin, so it satisfies the strict CSP font-src 'self'.
 import '@fontsource-variable/inter';
 import './index.css';
 

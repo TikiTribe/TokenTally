@@ -38,7 +38,7 @@ describe('useAppStore transitions', () => {
   it('ensureRegistry loads the pinned snapshot and is idempotent', async () => {
     await get().ensureRegistry();
     expect(get().registryStatus).toBe('ready');
-    expect(get().snapshotMeta?.snapshotVersion).toBe('59042a13a4932cdade3f3f352a81b27ec4b2557a');
+    expect(get().snapshotMeta?.snapshotVersion).toBe('8bb4e624126bd02dbc5190cdc40e520ba93502c9');
     expect((get().snapshotMeta?.droppedCount ?? 0)).toBeGreaterThan(0);
     // second call is a no-op (still ready)
     await get().ensureRegistry();

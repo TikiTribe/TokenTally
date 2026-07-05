@@ -16,7 +16,7 @@ describe('CSP single-source parse + strictness (D2)', () => {
     expect(csp).toContain("worker-src 'self'");
   });
 
-  it('script-src is strict — no unsafe-inline, no unsafe-eval, no wasm-unsafe-eval', () => {
+  it('script-src is strict - no unsafe-inline, no unsafe-eval, no wasm-unsafe-eval', () => {
     const scriptSrc = csp.split(';').find((d) => d.trim().startsWith('script-src')) ?? '';
     expect(scriptSrc).toContain("'self'");
     expect(scriptSrc).not.toContain('unsafe-inline');

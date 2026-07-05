@@ -5,7 +5,7 @@
 import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const WASM_MAGIC = Buffer.from([0x00, 0x61, 0x73, 0x6d]); // "\0asm" — the WebAssembly module preamble
+const WASM_MAGIC = Buffer.from([0x00, 0x61, 0x73, 0x6d]); // "\0asm" - the WebAssembly module preamble
 const TEXT_PATTERNS = [
   /\.wasm(['")/\\?#]|$)/, //          a .wasm asset reference (not the bare substring 'wasm')
   /\bWebAssembly\s*\.\s*(instantiate|compile|Module|Instance|Memory|Table)/, // real WASM construction

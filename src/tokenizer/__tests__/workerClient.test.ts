@@ -1,5 +1,5 @@
 // P2-A12: in a non-Worker environment (node/jsdom), constructing the worker throws, so tokenize() must
-// degrade to the synchronous main-thread fallback and still resolve with a count — never hang. (The worker
+// degrade to the synchronous main-thread fallback and still resolve with a count - never hang. (The worker
 // happy-path is covered by the E2E CSP/egress specs in a real browser.)
 import { describe, it, expect, beforeEach } from 'vitest';
 import { tokenize, _resetWorkerClient } from '@/tokenizer/workerClient';

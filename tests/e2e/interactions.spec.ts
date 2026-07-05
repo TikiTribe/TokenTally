@@ -1,4 +1,4 @@
-// INTERACTION COVERAGE — drive every control that the smoke suite (functional.spec.ts) does not already
+// INTERACTION COVERAGE - drive every control that the smoke suite (functional.spec.ts) does not already
 // exercise: context-strategy + framework-preset selects, all example scenarios, keyboard tab navigation,
 // per-mode exports, the prompt-mode permalink round-trip (exercises the latent ttl round-trip), and that a
 // model change actually reprices. Complements functional.spec.ts (which covers tabs/tokenize/CSV/PDF/theme/DoW once).

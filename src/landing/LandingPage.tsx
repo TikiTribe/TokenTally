@@ -19,22 +19,22 @@ const WORKLOADS = [
 ];
 
 const STEPS = [
-  { icon: IconTarget, n: '1', title: 'Pick a workload & model', body: 'Choose the pattern you are building and a model from a catalog of 1,300+.' },
-  { icon: IconSliders, n: '2', title: 'Describe your usage', body: 'Enter real numbers — prompt sizes, turns, monthly volume. Every field explains how it moves the cost.' },
+  { icon: IconTarget, n: '1', title: 'Pick a workload & model', body: 'Choose the pattern you are building and a model from a catalog of 2,300+.' },
+  { icon: IconSliders, n: '2', title: 'Describe your usage', body: 'Enter real numbers: prompt sizes, turns, monthly volume. Every field explains how it moves the cost.' },
   { icon: IconChart, n: '3', title: 'Read & act on the forecast', body: 'See the monthly cost, a per-component breakdown, what matters most, and export or share it.' },
 ];
 
 const FEATURES = [
-  { icon: IconBadge, title: 'Honest, per-model accuracy', body: 'Exact where a real tokenizer runs, a labeled estimate otherwise — shown as a badge on every number.' },
+  { icon: IconBadge, title: 'Honest, per-model accuracy', body: 'Exact where a real tokenizer runs, a labeled estimate otherwise, shown as a badge on every number.' },
   { icon: IconBolt, title: 'Prompt-cache modeling', body: 'See when caching pays off, with a warm-cache break-even and conservative bound.' },
   { icon: IconLock, title: 'Private by design', body: 'Prompt text is tokenized in your browser and never uploaded. Shared links carry settings, not text.' },
   { icon: IconChart, title: 'Sensitivity analysis', body: 'A tornado view shows which inputs move your bill the most, so you optimize the right thing.' },
-  { icon: IconDownload, title: 'Exports', body: 'Download a CSV or a PDF report — with CSV formula-injection protection built in.' },
+  { icon: IconDownload, title: 'Exports', body: 'Download a CSV or a PDF report. CSV exports include formula-injection protection.' },
   { icon: IconLink, title: 'Shareable permalinks', body: 'Send a link that reopens your exact configuration for a teammate to review.' },
 ];
 
 const STATS = [
-  { v: '1,300+', l: 'models priced' },
+  { v: '2,300+', l: 'models priced' },
   { v: '5', l: 'workload types' },
   { v: 'Exact', l: 'OpenAI tokenization' },
   { v: '$0', l: 'no signup, browser-only' },
@@ -53,7 +53,7 @@ export function LandingPage(props: { onLaunch: () => void; theme: ThemeMode; onC
 
       <header className="lp-nav">
         <div className="lp-nav__inner">
-          {/* On the landing the brand is a home affordance (scroll to top) — not a launch control. */}
+          {/* On the landing the brand is a home affordance (scroll to top) - not a launch control. */}
           <a className="lp-brand" href="#top" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0 }); }}>
             <span className="lp-brand__mark" aria-hidden="true">₸</span>
             <span>TokenTally</span>
@@ -79,11 +79,11 @@ export function LandingPage(props: { onLaunch: () => void; theme: ThemeMode; onC
             <div className="lp-hero__copy">
               <span className="lp-eyebrow">LLM cost forecasting</span>
               <h1 className="lp-h1">
-                Know what your LLM feature costs — <span className="lp-grad">before you build it.</span>
+                Know what your LLM feature costs, <span className="lp-grad">before you build it.</span>
               </h1>
               <p className="lp-lead">
-                TokenTally turns how your workload actually behaves — prompt sizes, conversation length, request
-                volume — into a precise monthly cost across 1,300+ models, with an honest accuracy label on every
+                TokenTally turns how your workload actually behaves (prompt sizes, conversation length, request
+                volume) into a precise monthly cost across 2,300+ models, with an honest accuracy label on every
                 number. It runs entirely in your browser.
               </p>
               <div className="lp-hero__ctas">
@@ -147,7 +147,7 @@ export function LandingPage(props: { onLaunch: () => void; theme: ThemeMode; onC
           <div className="lp-section__head">
             <span className="lp-eyebrow">Built for real patterns</span>
             <h2 className="lp-h2">Five workloads, one engine</h2>
-            <p className="lp-section__sub">Each models the token economics that actually drive its cost — context growth, cached prefixes, per-step accumulation.</p>
+            <p className="lp-section__sub">Each models the token economics that actually drive its cost: context growth, cached prefixes, per-step accumulation.</p>
           </div>
           <div className="lp-cards">
             {WORKLOADS.map((w) => (
@@ -181,7 +181,7 @@ export function LandingPage(props: { onLaunch: () => void; theme: ThemeMode; onC
         <section className="lp-final">
           <div className="lp-final__inner">
             <h2 className="lp-h2">Ready to forecast your costs?</h2>
-            <p className="lp-final__sub">No account, no backend — open the calculator and get a number in seconds.</p>
+            <p className="lp-final__sub">No account, no backend. Open the calculator and get a number in seconds.</p>
             {launch}
           </div>
         </section>

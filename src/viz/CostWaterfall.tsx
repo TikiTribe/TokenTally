@@ -1,4 +1,4 @@
-// Phase 2C hand-rolled cost waterfall (no recharts — exact control of the never-silent-$0 branch, C9/P2).
+// Phase 2C hand-rolled cost waterfall (no recharts - exact control of the never-silent-$0 branch, C9/P2).
 // Renders each WarmCostResult.waterfall component as a labeled bar; a component with a null cost (a
 // non-per_token native-unit line) renders its native rate/unit, NEVER a $0 bar. All text nodes; a
 // visually-hidden data table is the a11y alternative. Owner: TokenTally UI. Version: Phase 2C.
@@ -20,7 +20,7 @@ export function CostWaterfall(props: { waterfall: CostWaterfallData }): JSX.Elem
             </span>
             <span data-testid={`waterfall-${c.label}`} style={{ fontSize: '0.85rem', textAlign: 'right' }}>
               {c.cost === null
-                ? `${c.nativeRate ?? '—'} / M ${c.nativeUnit ?? 'unit'}`
+                ? `${c.nativeRate ?? 'n/a'} / M ${c.nativeUnit ?? 'unit'}`
                 : money(c.cost)}
             </span>
           </li>

@@ -1,5 +1,5 @@
 // Phase 2D tornado sensitivity chart (hand-rolled SVG). Each factor is a horizontal bar spanning the
-// monthly cost as that input swings ±20%, sorted by swing (biggest lever first — the engine pre-sorts).
+// monthly cost as that input swings ±20%, sorted by swing (biggest lever first - the engine pre-sorts).
 // Zero-swing factors (allowlist-rejected or no leverage) render inert. CSP-safe SVG; data-table alternative.
 // Owner: TokenTally UI. Version: Phase 2D.
 import { VizFigure } from '@/viz/vizA11y';
