@@ -71,4 +71,11 @@ describe('tiktokenSegments (per-token pieces for the token stream)', () => {
   it('empty text yields no pieces', () => {
     expect(tiktokenSegments('', 'o200k_base', 400)).toEqual([]);
   });
+  it('reconstructs multibyte text with no replacement-character garbage (merges split code points)', () => {
+    for (const text of ['a🎉b', 'hi 🚀🎊 x', '🇺🇸 flag', '👨‍👩‍👧 family', 'café 你好世界']) {
+      const segs = tiktokenSegments(text, 'o200k_base', 4000);
+      expect(segs.join('')).toBe(text); // no data loss
+      expect(segs.some((s) => s.includes('�'))).toBe(false); // no U+FFFD garbage
+    }
+  });
 });

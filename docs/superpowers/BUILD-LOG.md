@@ -588,3 +588,35 @@ Plan: docs/superpowers/plans/2026-07-05-complete-visualizations.md.
 State: all green — 367 unit, both tsc configs, lint, build, size, first-paint, 66 headed E2E incl. axe (light +
 dark). Adversarial review running. **Phase D (token stream) deferred to a follow-up PR** (needs a tokenizer
 segment-exposure change). NEXT: address review findings, push, PR #1 to main, merge on green; then Phase D.
+
+### Branch `feat/token-stream` (off main) — the 7th §2D visualization (token stream)
+
+Follow-up to PR #22. Brainstormed (spec: docs/superpowers/specs/2026-07-05-token-stream-design.md; plan:
+docs/superpowers/plans/2026-07-05-token-stream.md). Decisions: collapsible "Show tokens" reveal under each
+tokenized text box; ALWAYS show a stream (real token boundaries where a tokenizer runs, a labeled char-chunk
+approximation for heuristic models like Claude); 400-token cap; single shared hover readout. No new dependency
+(reuses js-tiktoken already in the worker).
+
+- Tasks 1+2 (a9475c5) — expose per-token segments: tiktokenSegments decodes each of the first 400 token ids;
+  segments: string[] | null threaded through TokenCount -> countTokens -> worker -> workerClient -> useTokenizer
+  -> FieldTokenCount. Real tokenizer -> pieces; heuristic -> null.
+- Tasks 3+4 (2ed9f77) — TokenStream component (colored per-token spans, approxChunks for the heuristic case,
+  400 cap + "+N more", shared readout) rendered as React TEXT NODES only (a <script> token is inert - the whole
+  security posture). Wired into TokenizedTextArea as a closed <details>; rides the lazy mode-panel chunks, not
+  first-paint.
+- Task 5 (bed175a) — E2E: reveal + hover readout; the XSS-inert case (<script> token renders as text, no element,
+  no dialog); csp.spec opens the stream and proves zero violations under script-src 'self'.
+
+Adversarial verification (5-agent Workflow: XSS red-team, unicode, a11y/CSP + a refutation pass) confirmed 5
+findings, all fixed: (HIGH) per-id tiktoken decode garbled multibyte code points BPE splits across tokens
+(emoji/flags/ZWJ -> "�") on the EXACT path -> merge fragment-tokens until they decode cleanly; (MED) approxChunks
+severed surrogate pairs -> chunk by code point (Array.from); (MED) per-token inspect was pointer-only (WCAG 2.1.1)
+-> roving arrow-key nav on the group + aria-live readout; (LOW) approx "+N more" mixed units -> overflow from the
+true token count vs the cap; (LOW) alternating tint ~1.29:1 -> stronger tint + a 1px boundary. Verified: no XSS
+path (React text nodes), no eval, CSP clean; the OPEN panel is axe-clean (keyboard group, aria-hidden spans).
+
+State: all green - 381 unit, both tsc, lint, build, size, first-paint, 69 headed E2E incl. axe (light+dark, and
+the OPEN token stream). NEXT: PR to main.
+
+## ALL SEVEN §2D VISUALIZATIONS NOW BUILT (waterfall, tornado, step, cache-warmth curve, cost-vs-context
+## scatter, blast-radius radial, token stream). The original "more visualizations" gap is closed.

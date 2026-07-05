@@ -713,12 +713,18 @@
     padding: 0 1px;
     border-radius: 2px;
     background: var(--surface-2);
+    /* a hairline boundary so adjacent tokens are distinguishable independent of the tint (review L5) */
+    box-shadow: inset 0 0 0 1px var(--border);
   }
   .tok[data-odd='1'] {
-    background: color-mix(in srgb, var(--primary) 16%, var(--surface-2));
+    background: color-mix(in srgb, var(--primary) 34%, var(--surface-2));
   }
   .tok--hover {
     outline: 2px solid var(--primary);
+  }
+  .tokenstream__stream:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
   }
   .tok--more {
     background: none;

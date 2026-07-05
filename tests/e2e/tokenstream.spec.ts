@@ -2,6 +2,7 @@
 // live stream with a working hover readout, and - the security-critical case - that a token containing markup
 // renders as inert text (no script execution) under the served CSP.
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import { waitReady, selectMode, MODE_TABS } from './helpers';
 
 test.describe('token stream', () => {
@@ -36,5 +37,17 @@ test.describe('token stream', () => {
     await expect(details.locator('.tokenstream__stream')).toContainText('<script>');
     expect(await details.locator('script, img').count()).toBe(0);
     expect(dialogFired).toBe(false);
+  });
+
+  test('the OPEN token stream has no serious/critical a11y violations (keyboard group + aria-live)', async ({ page }) => {
+    await waitReady(page);
+    await selectMode(page, MODE_TABS.chatbot);
+    await page.getByLabel('System prompt').fill('The quick brown fox jumps');
+    await page.locator('details.tokenstream summary').first().click();
+    await expect(page.locator('.tokenstream__stream').first()).toBeVisible({ timeout: 8000 });
+    // the group is focusable (arrow-key navigable), so verify axe finds no aria-hidden-focus or missing-name issue
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+    const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(serious, JSON.stringify(serious.map((v) => v.id))).toEqual([]);
   });
 });

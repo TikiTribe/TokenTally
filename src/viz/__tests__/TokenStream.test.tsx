@@ -11,6 +11,12 @@ describe('approxChunks', () => {
     expect(approxChunks('', 5)).toEqual([]);
     expect(approxChunks('abc', 0)).toEqual([]);
   });
+  it('splits by code point so a surrogate pair (emoji) is never severed', () => {
+    const emoji = '🚀🚀🚀🚀🚀';
+    const chunks = approxChunks(emoji, 3);
+    expect(chunks.join('')).toBe(emoji); // lossless
+    for (const c of chunks) expect(c).toBe(Array.from(c).join('')); // each chunk is whole code points (no lone surrogate)
+  });
 });
 
 describe('TokenStream', () => {
@@ -43,8 +49,26 @@ describe('TokenStream', () => {
   it('updates the shared readout on hover', async () => {
     const user = userEvent.setup();
     const { container } = render(<TokenStream text="hi there" count={2} segments={['hi', ' there']} badge="exact" />);
-    expect(screen.getByText(/Hover a token to inspect it/)).toBeInTheDocument();
+    expect(screen.getByText(/arrow through a token to inspect it/i)).toBeInTheDocument();
     await user.hover(container.querySelectorAll('.tok')[0]!);
     expect(screen.getByText(/token 1 of 2: "hi"/)).toBeInTheDocument();
+  });
+
+  it('is keyboard-navigable: arrow keys move the inspected token (WCAG 2.1.1)', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<TokenStream text="hi there" count={2} segments={['hi', ' there']} badge="exact" />);
+    const group = container.querySelector('.tokenstream__stream') as HTMLElement;
+    expect(group).toHaveAttribute('tabindex', '0'); // one tab stop, not one per token
+    group.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByText(/token 1 of 2: "hi"/)).toBeInTheDocument();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByText(/token 2 of 2: " there"/)).toBeInTheDocument();
+  });
+
+  it('renders merged multibyte segments as the real characters (no replacement garbage)', () => {
+    render(<TokenStream text="a🎉b" count={4} segments={['a', '🎉', 'b']} badge="exact" />);
+    expect(screen.getByText('🎉')).toBeInTheDocument();
+    expect(screen.queryByText('�')).toBeNull();
   });
 });
