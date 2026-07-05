@@ -11,12 +11,16 @@ export function WorkflowBar(): JSX.Element {
   const copyLink = (): void => {
     const s = useAppStore.getState();
     const hash = `c=${encodePermalink(s.mode, s.selection, s.inputs)}`;
-    window.location.hash = hash;
+    window.location.hash = hash; // the shareable URL is now in the address bar regardless of clipboard support
     const url = `${window.location.origin}${window.location.pathname}#${hash}`;
-    void navigator.clipboard?.writeText(url).then(
-      () => { setCopied(true); window.setTimeout(() => setCopied(false), 2000); },
-      () => setCopied(false),
-    );
+    const flash = (): void => { setCopied(true); window.setTimeout(() => setCopied(false), 2000); };
+    // Guard the Clipboard API: `navigator.clipboard?.writeText(...).then` would THROW when clipboard is
+    // undefined (non-secure context / unsupported). Fall back to the address-bar update + still confirm.
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(url).then(flash, () => setCopied(false));
+    } else {
+      flash();
+    }
   };
 
   return (

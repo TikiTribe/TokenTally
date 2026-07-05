@@ -53,7 +53,8 @@ export function LandingPage(props: { onLaunch: () => void; theme: ThemeMode; onC
 
       <header className="lp-nav">
         <div className="lp-nav__inner">
-          <a className="lp-brand" href="#" onClick={(e) => { e.preventDefault(); props.onLaunch(); }}>
+          {/* On the landing the brand is a home affordance (scroll to top) — not a launch control. */}
+          <a className="lp-brand" href="#top" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0 }); }}>
             <span className="lp-brand__mark" aria-hidden="true">₸</span>
             <span>TokenTally</span>
           </a>
