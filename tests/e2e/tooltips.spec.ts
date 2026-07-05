@@ -146,4 +146,29 @@ test.describe('result & chart hover-explain', () => {
       )
       .toMatch(/Step \d+/);
   });
+
+  test('the cost-vs-context chart shows a tooltip on hover ANYWHERE over the plot', async ({ page }) => {
+    await waitReady(page);
+    const chart = page.getByRole('group', { name: /cost vs context/i });
+    await expect(chart).toBeVisible({ timeout: 8000 });
+    await chart.scrollIntoViewIfNeeded();
+    const svg = chart.locator('svg.recharts-surface').first();
+    await expect(svg).toBeVisible({ timeout: 8000 });
+    const box = await svg.boundingBox();
+    if (!box) throw new Error('no chart svg');
+    // Hover NEAR THE TOP at low-mid x - a region the rising cost curve does not occupy, so there is no point
+    // symbol there. A shared-axis cursor (line) still fires the tooltip for that x; a point-only scatter shows
+    // nothing (the reported bug). Nudge x each poll so recharts recomputes the active point.
+    let flip = 0;
+    await expect
+      .poll(
+        async () => {
+          flip ^= 1;
+          await page.mouse.move(box.x + box.width * (0.32 + flip * 0.04), box.y + box.height * 0.14);
+          return (await chart.locator('.recharts-tooltip-wrapper').textContent()) ?? '';
+        },
+        { timeout: 6000, intervals: [150, 250, 400] },
+      )
+      .toMatch(/context|Cost/i);
+  });
 });
