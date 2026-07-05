@@ -26,8 +26,10 @@ describe('App shell (Phase 2A)', () => {
   it('loads the pinned pricing registry and shows the provenance stamp', async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByText(/Pricing data as of 2025-09-01/)).toBeInTheDocument(), { timeout: 5000 });
-    // P2-A22: the price-provenance disclaimer is present (prices not verified against provider billing).
-    expect(screen.getByText(/not independently verified against/i)).toBeInTheDocument();
+    // P2-A22: the price-provenance disclaimer is present in the snapshot stamp (scoped to that landmark — the
+    // intro's "Good to know" section legitimately restates the same caveat, so a page-wide query is ambiguous).
+    const stamp = screen.getByRole('complementary', { name: /pricing data provenance/i });
+    expect(within(stamp).getByText(/not independently verified against/i)).toBeInTheDocument();
   });
 
   it('computes a real forecast end-to-end (registry -> recompute -> a $/month headline)', async () => {
