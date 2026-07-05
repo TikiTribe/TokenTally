@@ -10,7 +10,9 @@ import type { RawEntry } from '../../../src/registry/normalize';
 
 const vendored = new URL(`../vendor/model_prices.${PINNED_COMMIT.slice(0, 8)}.json`, import.meta.url);
 const generated = new URL('../../../src/config/registry.generated.json', import.meta.url);
-const SNAPSHOT_DATE = '2026-07-03'; // must equal the SNAPSHOT_DATE used to regenerate registry.generated.json
+// Derive the date from the committed artifact so a snapshot refresh needs NO test edit (buildSnapshot must
+// byte-reproduce the artifact, which embeds its own snapshotDate).
+const SNAPSHOT_DATE = (JSON.parse(readFileSync(generated, 'utf8')) as { snapshotDate: string }).snapshotDate;
 
 describe('registry integrity (P2-A6)', () => {
   it('the vendored raw body matches the pinned sha256', () => {
