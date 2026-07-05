@@ -163,11 +163,9 @@ so production never depends on a live third-party call and a deleted upstream co
 
 **Automated monthly refresh.** The `.github/workflows/refresh-pricing.yml` Action runs on the 1st of each
 month (and on demand via "Run workflow"). It re-pins the newest LiteLLM commit, re-vendors + re-hashes the
-file, regenerates `src/config/registry.generated.json`, and **opens a PR** with the model/price deltas. It
-never auto-merges: a human reviews the diff and merges on green CI.
-
-**One-time setup:** add a fine-grained PAT as the repo secret `REFRESH_PAT` (Contents + Pull requests:
-read/write) so the auto-PR triggers CI. Without it the PR still opens, but CI must be kicked off manually.
+file, regenerates `src/config/registry.generated.json`, and **opens a PR** with the model/price deltas, then
+triggers that PR's CI itself (via `workflow_dispatch`, which the built-in token is allowed to fire). It never
+auto-merges: a human reviews the diff and merges once CI is green. No secret or PAT setup is needed.
 
 **Manual refresh:** `node scripts/registry/refresh.mjs` (add `--dry-run` to only check whether an update is
 available). The script warns loudly if a `gpt-4o` anchor price changed, since the hand-computed E2E math

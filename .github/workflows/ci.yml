@@ -1,7 +1,7 @@
 # CI gate (spec §5.9, premortem D6/D8/D9/D13). Blocks a PR on ANY failing OR skipped/only/todo test, a lint
 # or typecheck failure, a build break, a bundle-size regression, a WASM/honest-claims/policy-staleness
 # violation, or a high/critical vulnerability in the SHIPPED deps. Branch protection making this a required
-# check is an owner runbook step (settings are not code — see the BUILD-LOG runbook). No untrusted
+# check is an owner runbook step (settings are not code, see the BUILD-LOG runbook). No untrusted
 # github.event.* input is ever interpolated into a run: command (injection-safe).
 name: CI
 
@@ -9,6 +9,9 @@ on:
   pull_request:
   push:
     branches: [feat/realtime-determinism-engine]
+  # Allows the refresh-pricing workflow to run CI on its own bot-opened PR branch: a PR opened by the
+  # built-in GITHUB_TOKEN does not trigger pull_request, but workflow_dispatch is the documented exception.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,7 +28,7 @@ jobs:
           cache: 'npm'
       - run: npm ci
 
-      - name: No skipped / only / todo tests (D6 — CI blocks on any)
+      - name: No skipped / only / todo tests (D6, CI blocks on any)
         run: |
           if grep -rEn '\.(skip|only|todo)\s*\(|\bxit\s*\(|describe\.(skip|only)' src scripts --include='*.test.ts'; then
             echo "::error::skipped/only/todo tests are not allowed"; exit 1
