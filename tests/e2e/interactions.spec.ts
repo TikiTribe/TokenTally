@@ -28,19 +28,18 @@ test.describe('interaction coverage', () => {
     }
   });
 
-  test('all three example scenarios load, switch mode, and apply their config', async ({ page }) => {
+  test('all three example chips load, switch mode, and apply their config', async ({ page }) => {
     await waitReady(page);
-    const example = page.getByLabel('Example');
     // high-volume-chatbot -> chatbot tab, conversationsPerMonth 250000
-    await example.selectOption('high-volume-chatbot');
+    await page.getByRole('button', { name: /High-volume support chatbot/ }).click();
     await expect(page.getByRole('tab', { name: MODE_TABS.chatbot })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByLabel('Conversations per month', { exact: true })).toHaveValue('250000');
     // langchain-agent -> agent tab
-    await example.selectOption('langchain-agent');
+    await page.getByRole('button', { name: /LangChain tool agent/ }).click();
     await expect(page.getByRole('tab', { name: MODE_TABS.agent })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByLabel('Runs per month', { exact: true })).toHaveValue('20000');
     // rag-pipeline -> agent tab, gpt-4o-mini
-    await example.selectOption('rag-pipeline');
+    await page.getByRole('button', { name: /RAG query pipeline/ }).click();
     await expect(page.getByRole('tab', { name: MODE_TABS.agent })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByLabel('Steps per run', { exact: true })).toHaveValue('4');
   });

@@ -10,7 +10,8 @@ test('no cross-origin network egress on load', async ({ page, context, baseURL }
     const u = new URL(req.url());
     if (u.origin !== base.origin && u.protocol !== 'data:' && u.protocol !== 'blob:') offOrigin.push(req.url());
   });
-  await page.goto('/');
+  await page.goto('/#calculator'); // the calculator view loads the registry + worker (the real egress surface)
+  await expect(page.getByText(/Pricing data as of/)).toBeVisible({ timeout: 15000 });
   await page.waitForLoadState('networkidle');
   expect(offOrigin, `off-origin requests: ${JSON.stringify(offOrigin)}`).toEqual([]);
 });

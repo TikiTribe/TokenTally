@@ -26,7 +26,7 @@ test('serves the app with no securitypolicyviolation on load', async ({ page }) 
 
 test('driving the worker + engine (type + mode switch) raises no CSP violation', async ({ page }) => {
   await armCspListener(page);
-  await page.goto('/');
+  await page.goto('/#calculator'); // '/' is the landing; the calculator view loads the worker + engine
   // registry loads -> provenance stamp appears
   await expect(page.getByText(/Pricing data as of/)).toBeVisible({ timeout: 10000 });
 

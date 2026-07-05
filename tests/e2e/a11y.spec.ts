@@ -12,15 +12,26 @@ async function seriousViolations(page: Page): Promise<{ id: string; impact: stri
 }
 
 for (const theme of ['light', 'dark'] as const) {
-  test(`a11y: shell + all modes have no serious/critical WCAG violations (${theme})`, async ({ page }) => {
+  test(`a11y: landing + all calculator modes have no serious/critical WCAG violations (${theme})`, async ({ page }) => {
     await page.addInitScript((t) => {
       if (t === 'dark') localStorage.setItem('tokentally-theme', 'dark');
     }, theme);
-    await page.goto('/');
-    await expect(page.getByText(/Pricing data as of/)).toBeVisible({ timeout: 10000 });
+    // Zero transitions so axe reads the SETTLED UI, not a mid-transition frame (e.g. a tab colour briefly
+    // interpolating white->muted just after deselection).
+    await page.emulateMedia({ reducedMotion: 'reduce' });
 
+    // 1) the marketing landing (home view)
+    await page.goto('/');
+    await page.waitForSelector('.lp-hero', { timeout: 10000 });
+    const lv = await seriousViolations(page);
+    expect(lv, `${theme} / landing: ${JSON.stringify(lv)}`).toEqual([]);
+
+    // 2) the calculator, every mode
+    await page.goto('/#calculator');
+    await expect(page.getByText(/Pricing data as of/)).toBeVisible({ timeout: 10000 });
     for (const mode of [/^Chatbot/, /^Prompt/, /^Agent$/, /^Multi-agent/, /^Denial of Wallet/]) {
       await page.getByRole('tab', { name: mode }).click();
+      await page.waitForTimeout(200); // let the tab colour transition settle before axe reads it
       const v = await seriousViolations(page);
       expect(v, `${theme} / ${mode}: ${JSON.stringify(v)}`).toEqual([]);
     }

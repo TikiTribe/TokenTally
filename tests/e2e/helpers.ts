@@ -3,9 +3,10 @@
 // so the math assertions validate the shipped pipeline end to end, not a re-import of the same functions.
 import { expect, type Page, type Locator } from '@playwright/test';
 
-// Registry-ready gate: the snapshot stamp renders "Pricing data as of …" only once the catalog has loaded.
+// Registry-ready gate: go straight to the calculator view (#calculator) — '/' is now the marketing landing.
+// The snapshot stamp renders "Pricing data as of …" only once the catalog has loaded.
 export async function waitReady(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/#calculator');
   await expect(page.getByText(/Pricing data as of/)).toBeVisible({ timeout: 15000 });
 }
 
