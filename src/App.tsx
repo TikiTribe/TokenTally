@@ -8,6 +8,7 @@ import { applyTheme, persistTheme } from '@/shell/ThemeController';
 import { ModeNav } from '@/shell/ModeNav';
 import { SnapshotStamp } from '@/shell/SnapshotStamp';
 import { WorkflowBar } from '@/shell/WorkflowBar';
+import { IntroPanel } from '@/shell/IntroPanel';
 import { ResultDisplay } from '@/ui/ResultDisplay';
 import { decodePermalink } from '@/store/permalink';
 import type { Mode, ThemeMode } from '@/store/types';
@@ -75,6 +76,8 @@ function App(): JSX.Element {
           Theme: {THEME_LABEL[theme]}
         </button>
       </header>
+
+      <IntroPanel />
 
       <nav aria-label="Calculator mode" style={{ padding: '0 1rem' }}>
         <ModeNav />
