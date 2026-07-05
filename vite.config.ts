@@ -48,6 +48,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
+          // recharts (+ its d3/victory/react-smooth deps) into one lazy chunk, out of first-paint (P1-A25).
+          charts: ['recharts'],
         },
       },
     },

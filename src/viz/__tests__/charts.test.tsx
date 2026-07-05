@@ -5,8 +5,12 @@ import { render, screen } from '@testing-library/react';
 import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
 import { TornadoChart } from '@/viz/TornadoChart';
 import { CostWaterfall } from '@/viz/CostWaterfall';
+import { CacheWarmthCurve } from '@/viz/CacheWarmthCurve';
+import { BlastRadiusRadial } from '@/viz/BlastRadiusRadial';
+import { CostVsContextScatter } from '@/viz/CostVsContextScatter';
 import type { StepProfile } from '@/workloads';
 import type { TornadoBar } from '@/optimization';
+import type { WarmthPoint } from '@/store/engineClient';
 
 describe('StepAccumulationChart', () => {
   it('renders steps with an accessible data table', () => {
@@ -38,6 +42,64 @@ describe('TornadoChart', () => {
   it('returns null when all swings are zero (allowlist-rejected factors)', () => {
     const { container } = render(<TornadoChart bars={[{ factor: 'x', low: 0, high: 0, swing: 0 }]} central={0} />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('CacheWarmthCurve', () => {
+  it('renders honest text and no chart when there is no warm-cache dynamic', () => {
+    render(<CacheWarmthCurve points={null} breakEven={null} />);
+    expect(screen.queryByRole('group', { name: /cache warmth/i })).toBeNull(); // no chart, just honest text
+    expect(screen.getByText(/no warm-cache dynamics/i)).toBeInTheDocument();
+  });
+  it('renders a labeled figure + data table for a series', () => {
+    const points: WarmthPoint[] = [
+      { arrivals: 1000, central: 120, low: 110, high: 140, conservative: 150 },
+      { arrivals: 100000, central: 60, low: 50, high: 75, conservative: 150 },
+    ];
+    render(<CacheWarmthCurve points={points} breakEven={5000} />);
+    expect(screen.getByRole('group', { name: /cache warmth/i })).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+});
+
+describe('CostVsContextScatter', () => {
+  it('renders nothing for a null/short series', () => {
+    const { container } = render(<CostVsContextScatter points={null} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+  it('renders a labeled figure + a row per point, flagging truncation', () => {
+    render(
+      <CostVsContextScatter
+        points={[
+          { context: 0, central: 10, truncated: false },
+          { context: 5000, central: 30, truncated: false },
+          { context: 200000, central: 45, truncated: true },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('group', { name: /cost vs context/i })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'yes' })).toBeInTheDocument(); // the truncated point
+  });
+});
+
+describe('BlastRadiusRadial', () => {
+  it('renders nothing for a zero exposure (never fake geometry)', () => {
+    const { container } = render(<BlastRadiusRadial worstCase={0} mitigations={[]} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+  it('renders a labeled figure + a ring per scenario for a real exposure', () => {
+    render(
+      <BlastRadiusRadial
+        worstCase={483840}
+        mitigations={[
+          { control: 'Rate limit', savedMonthly: 200000 },
+          { control: 'Spend cap', savedMonthly: 400000 },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('group', { name: /blast radius/i })).toBeInTheDocument();
+    // worst case + 2 mitigations = 3 rows in the a11y table
+    expect(screen.getAllByRole('row')).toHaveLength(4); // header + 3
   });
 });
 

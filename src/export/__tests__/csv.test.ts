@@ -7,6 +7,8 @@ import type { EngineResult } from '@/store/engineClient';
 const workload: EngineResult = {
   kind: 'workload',
   tornado: [],
+  warmthSeries: null,
+  contextSeries: null,
   forecast: {
     kind: 'chatbot', monthlyCost: 123.45, arrivalsPerMonth: 1000,
     accuracyNote: 'estimate: heuristic', snapshotVersion: 'abc123def456', formula: 'chatbot: ...',

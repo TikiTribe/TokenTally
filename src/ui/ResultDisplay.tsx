@@ -6,12 +6,13 @@
 import { lazy, Suspense } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
-import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
 import { TornadoChart } from '@/viz/TornadoChart';
+import { CacheWarmthCurveLazy, StepAccumulationChartLazy, BlastRadiusRadialLazy, CostVsContextScatterLazy } from '@/viz/chartsLazy';
 import { ExportButtons } from '@/ui/ExportButtons';
 import { HelpTip } from '@/ui/HelpTip';
 import { money } from '@/ui/format';
 import type { WorkloadForecast } from '@/workloads';
+import type { WarmthPoint, ContextPoint } from '@/store/engineClient';
 import type { ConfidenceRange } from '@/types/engine';
 import type { DenialOfWalletResult, TornadoBar } from '@/optimization';
 
@@ -54,7 +55,17 @@ function confidenceLine(low: number, high: number, conservative: number): string
   return `Range ${money(low)} to ${money(high)} · conservative, no warm cache ${money(conservative)}`;
 }
 
-function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoBar[] }): JSX.Element {
+function WorkloadResult({
+  f,
+  tornado,
+  warmthSeries,
+  contextSeries,
+}: {
+  f: WorkloadForecast;
+  tornado: TornadoBar[];
+  warmthSeries: WarmthPoint[] | null;
+  contextSeries: ContextPoint[] | null;
+}): JSX.Element {
   const c = f.cost;
   if (!c.applicable) {
     return <p style={{ color: 'var(--text-muted)' }}>{f.accuracyNote}</p>; // non-per_token etc - honest note, not $0
@@ -81,11 +92,21 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
         </p>
       ) : null}
       <CostWaterfall waterfall={c.waterfall} />
-      <StepAccumulationChart steps={f.steps} />
+      <Suspense fallback={null}>
+        <StepAccumulationChartLazy steps={f.steps} />
+      </Suspense>
       <TornadoChart bars={tornado} central={f.monthlyCost} />
       <Suspense fallback={null}>
         <WhatIfPanel bars={tornado} />
       </Suspense>
+      {/* Cache-warmth curve: only chatbot/prompt have an arrivals axis. For a non-caching config warmthSeries is
+          null and the chart renders honest text instead of a fake curve. */}
+      {f.kind === 'chatbot' || f.kind === 'prompt' ? (
+        <Suspense fallback={null}>
+          <CacheWarmthCurveLazy points={warmthSeries} breakEven={f.cost.breakEvenArrivals} />
+          <CostVsContextScatterLazy points={contextSeries} />
+        </Suspense>
+      ) : null}
       <p data-testid="formula-line" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         Formula: {f.formula} · priced against snapshot {f.snapshotVersion.slice(0, 8)}
       </p>
@@ -112,6 +133,9 @@ function DowResult({ r }: { r: DenialOfWalletResult }): JSX.Element {
       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
         {r.note} <HelpTip tipId="tip-dow-note" content={DOW_NOTE_HELP} />
       </p>
+      <Suspense fallback={null}>
+        <BlastRadiusRadialLazy worstCase={r.worstCaseMonthly} mitigations={r.mitigations} />
+      </Suspense>
       <ul data-testid="dow-mitigations">
         {r.mitigations.map((m) => (
           <li key={m.control}>
@@ -145,7 +169,7 @@ export function ResultDisplay(): JSX.Element {
       ) : result.kind === 'unavailable' ? (
         <p style={{ color: 'var(--text-muted)' }}>{result.reason}</p>
       ) : result.kind === 'workload' ? (
-        <WorkloadResult f={result.forecast} tornado={result.tornado} />
+        <WorkloadResult f={result.forecast} tornado={result.tornado} warmthSeries={result.warmthSeries} contextSeries={result.contextSeries} />
       ) : (
         <DowResult r={result.result} />
       )}

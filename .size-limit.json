@@ -12,6 +12,12 @@
     "gzip": true
   },
   {
+    "name": "recharts charts (lazy, off first-paint)",
+    "path": "dist/assets/charts-*.js",
+    "limit": "165 KB",
+    "gzip": true
+  },
+  {
     "name": "engine (workloads + optimization, lazy)",
     "path": "dist/assets/engineClient-*.js",
     "limit": "18 KB",

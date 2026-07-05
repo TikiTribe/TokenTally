@@ -71,7 +71,8 @@ test.describe('help & tooltips', () => {
 });
 
 // The original ask: "hover over any item in a chart or graph, or any point on a line, and get an explanation of
-// what it is and why". Every result summary line carries a HelpTip; every chart element carries a hover title.
+// what it is and why". Every result summary line carries a HelpTip; every chart element carries a VISIBLE
+// interactive tooltip (ChartTip / recharts Tooltip), not an invisible native title.
 test.describe('result & chart hover-explain', () => {
   test('the confidence line explains warm cache / point estimate on focus', async ({ page }) => {
     await waitReady(page);
@@ -88,43 +89,61 @@ test.describe('result & chart hover-explain', () => {
     await expect(btn).toHaveAttribute('aria-expanded', 'false');
   });
 
-  test('every waterfall row has a what+why hover title', async ({ page }) => {
+  test('every waterfall row shows a VISIBLE what+why tooltip on hover', async ({ page }) => {
     await waitReady(page);
     await selectMode(page, MODE_TABS.chatbot);
     await page.getByLabel('System prompt').fill('You are a helpful assistant.'); // force a cached prefix so cache rows show
     // wait out the tokenize + recompute debounce: the cache-write row appearing proves the waterfall re-rendered
     await expect(page.getByTestId('waterfall-cacheWrite')).toBeVisible({ timeout: 8000 });
+    const outputRow = page.locator('figure[aria-label="Monthly cost breakdown"] li', { has: page.getByTestId('waterfall-output') });
+    await outputRow.hover();
+    // The real fix: a styled role=tooltip becomes visible on hover, not an invisible native `title`.
+    await expect(outputRow.locator('.chart-tip')).toHaveClass(/is-open/);
+    await expect(outputRow.locator('.chart-tip')).toContainText(/Output:.*output rate/i);
     const rows = page.locator('figure[aria-label="Monthly cost breakdown"] li');
     const n = await rows.count();
     expect(n).toBeGreaterThan(0);
     for (let i = 0; i < n; i++) {
-      await expect(rows.nth(i)).toHaveAttribute('title', /.+:.+/); // "<Label>: <what and why>"
+      await expect(rows.nth(i).locator('.chart-tip')).toContainText(/.+:.+/); // "<Label>: <what and why>"
     }
-    // spot-check the meaning, not just presence
-    await expect(page.locator('li', { has: page.getByTestId('waterfall-output') }))
-      .toHaveAttribute('title', /Output:.*output rate/i);
   });
 
-  test('every tornado row hover title names the swing and why it matters', async ({ page }) => {
+  test('every tornado row shows a VISIBLE tooltip naming the swing on hover', async ({ page }) => {
     await waitReady(page);
     const rows = page.locator('.tornado__row');
     await expect(rows.first()).toBeVisible({ timeout: 8000 });
+    await rows.first().hover();
+    await expect(rows.first().locator('.chart-tip')).toHaveClass(/is-open/); // the user-reported failure now passes
     const n = await rows.count();
     expect(n).toBeGreaterThan(0);
     for (let i = 0; i < n; i++) {
-      await expect(rows.nth(i)).toHaveAttribute('title', /swing is how much this one input moves the total/i);
+      await expect(rows.nth(i).locator('.chart-tip')).toContainText(/swing is how much this one input moves the total/i);
     }
   });
 
-  test('each agent step point carries a per-point hover title', async ({ page }) => {
+  test('the agent step line shows a step tooltip on hover ANYWHERE over the plot', async ({ page }) => {
     await waitReady(page);
     await selectMode(page, MODE_TABS.agent);
-    const circles = page.locator('figure[aria-label*="agent step"] circle');
-    await expect(circles.first()).toBeAttached({ timeout: 8000 });
-    const n = await circles.count();
-    expect(n).toBeGreaterThan(1);
-    for (let i = 0; i < n; i++) {
-      await expect(circles.nth(i).locator('title')).toContainText(/Step \d+:/);
-    }
+    const chart = page.locator('figure[aria-label*="agent step"]');
+    await expect(chart).toBeVisible({ timeout: 8000 });
+    await chart.scrollIntoViewIfNeeded();
+    const svg = chart.locator('svg.recharts-surface').first();
+    await expect(svg).toBeVisible({ timeout: 8000 });
+    const box = await svg.boundingBox();
+    if (!box) throw new Error('no chart svg');
+    // recharts activates its tooltip on mousemove and shows the NEAREST step for the cursor's x - no need to land
+    // on a 3px dot (the "hover a point on the line shows nothing" fix). Re-move the mouse each poll (alternating x
+    // so recharts recomputes the active point) until the tooltip has content.
+    let flip = 0;
+    await expect
+      .poll(
+        async () => {
+          flip ^= 1;
+          await page.mouse.move(box.x + box.width * (0.4 + flip * 0.2), box.y + box.height * 0.5);
+          return (await chart.locator('.recharts-tooltip-wrapper').textContent()) ?? '';
+        },
+        { timeout: 6000, intervals: [150, 250, 400] },
+      )
+      .toMatch(/Step \d+/);
   });
 });
