@@ -93,7 +93,7 @@
     letter-spacing: -0.03em;
   }
   .lp-grad {
-    background: var(--gradient-brand);
+    background: var(--gradient-text);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -214,7 +214,7 @@
     font-size: 1.9rem;
     font-weight: 800;
     letter-spacing: -0.02em;
-    background: var(--gradient-brand);
+    background: var(--gradient-text);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
