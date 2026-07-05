@@ -25,10 +25,10 @@ test.describe('visualizations', () => {
   test('step-accumulation chart renders for agent (one row per step) but NOT for chatbot', async ({ page }) => {
     await waitReady(page);
     // chatbot: no per-step accumulation chart
-    await expect(page.getByRole('group', { name: /cost per agent step/i })).toHaveCount(0);
+    await expect(page.getByRole('img', { name: /cost per agent step/i })).toHaveCount(0);
     // agent: 6 rows (default stepsPerRun), columns Step / Input tokens / Output tokens / Cost
     await selectMode(page, MODE_TABS.agent);
-    const step = page.getByRole('group', { name: /cost per agent step/i });
+    const step = page.getByRole('img', { name: /cost per agent step/i });
     const table = step.locator('table');
     await expect(table.locator('tbody tr')).toHaveCount(6);
     const head = (await table.locator('thead').textContent()) ?? '';

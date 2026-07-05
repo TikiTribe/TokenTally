@@ -6,9 +6,8 @@
 import { lazy, Suspense } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
-import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
 import { TornadoChart } from '@/viz/TornadoChart';
-import { CacheWarmthCurveLazy } from '@/viz/chartsLazy';
+import { CacheWarmthCurveLazy, StepAccumulationChartLazy } from '@/viz/chartsLazy';
 import { ExportButtons } from '@/ui/ExportButtons';
 import { HelpTip } from '@/ui/HelpTip';
 import { money } from '@/ui/format';
@@ -82,7 +81,9 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
         </p>
       ) : null}
       <CostWaterfall waterfall={c.waterfall} />
-      <StepAccumulationChart steps={f.steps} />
+      <Suspense fallback={null}>
+        <StepAccumulationChartLazy steps={f.steps} />
+      </Suspense>
       <TornadoChart bars={tornado} central={f.monthlyCost} />
       <Suspense fallback={null}>
         <WhatIfPanel bars={tornado} />

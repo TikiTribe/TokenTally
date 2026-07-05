@@ -6,3 +6,7 @@ import { lazy } from 'react';
 export const CacheWarmthCurveLazy = lazy(() =>
   import('@/viz/CacheWarmthCurve').then((m) => ({ default: m.CacheWarmthCurve })),
 );
+
+export const StepAccumulationChartLazy = lazy(() =>
+  import('@/viz/StepAccumulationChart').then((m) => ({ default: m.StepAccumulationChart })),
+);

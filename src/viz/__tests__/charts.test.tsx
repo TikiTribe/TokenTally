@@ -15,7 +15,7 @@ describe('StepAccumulationChart', () => {
       { step: 2, inputTokens: 500, outputTokens: 50, reasoningTokens: 0, cost: 0.03 },
     ];
     render(<StepAccumulationChart steps={steps} />);
-    expect(screen.getByRole('group', { name: /cost per agent step/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /cost per agent step/i })).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
   it('returns null (no fake geometry) for null / single-step', () => {

@@ -121,15 +121,29 @@ test.describe('result & chart hover-explain', () => {
     }
   });
 
-  test('each agent step point carries a per-point hover title', async ({ page }) => {
+  test('the agent step line shows a step tooltip on hover ANYWHERE over the plot', async ({ page }) => {
     await waitReady(page);
     await selectMode(page, MODE_TABS.agent);
-    const circles = page.locator('figure[aria-label*="agent step"] circle');
-    await expect(circles.first()).toBeAttached({ timeout: 8000 });
-    const n = await circles.count();
-    expect(n).toBeGreaterThan(1);
-    for (let i = 0; i < n; i++) {
-      await expect(circles.nth(i).locator('title')).toContainText(/Step \d+:/);
-    }
+    const chart = page.locator('figure[aria-label*="agent step"]');
+    await expect(chart).toBeVisible({ timeout: 8000 });
+    await chart.scrollIntoViewIfNeeded();
+    const svg = chart.locator('svg.recharts-surface').first();
+    await expect(svg).toBeVisible({ timeout: 8000 });
+    const box = await svg.boundingBox();
+    if (!box) throw new Error('no chart svg');
+    // recharts activates its tooltip on mousemove and shows the NEAREST step for the cursor's x - no need to land
+    // on a 3px dot (the "hover a point on the line shows nothing" fix). Re-move the mouse each poll (alternating x
+    // so recharts recomputes the active point) until the tooltip has content.
+    let flip = 0;
+    await expect
+      .poll(
+        async () => {
+          flip ^= 1;
+          await page.mouse.move(box.x + box.width * (0.4 + flip * 0.2), box.y + box.height * 0.5);
+          return (await chart.locator('.recharts-tooltip-wrapper').textContent()) ?? '';
+        },
+        { timeout: 6000, intervals: [150, 250, 400] },
+      )
+      .toMatch(/Step \d+/);
   });
 });
