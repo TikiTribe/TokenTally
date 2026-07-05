@@ -40,4 +40,28 @@ describe('WhatIfPanel', () => {
     const { container } = render(<WhatIfPanel bars={bars} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('freezes the visible set: reordered/added drivers do not reshuffle or grow it without a mode/model change', () => {
+    const initial: TornadoBar[] = [
+      { factor: 'conversationsPerMonth', low: 1, high: 5, swing: 4 },
+      { factor: 'avgResponseTokens', low: 1, high: 4, swing: 3 },
+      { factor: 'turnsPerConversation', low: 1, high: 3, swing: 2 },
+    ];
+    const { rerender } = render(<WhatIfPanel bars={initial} />);
+    expect(screen.getAllByRole('slider')).toHaveLength(3);
+    // A recompute re-sorts the bars and a fourth numeric driver would now rank into the top three. Mode + model
+    // are unchanged, so the frozen set must hold: same three sliders, the new driver is NOT added (this is what
+    // prevents an active drag from unmounting its own slider when a swing crosses a neighbor).
+    const reordered: TornadoBar[] = [
+      { factor: 'avgUserMessageTokens', low: 1, high: 9, swing: 8 },
+      { factor: 'conversationsPerMonth', low: 1, high: 2, swing: 1 },
+      { factor: 'avgResponseTokens', low: 1, high: 2, swing: 1 },
+      { factor: 'turnsPerConversation', low: 1, high: 2, swing: 1 },
+    ];
+    rerender(<WhatIfPanel bars={reordered} />);
+    const sliders = screen.getAllByRole('slider');
+    expect(sliders).toHaveLength(3);
+    expect(screen.queryByRole('slider', { name: 'Avg user message tokens' })).toBeNull();
+    expect(screen.getByRole('slider', { name: 'Conversations / month' })).toBeInTheDocument();
+  });
 });

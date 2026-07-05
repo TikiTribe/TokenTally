@@ -2,7 +2,7 @@
 // dollars foot to the headline for cache-null models, P2-A1/A11). Now labeled for sighted users: a visible
 // caption, y-axis min/max dollars, x-axis step range, per-point hover, and aspect preserved (no distortion).
 // A visually-hidden data table stays as a redundant screen-reader aid. Renders nothing for chatbot/prompt.
-import { money, moneyPrecise } from '@/ui/format';
+import { moneyPrecise } from '@/ui/format';
 import type { StepProfile } from '@/workloads';
 
 const W = 320;
@@ -14,7 +14,6 @@ export function StepAccumulationChart(props: { steps: StepProfile[] | null }): J
   if (!steps || steps.length < 2) return null;
   const costs = steps.map((s) => s.cost);
   const maxCost = Math.max(...costs, Number.MIN_VALUE);
-  const minCost = Math.min(...costs);
   const x = (i: number): number => PAD + (i / (steps.length - 1)) * (W - 2 * PAD);
   const y = (c: number): number => H - PAD - (c / maxCost) * (H - 2 * PAD);
   const points = steps.map((s, i) => `${x(i).toFixed(1)},${y(s.cost).toFixed(1)}`).join(' ');
@@ -25,9 +24,12 @@ export function StepAccumulationChart(props: { steps: StepProfile[] | null }): J
         Cost per step <span className="viz__subcaption">context accumulates, so later steps cost more</span>
       </figcaption>
       <div className="stepchart">
+        {/* The plot is a zero-based scale (y maps cost 0 -> the bottom), so the axis reads max at top and $0 at
+            the bottom - not min(cost), which would mislabel the baseline. moneyPrecise keeps sub-cent per-step
+            costs legible (2dp would collapse them to $0.00) and matches the per-point hover. */}
         <div className="stepchart__yaxis" aria-hidden="true">
-          <span>{money(maxCost)}</span>
-          <span>{money(minCost)}</span>
+          <span>{moneyPrecise(maxCost)}</span>
+          <span>{moneyPrecise(0)}</span>
         </div>
         {/* preserveAspectRatio meet (not "none") so the slope, i.e. the accumulation rate, is not distorted. */}
         <svg className="stepchart__svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" focusable="false" aria-hidden="true">

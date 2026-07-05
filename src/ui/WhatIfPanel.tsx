@@ -3,10 +3,9 @@
 // writes straight to the same store field the number input uses, so dragging is just a fast, exploratory edit -
 // the App's debounced recompute (150ms) reprices on every change. Only factors that are directly editable
 // numbers are shown; derived/enum factors (a tokenized prompt, the context-strategy enum) are skipped because
-// there is no single number to scrub. Like the tornado, this panel is absent when the forecast is $0 (nothing
-// swings), so the always-present number inputs are the recovery path if a driver is dragged to zero.
-// Owner: TokenTally UI.
-import { useState } from 'react';
+// there is no single number to scrub. The visible driver set is frozen per mode+model (see below), so it does
+// not reshuffle under an active drag and stays put even at a $0 forecast. Owner: TokenTally UI.
+import { useRef, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { factorLabel } from '@/ui/format';
 import type { TornadoBar } from '@/optimization';
@@ -62,19 +61,36 @@ function WhatIfSlider(props: { mode: Mode; factor: string; value: number }): JSX
 export function WhatIfPanel(props: { bars: TornadoBar[] }): JSX.Element | null {
   const mode = useAppStore((s) => s.mode);
   const inputs = useAppStore((s) => s.inputs[s.mode]);
-  // Top drivers (already sorted by swing) that are directly editable numbers. Keep at most three so the panel
-  // stays a focused "what moves this most", not a second copy of the input form.
-  const rows = props.bars.filter((b) => b.swing > 0 && numInput(inputs, b.factor) !== null).slice(0, 3);
-  if (rows.length === 0) return null;
+  const modelKey = useAppStore((s) => s.selection[s.mode].canonicalId);
+  // Freeze the visible driver set per mode+model. The engine re-sorts the bars by swing on every recompute, so
+  // deriving the top three live would let an active drag reorder - or even unmount - its own slider once a swing
+  // crosses a neighbor (agent mode has four numeric drivers capped to three). Lock the set the first time drivers
+  // are available for a mode+model and only re-derive when that key changes (a real ranking change), never on a
+  // value edit. Because it stays locked it also persists at a $0 forecast, so a driver dragged to zero can be
+  // dragged straight back up instead of the panel vanishing with the tornado.
+  const cache = useRef<{ key: string; factors: string[] }>({ key: '', factors: [] });
+  const key = `${mode}:${modelKey}`;
+  if (cache.current.key !== key || cache.current.factors.length === 0) {
+    const qualifying = props.bars
+      .filter((b) => b.swing > 0 && numInput(inputs, b.factor) !== null)
+      .slice(0, 3)
+      .map((b) => b.factor);
+    if (qualifying.length > 0 || cache.current.key !== key) cache.current = { key, factors: qualifying };
+  }
+  const factors = cache.current.key === key ? cache.current.factors : [];
+  if (factors.length === 0) return null;
   return (
     <figure className="whatif" style={{ margin: '1.25rem 0 0' }}>
       <figcaption className="viz__caption">
         What if <span className="viz__subcaption">drag a top driver to watch the monthly cost above respond</span>
       </figcaption>
       <div className="whatif__rows">
-        {rows.map((b) => (
-          <WhatIfSlider key={`${mode}:${b.factor}`} mode={mode} factor={b.factor} value={numInput(inputs, b.factor) as number} />
-        ))}
+        {factors.map((factor) => {
+          const value = numInput(inputs, factor);
+          return value === null ? null : (
+            <WhatIfSlider key={`${mode}:${factor}`} mode={mode} factor={factor} value={value} />
+          );
+        })}
       </div>
     </figure>
   );
