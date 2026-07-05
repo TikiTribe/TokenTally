@@ -40,7 +40,9 @@ export function StepAccumulationChart(props: { steps: StepProfile[] | null }): J
             ]}
             labelFormatter={(v) => `Step ${v}`}
           />
-          <Line type="monotone" dataKey="cost" stroke={t.central} strokeWidth={2} dot={{ r: 3, fill: t.central }} activeDot={{ r: 5 }} name="Cost" />
+          {/* No entrance animation: the chart re-renders on every recompute; recharts' default would re-draw
+              the line each time (flicker). */}
+          <Line type="monotone" dataKey="cost" stroke={t.central} strokeWidth={2} dot={{ r: 3, fill: t.central }} activeDot={{ r: 5 }} name="Cost" isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </VizFigure>
