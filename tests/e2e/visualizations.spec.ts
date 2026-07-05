@@ -77,4 +77,13 @@ test.describe('visualizations', () => {
     await selectMode(page, MODE_TABS.agent);
     await expect(page.getByRole('img', { name: /cache warmth/i })).toHaveCount(0);
   });
+
+  test('blast-radius radial appears in Denial of Wallet only after both gates', async ({ page }) => {
+    await waitReady(page);
+    await selectMode(page, MODE_TABS.dow);
+    await expect(page.getByRole('img', { name: /blast radius/i })).toHaveCount(0); // gated
+    await page.getByLabel(/Enable Denial-of-Wallet/).check();
+    await page.getByLabel(/authorized to test/).check();
+    await expect(page.getByRole('img', { name: /blast radius/i })).toBeVisible({ timeout: 8000 });
+  });
 });

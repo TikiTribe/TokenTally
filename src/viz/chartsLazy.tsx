@@ -10,3 +10,7 @@ export const CacheWarmthCurveLazy = lazy(() =>
 export const StepAccumulationChartLazy = lazy(() =>
   import('@/viz/StepAccumulationChart').then((m) => ({ default: m.StepAccumulationChart })),
 );
+
+export const BlastRadiusRadialLazy = lazy(() =>
+  import('@/viz/BlastRadiusRadial').then((m) => ({ default: m.BlastRadiusRadial })),
+);

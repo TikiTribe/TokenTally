@@ -6,6 +6,7 @@ import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
 import { TornadoChart } from '@/viz/TornadoChart';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { CacheWarmthCurve } from '@/viz/CacheWarmthCurve';
+import { BlastRadiusRadial } from '@/viz/BlastRadiusRadial';
 import type { StepProfile } from '@/workloads';
 import type { TornadoBar } from '@/optimization';
 import type { WarmthPoint } from '@/store/engineClient';
@@ -57,6 +58,27 @@ describe('CacheWarmthCurve', () => {
     render(<CacheWarmthCurve points={points} breakEven={5000} />);
     expect(screen.getByRole('img', { name: /cache warmth/i })).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+});
+
+describe('BlastRadiusRadial', () => {
+  it('renders nothing for a zero exposure (never fake geometry)', () => {
+    const { container } = render(<BlastRadiusRadial worstCase={0} mitigations={[]} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+  it('renders a labeled figure + a ring per scenario for a real exposure', () => {
+    render(
+      <BlastRadiusRadial
+        worstCase={483840}
+        mitigations={[
+          { control: 'Rate limit', savedMonthly: 200000 },
+          { control: 'Spend cap', savedMonthly: 400000 },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('img', { name: /blast radius/i })).toBeInTheDocument();
+    // worst case + 2 mitigations = 3 rows in the a11y table
+    expect(screen.getAllByRole('row')).toHaveLength(4); // header + 3
   });
 });
 

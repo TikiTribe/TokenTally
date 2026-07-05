@@ -7,7 +7,7 @@ import { lazy, Suspense } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { TornadoChart } from '@/viz/TornadoChart';
-import { CacheWarmthCurveLazy, StepAccumulationChartLazy } from '@/viz/chartsLazy';
+import { CacheWarmthCurveLazy, StepAccumulationChartLazy, BlastRadiusRadialLazy } from '@/viz/chartsLazy';
 import { ExportButtons } from '@/ui/ExportButtons';
 import { HelpTip } from '@/ui/HelpTip';
 import { money } from '@/ui/format';
@@ -122,6 +122,9 @@ function DowResult({ r }: { r: DenialOfWalletResult }): JSX.Element {
       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
         {r.note} <HelpTip tipId="tip-dow-note" content={DOW_NOTE_HELP} />
       </p>
+      <Suspense fallback={null}>
+        <BlastRadiusRadialLazy worstCase={r.worstCaseMonthly} mitigations={r.mitigations} />
+      </Suspense>
       <ul data-testid="dow-mitigations">
         {r.mitigations.map((m) => (
           <li key={m.control}>
