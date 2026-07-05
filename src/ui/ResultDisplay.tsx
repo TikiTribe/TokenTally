@@ -7,7 +7,7 @@ import { lazy, Suspense } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { TornadoChart } from '@/viz/TornadoChart';
-import { CacheWarmthCurveLazy, StepAccumulationChartLazy, BlastRadiusRadialLazy, CostVsContextScatterLazy } from '@/viz/chartsLazy';
+import { CacheWarmthCurveLazy, StepAccumulationChartLazy, BlastRadiusRadialLazy, CostVsContextChartLazy } from '@/viz/chartsLazy';
 import { ExportButtons } from '@/ui/ExportButtons';
 import { HelpTip } from '@/ui/HelpTip';
 import { money } from '@/ui/format';
@@ -104,7 +104,7 @@ function WorkloadResult({
       {f.kind === 'chatbot' || f.kind === 'prompt' ? (
         <Suspense fallback={null}>
           <CacheWarmthCurveLazy points={warmthSeries} breakEven={f.cost.breakEvenArrivals} />
-          <CostVsContextScatterLazy points={contextSeries} />
+          <CostVsContextChartLazy points={contextSeries} />
         </Suspense>
       ) : null}
       <p data-testid="formula-line" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>

@@ -7,7 +7,7 @@ import { TornadoChart } from '@/viz/TornadoChart';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { CacheWarmthCurve } from '@/viz/CacheWarmthCurve';
 import { BlastRadiusRadial } from '@/viz/BlastRadiusRadial';
-import { CostVsContextScatter } from '@/viz/CostVsContextScatter';
+import { CostVsContextChart } from '@/viz/CostVsContextChart';
 import type { StepProfile } from '@/workloads';
 import type { TornadoBar } from '@/optimization';
 import type { WarmthPoint } from '@/store/engineClient';
@@ -62,14 +62,14 @@ describe('CacheWarmthCurve', () => {
   });
 });
 
-describe('CostVsContextScatter', () => {
+describe('CostVsContextChart', () => {
   it('renders nothing for a null/short series', () => {
-    const { container } = render(<CostVsContextScatter points={null} />);
+    const { container } = render(<CostVsContextChart points={null} />);
     expect(container).toBeEmptyDOMElement();
   });
   it('renders a labeled figure + a row per point, flagging truncation', () => {
     render(
-      <CostVsContextScatter
+      <CostVsContextChart
         points={[
           { context: 0, central: 10, truncated: false },
           { context: 5000, central: 30, truncated: false },
