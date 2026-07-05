@@ -1,15 +1,16 @@
-// Phase 2A application shell. Landmark scaffold + WCAG tablist + theme control. First-paint safe: the only
-// engine/registry access is inside the React.lazy mode panels (each its own chunk) and the store's dynamic
-// ensureRegistry — nothing here top-level-imports the engine/registry (first-paint-lean gate). Owner:
-// TokenTally UI. Version: Phase 2A.
-import { lazy, Suspense, useEffect } from 'react';
+// Application shell + client-side view routing (hash-based). Two views: the marketing LANDING (home) and the
+// calculator APP. First-paint safe: the landing is static content; the engine/registry only load inside the
+// React.lazy mode panels and the store's dynamic ensureRegistry. Routing: '' -> home, '#calculator' -> app,
+// '#c=…' (a config permalink) -> app. Owner: TokenTally UI. Version: landing-1.
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { applyTheme, persistTheme } from '@/shell/ThemeController';
 import { ModeNav } from '@/shell/ModeNav';
 import { SnapshotStamp } from '@/shell/SnapshotStamp';
 import { WorkflowBar } from '@/shell/WorkflowBar';
-import { IntroPanel } from '@/shell/IntroPanel';
+import { GuideStrip } from '@/shell/GuideStrip';
 import { ResultDisplay } from '@/ui/ResultDisplay';
+import { LandingPage } from '@/landing/LandingPage';
 import { decodePermalink } from '@/store/permalink';
 import type { Mode, ThemeMode } from '@/store/types';
 
@@ -24,6 +25,14 @@ const PANELS: Record<Mode, React.LazyExoticComponent<() => JSX.Element>> = {
 const THEME_CYCLE: Record<ThemeMode, ThemeMode> = { system: 'light', light: 'dark', dark: 'system' };
 const THEME_LABEL: Record<ThemeMode, string> = { system: 'System', light: 'Light', dark: 'Dark' };
 
+const PERMALINK_RE = /[#&]c=([^&]+)/;
+type View = 'home' | 'app';
+function viewFromHash(): View {
+  const h = window.location.hash;
+  if (PERMALINK_RE.test(h) || h === '#calculator' || h === '#app') return 'app';
+  return 'home';
+}
+
 function App(): JSX.Element {
   const mode = useAppStore((s) => s.mode);
   const theme = useAppStore((s) => s.theme);
@@ -34,14 +43,32 @@ function App(): JSX.Element {
   const registryStatus = useAppStore((s) => s.registryStatus);
   const Panel = PANELS[mode];
 
-  // Load the pricing registry once (dynamic import keeps it out of first-paint).
+  const [view, setView] = useState<View>(viewFromHash);
+  const cycleTheme = (): void => setTheme(THEME_CYCLE[theme]);
+  const goToApp = (): void => {
+    if (!PERMALINK_RE.test(window.location.hash)) window.location.hash = 'calculator';
+    setView('app');
+  };
+  const goHome = (): void => {
+    window.location.hash = '';
+    setView('home');
+  };
+
+  // Keep the view in sync with browser back/forward + manual hash edits.
   useEffect(() => {
-    void useAppStore.getState().ensureRegistry();
+    const onHash = (): void => setView(viewFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
   }, []);
+
+  // Load the pricing registry once the calculator is in view (dynamic import keeps it out of first-paint).
+  useEffect(() => {
+    if (view === 'app') void useAppStore.getState().ensureRegistry();
+  }, [view]);
 
   // §5.8: apply a config permalink from the URL hash on first load (strictly validated in decodePermalink).
   useEffect(() => {
-    const m = /[#&]c=([^&]+)/.exec(window.location.hash);
+    const m = PERMALINK_RE.exec(window.location.hash);
     if (!m) return;
     const decoded = decodePermalink(m[1]!);
     if (decoded) useAppStore.getState().applyConfig(decoded.mode, decoded.selection, decoded.inputs as Record<string, unknown>);
@@ -55,49 +82,54 @@ function App(): JSX.Element {
 
   // Real-time recompute: debounce any relevant change, then run the forecast (dynamic-imports the engine).
   useEffect(() => {
-    if (registryStatus !== 'ready') return;
+    if (view !== 'app' || registryStatus !== 'ready') return;
     const t = setTimeout(() => void useAppStore.getState().recompute(), 150);
     return () => clearTimeout(t);
-  }, [mode, inputs, selection, tokenCounts, registryStatus]);
+  }, [view, mode, inputs, selection, tokenCounts, registryStatus]);
+
+  if (view === 'home') {
+    return <LandingPage onLaunch={goToApp} theme={theme} onCycleTheme={cycleTheme} />;
+  }
 
   return (
     <>
       <a href="#main" className="skip-link">
         Skip to content
       </a>
-      <header style={{ borderBottom: '1px solid var(--border)', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.5rem' }}>TokenTally</h1>
-          <p style={{ margin: '0.25rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            LLM cost forecasting — precision scoped per model, honest ranges everywhere.
-          </p>
-        </div>
-        <button className="btn-secondary" aria-label={`Theme: ${THEME_LABEL[theme]}. Activate to change.`} onClick={() => setTheme(THEME_CYCLE[theme])}>
+      <header className="app-header">
+        <a className="app-brand" href="#" onClick={(e) => { e.preventDefault(); goHome(); }}>
+          <span className="lp-brand__mark" aria-hidden="true">₸</span>
+          <span>TokenTally</span>
+        </a>
+        <button className="btn-secondary" aria-label={`Theme: ${THEME_LABEL[theme]}. Activate to change.`} onClick={cycleTheme}>
           Theme: {THEME_LABEL[theme]}
         </button>
       </header>
 
-      <IntroPanel />
+      <div className="app-shell">
+        <GuideStrip />
 
-      <nav aria-label="Calculator mode" style={{ padding: '0 1rem' }}>
-        <ModeNav />
-        <div style={{ padding: '0.5rem 0' }}>
-          <WorkflowBar />
-        </div>
-      </nav>
+        <nav aria-label="Calculator mode" className="app-modenav">
+          <ModeNav />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.75rem 0 0' }}>
+            <WorkflowBar />
+          </div>
+        </nav>
 
-      <main id="main" style={{ padding: '1rem', maxWidth: 720, margin: '0 auto' }}>
-        <section role="tabpanel" id={`panel-${mode}`} aria-labelledby={`tab-${mode}`}>
-          <Suspense fallback={<div className="card">Loading…</div>}>
-            <Panel />
-          </Suspense>
-          <ResultDisplay />
-        </section>
-      </main>
+        <main id="main" className="app-main">
+          <h1 className="sr-only">TokenTally — LLM cost calculator</h1>
+          <section role="tabpanel" id={`panel-${mode}`} aria-labelledby={`tab-${mode}`}>
+            <Suspense fallback={<div className="card">Loading…</div>}>
+              <Panel />
+            </Suspense>
+            <ResultDisplay />
+          </section>
+        </main>
 
-      <footer style={{ borderTop: '1px solid var(--border)', padding: '1rem', marginTop: '2rem' }}>
-        <SnapshotStamp />
-      </footer>
+        <footer className="app-footer">
+          <SnapshotStamp />
+        </footer>
+      </div>
     </>
   );
 }

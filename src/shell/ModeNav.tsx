@@ -33,7 +33,7 @@ export function ModeNav(): JSX.Element {
   };
 
   return (
-    <div role="tablist" aria-label="Calculator mode" style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid var(--border)' }}>
+    <div role="tablist" aria-label="Calculator mode" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
       {MODES.map((m, i) => {
         const selected = m === mode;
         return (

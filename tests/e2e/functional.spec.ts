@@ -4,7 +4,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 async function waitReady(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/#calculator'); // '/' is now the marketing landing
   await expect(page.getByText(/Pricing data as of/)).toBeVisible({ timeout: 10000 });
 }
 
@@ -63,9 +63,9 @@ test('permalink round-trips config (and never carries prompt text)', async ({ pa
   await expect(page.getByLabel('Conversations per month')).toHaveValue('777777');
 });
 
-test('example scenario loads and switches mode', async ({ page }) => {
+test('example scenario chip loads and switches mode', async ({ page }) => {
   await waitReady(page);
-  await page.getByLabel('Example').selectOption('langchain-agent');
+  await page.getByRole('button', { name: /LangChain tool agent/ }).click();
   // the LangChain example is an Agent scenario -> the Agent tab becomes selected
   await expect(page.getByRole('tab', { name: /^Agent$/ })).toHaveAttribute('aria-selected', 'true');
 });
