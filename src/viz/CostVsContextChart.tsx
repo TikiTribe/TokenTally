@@ -11,7 +11,7 @@ import { money } from '@/ui/format';
 import { VizFigure } from '@/viz/vizA11y';
 import type { ContextPoint } from '@/store/engineClient';
 
-export function CostVsContextScatter(props: { points: ContextPoint[] | null }): JSX.Element | null {
+export function CostVsContextChart(props: { points: ContextPoint[] | null }): JSX.Element | null {
   const theme = useAppStore((s) => s.theme);
   void theme;
   const t = chartTheme();
