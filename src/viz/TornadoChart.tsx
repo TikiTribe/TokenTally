@@ -3,6 +3,7 @@
 // the current cost, a bar from the low to the high cost on a shared dollar scale, the swing shown as text,
 // and a hover title. A visually-hidden data table stays as a redundant screen-reader aid. Owner: TokenTally UI.
 import { money, factorLabel, factorHelp } from '@/ui/format';
+import { ChartTip } from '@/ui/ChartTooltip';
 import type { TornadoBar } from '@/optimization';
 
 export function TornadoChart(props: { bars: TornadoBar[]; central: number }): JSX.Element | null {
@@ -25,11 +26,8 @@ export function TornadoChart(props: { bars: TornadoBar[]; central: number }): JS
             const width = Math.max(pct(Math.max(b.low, b.high)) - left, 0.75);
             const name = factorLabel(b.factor);
             return (
-              <li
-                key={b.factor}
-                className="tornado__row"
-                title={factorHelp(b.factor, b.low, b.high, b.swing)}
-              >
+              // ChartTip = a visible, immediate hover/focus tooltip (the native `title` was invisible to users).
+              <ChartTip key={b.factor} as="li" className="tornado__row" content={factorHelp(b.factor, b.low, b.high, b.swing)}>
                 <span className="tornado__name">{name}</span>
                 <span className="tornado__track" aria-hidden="true">
                   <span className="tornado__baseline" />
@@ -38,7 +36,7 @@ export function TornadoChart(props: { bars: TornadoBar[]; central: number }): JS
                 {/* Show the full swing |high - low|, matching the data table and the hover text. Not ±swing/2:
                     that assumes the baseline is the midpoint of low/high, which fails for non-linear inputs. */}
                 <span className="tornado__swing">{money(b.swing)}</span>
-              </li>
+              </ChartTip>
             );
           })}
         </ul>

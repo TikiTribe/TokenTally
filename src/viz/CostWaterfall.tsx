@@ -4,6 +4,7 @@
 // line) shows its native rate, never a $0 bar. Owner: TokenTally UI.
 import type { CostWaterfall as CostWaterfallData } from '@/types/engine';
 import { money, waterfallLabel, waterfallHelp } from '@/ui/format';
+import { ChartTip } from '@/ui/ChartTooltip';
 
 export function CostWaterfall(props: { waterfall: CostWaterfallData }): JSX.Element | null {
   // Hide zero-cost cache rows: without caching (or a cached prefix) they are just noise (#16).
@@ -20,8 +21,14 @@ export function CostWaterfall(props: { waterfall: CostWaterfallData }): JSX.Elem
       </figcaption>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
         {comps.map((c) => (
-          // title = per-row hover: what this component is and why it costs what it does (the "hover any item" ask).
-          <li key={c.label} title={waterfallHelp(c.label)} style={{ display: 'grid', gridTemplateColumns: '9rem 1fr 6rem', alignItems: 'center', gap: '0.5rem', cursor: 'help' }}>
+          // ChartTip: a visible hover/focus tooltip explaining what this component is and why it costs what it
+          // does (the "hover any item" ask - native title was invisible to users).
+          <ChartTip
+            key={c.label}
+            as="li"
+            content={waterfallHelp(c.label)}
+            style={{ display: 'grid', gridTemplateColumns: '9rem 1fr 6rem', alignItems: 'center', gap: '0.5rem', cursor: 'help' }}
+          >
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{waterfallLabel(c.label)}</span>
             <span aria-hidden="true" style={{ background: 'var(--surface-2)', borderRadius: 3, height: '0.9rem' }}>
               <span style={{ display: 'block', height: '100%', width: `${((c.cost ?? 0) / max) * 100}%`, background: 'var(--primary)', borderRadius: 3 }} />
@@ -31,7 +38,7 @@ export function CostWaterfall(props: { waterfall: CostWaterfallData }): JSX.Elem
                 ? `${c.nativeRate ?? 'n/a'} / M ${c.nativeUnit ?? 'unit'}`
                 : money(c.cost)}
             </span>
-          </li>
+          </ChartTip>
         ))}
       </ul>
     </figure>

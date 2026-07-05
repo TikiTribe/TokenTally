@@ -71,7 +71,8 @@ test.describe('help & tooltips', () => {
 });
 
 // The original ask: "hover over any item in a chart or graph, or any point on a line, and get an explanation of
-// what it is and why". Every result summary line carries a HelpTip; every chart element carries a hover title.
+// what it is and why". Every result summary line carries a HelpTip; every chart element carries a VISIBLE
+// interactive tooltip (ChartTip / recharts Tooltip), not an invisible native title.
 test.describe('result & chart hover-explain', () => {
   test('the confidence line explains warm cache / point estimate on focus', async ({ page }) => {
     await waitReady(page);
@@ -88,31 +89,35 @@ test.describe('result & chart hover-explain', () => {
     await expect(btn).toHaveAttribute('aria-expanded', 'false');
   });
 
-  test('every waterfall row has a what+why hover title', async ({ page }) => {
+  test('every waterfall row shows a VISIBLE what+why tooltip on hover', async ({ page }) => {
     await waitReady(page);
     await selectMode(page, MODE_TABS.chatbot);
     await page.getByLabel('System prompt').fill('You are a helpful assistant.'); // force a cached prefix so cache rows show
     // wait out the tokenize + recompute debounce: the cache-write row appearing proves the waterfall re-rendered
     await expect(page.getByTestId('waterfall-cacheWrite')).toBeVisible({ timeout: 8000 });
+    const outputRow = page.locator('figure[aria-label="Monthly cost breakdown"] li', { has: page.getByTestId('waterfall-output') });
+    await outputRow.hover();
+    // The real fix: a styled role=tooltip becomes visible on hover, not an invisible native `title`.
+    await expect(outputRow.locator('.chart-tip')).toHaveClass(/is-open/);
+    await expect(outputRow.locator('.chart-tip')).toContainText(/Output:.*output rate/i);
     const rows = page.locator('figure[aria-label="Monthly cost breakdown"] li');
     const n = await rows.count();
     expect(n).toBeGreaterThan(0);
     for (let i = 0; i < n; i++) {
-      await expect(rows.nth(i)).toHaveAttribute('title', /.+:.+/); // "<Label>: <what and why>"
+      await expect(rows.nth(i).locator('.chart-tip')).toContainText(/.+:.+/); // "<Label>: <what and why>"
     }
-    // spot-check the meaning, not just presence
-    await expect(page.locator('li', { has: page.getByTestId('waterfall-output') }))
-      .toHaveAttribute('title', /Output:.*output rate/i);
   });
 
-  test('every tornado row hover title names the swing and why it matters', async ({ page }) => {
+  test('every tornado row shows a VISIBLE tooltip naming the swing on hover', async ({ page }) => {
     await waitReady(page);
     const rows = page.locator('.tornado__row');
     await expect(rows.first()).toBeVisible({ timeout: 8000 });
+    await rows.first().hover();
+    await expect(rows.first().locator('.chart-tip')).toHaveClass(/is-open/); // the user-reported failure now passes
     const n = await rows.count();
     expect(n).toBeGreaterThan(0);
     for (let i = 0; i < n; i++) {
-      await expect(rows.nth(i)).toHaveAttribute('title', /swing is how much this one input moves the total/i);
+      await expect(rows.nth(i).locator('.chart-tip')).toContainText(/swing is how much this one input moves the total/i);
     }
   });
 
