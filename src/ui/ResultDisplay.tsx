@@ -3,15 +3,56 @@
 // estimate, variance unmodeled" when unmodeled), the accuracy note, the waterfall, and a trust line linking
 // the formula + snapshotVersion (§6/§12). NEVER a silent $0: 'unavailable' and DoW-disabled/unmodeled/zero
 // render honest text (P2-A9/A20). Owner: TokenTally UI. Version: Phase 2C.
+import { lazy, Suspense } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
 import { TornadoChart } from '@/viz/TornadoChart';
 import { ExportButtons } from '@/ui/ExportButtons';
+import { HelpTip } from '@/ui/HelpTip';
+import { money } from '@/ui/format';
 import type { WorkloadForecast } from '@/workloads';
+import type { ConfidenceRange } from '@/types/engine';
 import type { DenialOfWalletResult, TornadoBar } from '@/optimization';
 
-const money = (n: number): string => `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+// Lazy: the what-if sliders only render after a forecast computes, so they stay out of the first-paint entry
+// chunk (D9 size budget). Named export -> default shim for React.lazy.
+const WhatIfPanel = lazy(() => import('@/ui/WhatIfPanel').then((m) => ({ default: m.WhatIfPanel })));
+
+// Plain-language definitions for the jargon each summary line uses, surfaced on hover/focus via HelpTip so a
+// non-expert can decode "point estimate", "warm cache", "break-even", and the DoW ceiling (audit #8/#9/#10/#20/#21).
+function confidenceHelp(band: ConfidenceRange): string {
+  if (band.unmodeled) {
+    return 'A point estimate is a single expected cost. This workload has no modeled source of cost variance (no prompt caching in play), so there is no range to show.';
+  }
+  if (band.low === band.high) {
+    return 'A point estimate is a single expected cost. The range collapses here because there is no warm-cache saving to model, so the estimate and the conservative (cold-cache) figure are the same.';
+  }
+  return 'Your cost depends on how often a cached system prompt is still warm (recently used) when the next message arrives. A warm cache reuses the prompt at a low rate; a cold cache pays the full write again. The low end assumes the cache stays warm; the conservative high end assumes it never does. Your real cost sits between them.';
+}
+const CACHE_HELP =
+  'A warm cache reuses your system prompt at a fraction of its first-time price. Break-even is the monthly message volume at which those savings pay back the one-time cost of writing the prompt into the cache. Arrivals are incoming messages per month.';
+const DOW_NOTE_HELP =
+  'Worst case assumes an attacker sends the largest request the model allows: a prompt that fills the whole context window, the maximum output, and any reasoning tokens, with no cache reuse (the most expensive path). It is a ceiling for setting spend limits, not a prediction.';
+const DOW_FORMULA_HELP =
+  'The arithmetic behind the ceiling: requests times retries, times the cost of one maximum-size request (full context input, maximum output, and reasoning), priced with no warm cache so nothing is discounted.';
+
+// Accuracy badge colour tracks the model's tier, read from the note prefix (#22: it was always "estimate").
+function badgeClass(note: string): string {
+  if (note.startsWith('exact')) return 'badge badge-exact';
+  if (note.startsWith('approx')) return 'badge badge-approx';
+  return 'badge badge-estimate';
+}
+
+function confidenceLine(low: number, high: number, conservative: number): string {
+  // #23: no fake "Range $X to $X" when the band collapses (exact tokenizer + no cache variance).
+  if (low === high) {
+    return conservative > high
+      ? `Point estimate · conservative, no warm cache ${money(conservative)}`
+      : 'Point estimate (no modeled cost variance).';
+  }
+  return `Range ${money(low)} to ${money(high)} · conservative, no warm cache ${money(conservative)}`;
+}
 
 function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoBar[] }): JSX.Element {
   const c = f.cost;
@@ -25,23 +66,26 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
         {money(f.monthlyCost)} <span style={{ fontSize: '1rem', fontWeight: 400, color: 'var(--text-muted)' }}>/ month</span>
       </output>
       <p data-testid="confidence-line" style={{ margin: '0.25rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-        {band.unmodeled
-          ? 'Point estimate. Variance unmodeled.'
-          : `Range ${money(band.low)} to ${money(band.high)} · conservative (no warm cache) ${money(c.conservativeTotal)}`}
+        {band.unmodeled ? 'Point estimate. Variance unmodeled.' : confidenceLine(band.low, band.high, c.conservativeTotal)}{' '}
+        <HelpTip tipId="tip-confidence" content={confidenceHelp(band)} />
       </p>
-      <p><span className="badge badge-estimate" data-testid="accuracy-badge">{f.accuracyNote}</span></p>
+      <p><span className={badgeClass(f.accuracyNote)} data-testid="accuracy-badge">{f.accuracyNote}</span></p>
       {/* §13 cut line: the cross-run warm-cache view + break-even. */}
       {c.warmth !== null || c.breakEvenArrivals !== null ? (
         <p data-testid="cache-line" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           {c.savingsUpTo.central > 0 ? `Caching saves up to ${money(c.savingsUpTo.central)}/mo. ` : ''}
           {c.breakEvenArrivals !== null && Number.isFinite(c.breakEvenArrivals)
             ? `Warm-cache break-even at ~${Math.round(c.breakEvenArrivals).toLocaleString()} arrivals/mo.`
-            : ''}
+            : ''}{' '}
+          <HelpTip tipId="tip-cache" content={CACHE_HELP} />
         </p>
       ) : null}
       <CostWaterfall waterfall={c.waterfall} />
       <StepAccumulationChart steps={f.steps} />
-      <TornadoChart bars={tornado} />
+      <TornadoChart bars={tornado} central={f.monthlyCost} />
+      <Suspense fallback={null}>
+        <WhatIfPanel bars={tornado} />
+      </Suspense>
       <p data-testid="formula-line" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         Formula: {f.formula} · priced against snapshot {f.snapshotVersion.slice(0, 8)}
       </p>
@@ -65,7 +109,9 @@ function DowResult({ r }: { r: DenialOfWalletResult }): JSX.Element {
       <output data-testid="dow-exposure" aria-live="polite" style={{ display: 'block', fontSize: '1.5rem', fontWeight: 700 }}>
         Worst-case exposure: {money(r.worstCaseMonthly)} / month
       </output>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{r.note}</p>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+        {r.note} <HelpTip tipId="tip-dow-note" content={DOW_NOTE_HELP} />
+      </p>
       <ul data-testid="dow-mitigations">
         {r.mitigations.map((m) => (
           <li key={m.control}>
@@ -73,7 +119,9 @@ function DowResult({ r }: { r: DenialOfWalletResult }): JSX.Element {
           </li>
         ))}
       </ul>
-      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Formula: {r.formula} · snapshot {r.snapshotVersion.slice(0, 8)}</p>
+      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+        Formula: {r.formula} · snapshot {r.snapshotVersion.slice(0, 8)} <HelpTip tipId="tip-dow-formula" content={DOW_FORMULA_HELP} />
+      </p>
     </div>
   );
 }

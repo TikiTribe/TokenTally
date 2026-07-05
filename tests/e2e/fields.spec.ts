@@ -10,7 +10,7 @@ test.describe('field validation & clamps', () => {
   test('zero volume yields a legitimate $0 headline (correct, not a silent-$0 bug)', async ({ page }) => {
     await waitReady(page);
     await setField(page, 'Conversations per month', 0);
-    await expect(headline(page)).toHaveText(/\$0\s*\/ month/, { timeout: 8000 });
+    await expect(headline(page)).toHaveText(/\$0\.00\s*\/ month/, { timeout: 8000 });
     expect(await headlineValue(page)).toBe(0);
   });
 
@@ -25,7 +25,7 @@ test.describe('field validation & clamps', () => {
   test('empty field coerces to 0 without crashing the forecast', async ({ page }) => {
     await waitReady(page);
     await setField(page, 'Conversations per month', ''); // Number('') === 0
-    await expect(headline(page)).toHaveText(/\$0\s*\/ month/, { timeout: 8000 });
+    await expect(headline(page)).toHaveText(/\$0\.00\s*\/ month/, { timeout: 8000 });
   });
 
   test('astronomically large volume stays finite (bounded clamp, no Infinity)', async ({ page }) => {

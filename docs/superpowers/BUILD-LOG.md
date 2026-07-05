@@ -522,3 +522,43 @@ NEXT ACTIONS (0B loop):
 
 END: headed Playwright E2E over every function, appsec pass, resolve the 10 Dependabot vulns, then the SINGLE final
 integration->main go-live PR (flips production), then delete all phase branches. main is untouched until that PR.
+
+---
+
+## POST-LAUNCH (main is live at tokentally.ai; features ship to main via clean PRs)
+
+The pre-launch phased build above is complete and merged; TokenTally is live. Subsequent work is
+post-launch feature/bug PRs straight to main (branch-protected: `ci` check + conversation resolution).
+
+### Branch `feat/result-charts-and-explain` (off main) — result charts, hover-explain, what-if slider
+
+Origin: user reported "random bars at the bottom of this chart" (the tornado/step charts rendered as
+unlabeled SVGs whose labels lived only in a 1px sr-only table) and asked for hover-to-explain on every
+chart item plus a "what-if" analysis slider. A 43-agent adversarial audit surfaced 23 verified findings;
+all 23 are fixed, plus the slider was added.
+
+- Phase 1 (commit 28f6599) — correctness: accuracyNote "--30%" (relLow already signed), badge tier class
+  (was always "estimate"), no fake "Range $X to $X" when the band collapses, money() always 2 decimals,
+  zero-cost cache rows hidden, waterfall bars no longer floored at $1. Deleted orphaned vizA11y.
+- Phase 2 (28f6599) — readable charts: tornado is a labeled diverging-bar chart with a baseline and a
+  swing column; step chart has axes + per-point hover; waterfall has human labels; each figure has a
+  visible caption. sr-only tables kept as redundant screen-reader aids.
+- Phase 3 (ffa0744) — hover-to-explain: plain-language HelpTip on the confidence line, cache/break-even
+  line, and DoW note+formula (defines point estimate, warm/cold cache, break-even, arrivals, the DoW
+  ceiling); what+why hover title on every waterfall and tornado row.
+- Phase 4 (3430fbf) — interactive what-if sliders on the top 3 numeric drivers; each writes the same
+  store field the number input uses, so the debounced recompute reprices live and the two views stay in
+  sync. Also de-flaked the a11y gate: a getComputedStyle-during-recalc artifact (heading inherited color
+  lagged the theme var under contention) made axe read a dark-on-dark frame the user never sees (theme is
+  stamped pre-paint); the scan now waits for heading colors to settle. Verified green across 4-worker x6.
+
+Adversarial code+security review (subagent, whole diff): no critical/high. Prototype-pollution on the slider's
+computed-key write is defended in depth (factor from a static allowlist, re-checked, filtered to live numbers,
+and object-spread never writes the prototype); no XSS (all hover/HelpTip copy is hardcoded or numeric, React-
+escaped). Two LOW items fixed before PR: the step-chart y-axis low label (zero-based scale, so it now reads $0
+at the baseline via moneyPrecise) and an agent-mode mid-drag slider unmount (the visible driver set is now frozen
+per mode+model, so a swing crossing a neighbor cannot reorder or unmount the slider being dragged; it also keeps
+the panel present at a $0 forecast).
+
+State: all green — 354 unit, both tsc configs, lint, build, 63 headed E2E incl. axe (light + dark). NEXT: push
+`feat/result-charts-and-explain` and open a PR to main; merge on green CI.

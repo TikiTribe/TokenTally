@@ -53,7 +53,10 @@ describe('App shell (calculator view)', () => {
 
   it('computes a real forecast end-to-end (registry -> recompute -> a $/month headline)', async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/\$[\d,.]+ /)).toBeInTheDocument(), { timeout: 6000 });
-    expect(screen.getByText(/\/ month/)).toBeInTheDocument();
-  });
+    // Assert the headline via its testid contract, not a whitespace-sensitive getByText: the "/ month" suffix
+    // is a styled <span>, so the <output>'s direct text is just the dollar amount. toHaveTextContent reads the
+    // full (descendant) text, which is the real user-visible headline.
+    const headline = await screen.findByTestId('headline-cost', {}, { timeout: 8000 });
+    expect(headline).toHaveTextContent(/\$[\d,.]+ \/ month/);
+  }, 10000); // full engine recompute over the 2,360-model registry in jsdom needs headroom past the 5s default
 });

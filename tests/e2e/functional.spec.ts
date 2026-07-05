@@ -15,7 +15,7 @@ test('every mode produces a forecast or an honest note (never a blank/$0)', asyn
   for (const mode of [/^Chatbot/, /^Prompt/, /^Agent$/, /^Multi-agent/]) {
     await page.getByRole('tab', { name: mode }).click();
     // a $/month headline appears for a resolvable model + non-empty inputs
-    await expect(page.getByText(/\/ month/)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByTestId('headline-cost')).toContainText('/ month', { timeout: 8000 });
   }
 });
 
@@ -28,7 +28,7 @@ test('typing tokenizes off the main thread (live token count)', async ({ page })
 
 test('CSV export downloads', async ({ page }) => {
   await waitReady(page);
-  await expect(page.getByText(/\/ month/)).toBeVisible({ timeout: 8000 });
+  await expect(page.getByTestId('headline-cost')).toContainText('/ month', { timeout: 8000 });
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Export CSV/ }).click(),
@@ -38,7 +38,7 @@ test('CSV export downloads', async ({ page }) => {
 
 test('PDF export downloads (lazy jsPDF loads under CSP)', async ({ page }) => {
   await waitReady(page);
-  await expect(page.getByText(/\/ month/)).toBeVisible({ timeout: 8000 });
+  await expect(page.getByTestId('headline-cost')).toContainText('/ month', { timeout: 8000 });
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Export PDF/ }).click(),

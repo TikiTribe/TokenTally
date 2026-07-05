@@ -37,7 +37,7 @@ test('driving the worker + engine (type + mode switch) raises no CSP violation',
 
   // Switch to Agent: exercises the engine dynamic import + a fresh forecast render.
   await page.getByRole('tab', { name: /^Agent$/ }).click();
-  await expect(page.getByText(/\/ month/)).toBeVisible({ timeout: 10000 });
+  await expect(page.getByTestId('headline-cost')).toContainText('/ month', { timeout: 10000 });
 
   const v = await violations(page);
   expect(v, `CSP violations: ${JSON.stringify(v)}`).toEqual([]);
