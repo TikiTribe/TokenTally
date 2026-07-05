@@ -42,6 +42,31 @@ export function factorLabel(id: string): string {
   return FACTOR_LABEL[id] ?? deCamel(id);
 }
 
+// Per-element hover copy: what each waterfall component is AND why it costs what it does. Fed to the row's
+// title so a sighted user can hover any bar and understand it (the original ask: "what it is and why").
+const WATERFALL_HELP: Record<string, string> = {
+  input:
+    'Input: the tokens you send each message (system prompt, the user text, and any carried context), billed at the model input rate.',
+  output:
+    "Output: the tokens the model generates in its replies, billed at the output rate, which is usually several times the input rate. It's why response length matters.",
+  cacheWrite:
+    'Cache writes: the one-time cost to store your system prompt in the cache the first time it is seen. Paid once per cold prefix, not per message.',
+  cacheReads:
+    'Cache reads: the reduced rate for reusing a cached system prompt on later messages. This is where prompt caching saves money.',
+  reasoning:
+    'Reasoning: hidden tokens the model generates to think before it answers, billed at the output rate. They add cost you never see in the reply.',
+};
+export function waterfallHelp(id: string): string {
+  const member = /^member(\d+)$/.exec(id);
+  if (member) return `Agent ${Number(member[1]) + 1}: this agent's share of the crew's monthly cost.`;
+  return WATERFALL_HELP[id] ?? `${waterfallLabel(id)}: a component of your monthly cost.`;
+}
+
+// Per-row hover copy for the tornado: what the swing means and why it matters.
+export function factorHelp(id: string, low: number, high: number, swing: number): string {
+  return `${factorLabel(id)}: if this input is 20% lower or higher, your monthly cost lands between ${money(low)} and ${money(high)}. The ${money(swing)} swing is how much this one input moves the total. A longer bar means your forecast depends more on getting this input right.`;
+}
+
 // Fallback: split camelCase into words and sentence-case the first (e.g. "someNewField" -> "Some new field").
 function deCamel(id: string): string {
   const spaced = id.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase();

@@ -52,7 +52,10 @@ test.describe('help & tooltips', () => {
       [MODE_TABS.crew, 5],    // Model + 4 numbers
     ] as const) {
       await selectMode(page, mode);
-      await expect(page.getByRole('button', { name: 'More information' })).toHaveCount(count);
+      // Scope to the field rows: the result surface now carries its own explanatory HelpTips (confidence, cache,
+      // DoW), so an unscoped page-wide count would race the forecast render and drift. This asserts the intent:
+      // every INPUT field has a help tooltip.
+      await expect(page.locator('.field-label-row').getByRole('button', { name: 'More information' })).toHaveCount(count);
     }
   });
 
@@ -64,5 +67,64 @@ test.describe('help & tooltips', () => {
     await expect(body).toBeHidden(); // collapsed by default
     await summary.click();
     await expect(body).toBeVisible();
+  });
+});
+
+// The original ask: "hover over any item in a chart or graph, or any point on a line, and get an explanation of
+// what it is and why". Every result summary line carries a HelpTip; every chart element carries a hover title.
+test.describe('result & chart hover-explain', () => {
+  test('the confidence line explains warm cache / point estimate on focus', async ({ page }) => {
+    await waitReady(page);
+    const line = page.getByTestId('confidence-line');
+    await expect(line).toBeVisible({ timeout: 8000 });
+    const btn = line.getByRole('button', { name: 'More information' });
+    const tip = line.getByRole('tooltip');
+    await expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await btn.focus();
+    await expect(btn).toHaveAttribute('aria-expanded', 'true');
+    await expect(tip).toHaveClass(/is-open/);
+    await expect(tip).toContainText(/point estimate|warm cache/i);
+    await page.keyboard.press('Escape');
+    await expect(btn).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('every waterfall row has a what+why hover title', async ({ page }) => {
+    await waitReady(page);
+    await selectMode(page, MODE_TABS.chatbot);
+    await page.getByLabel('System prompt').fill('You are a helpful assistant.'); // force a cached prefix so cache rows show
+    // wait out the tokenize + recompute debounce: the cache-write row appearing proves the waterfall re-rendered
+    await expect(page.getByTestId('waterfall-cacheWrite')).toBeVisible({ timeout: 8000 });
+    const rows = page.locator('figure[aria-label="Monthly cost breakdown"] li');
+    const n = await rows.count();
+    expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i++) {
+      await expect(rows.nth(i)).toHaveAttribute('title', /.+:.+/); // "<Label>: <what and why>"
+    }
+    // spot-check the meaning, not just presence
+    await expect(page.locator('li', { has: page.getByTestId('waterfall-output') }))
+      .toHaveAttribute('title', /Output:.*output rate/i);
+  });
+
+  test('every tornado row hover title names the swing and why it matters', async ({ page }) => {
+    await waitReady(page);
+    const rows = page.locator('.tornado__row');
+    await expect(rows.first()).toBeVisible({ timeout: 8000 });
+    const n = await rows.count();
+    expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i++) {
+      await expect(rows.nth(i)).toHaveAttribute('title', /swing is how much this one input moves the total/i);
+    }
+  });
+
+  test('each agent step point carries a per-point hover title', async ({ page }) => {
+    await waitReady(page);
+    await selectMode(page, MODE_TABS.agent);
+    const circles = page.locator('figure[aria-label*="agent step"] circle');
+    await expect(circles.first()).toBeAttached({ timeout: 8000 });
+    const n = await circles.count();
+    expect(n).toBeGreaterThan(1);
+    for (let i = 0; i < n; i++) {
+      await expect(circles.nth(i).locator('title')).toContainText(/Step \d+:/);
+    }
   });
 });

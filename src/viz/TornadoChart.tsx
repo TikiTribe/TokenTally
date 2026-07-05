@@ -2,7 +2,7 @@
 // SVG (unreadable to sighted users) into a labeled diverging-bar chart: readable factor names, a baseline at
 // the current cost, a bar from the low to the high cost on a shared dollar scale, the swing shown as text,
 // and a hover title. A visually-hidden data table stays as a redundant screen-reader aid. Owner: TokenTally UI.
-import { money, factorLabel } from '@/ui/format';
+import { money, factorLabel, factorHelp } from '@/ui/format';
 import type { TornadoBar } from '@/optimization';
 
 export function TornadoChart(props: { bars: TornadoBar[]; central: number }): JSX.Element | null {
@@ -28,7 +28,7 @@ export function TornadoChart(props: { bars: TornadoBar[]; central: number }): JS
               <li
                 key={b.factor}
                 className="tornado__row"
-                title={`${name}: ${money(b.low)} to ${money(b.high)} as this input swings ±20% (swing ${money(b.swing)})`}
+                title={factorHelp(b.factor, b.low, b.high, b.swing)}
               >
                 <span className="tornado__name">{name}</span>
                 <span className="tornado__track" aria-hidden="true">
