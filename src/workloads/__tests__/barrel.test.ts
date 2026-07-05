@@ -1,4 +1,4 @@
-// P1-A23: lock the Phase-2 import contract — every intended public symbol must be reachable from the barrel
+// P1-A23: lock the Phase-2 import contract - every intended public symbol must be reachable from the barrel
 // (tsc catches a misnamed re-export but NOT an omitted one).
 import { describe, it, expect } from 'vitest';
 import * as workloads from '@/workloads';

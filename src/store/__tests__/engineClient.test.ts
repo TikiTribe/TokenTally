@@ -21,7 +21,9 @@ let perChar: ModelRecord | undefined;
 beforeAll(() => {
   loadRegistry(registrySnapshot as unknown as RegistrySnapshot);
   const chat = listByMode('chat');
-  perToken = chat.find((m) => m.billingUnit === 'per_token')!;
+  // A real, PRICED per-token model (the catalog now includes some $0/free per-token entries; the test's
+  // intent is "a real model with real pricing yields a positive forecast").
+  perToken = chat.find((m) => m.billingUnit === 'per_token' && m.inputPrice > 0 && m.outputPrice > 0)!;
   perChar = chat.find((m) => m.billingUnit === 'per_character');
 });
 

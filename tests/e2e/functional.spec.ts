@@ -1,4 +1,4 @@
-// Phase 4: headed functional acceptance — drives EVERY user-facing function in a real browser under the
+// Phase 4: headed functional acceptance - drives EVERY user-facing function in a real browser under the
 // served CSP. Complements the CSP/egress/a11y specs (which assert no violations); this asserts the features
 // actually work end to end.
 import { test, expect, type Page } from '@playwright/test';

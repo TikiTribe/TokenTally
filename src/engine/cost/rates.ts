@@ -26,7 +26,7 @@ export function effectiveOutputRate(model: ModelRecord, tokens: number): number 
   return tier !== null && tier.outputPrice !== null ? tier.outputPrice : model.outputPrice;
 }
 
-// C8: read is null when the model exposes a write rate but no usable read rate — the cost core must
+// C8: read is null when the model exposes a write rate but no usable read rate - the cost core must
 // never treat that as a free read.
 export function effectiveCacheRates(
   model: ModelRecord,

@@ -44,7 +44,7 @@ describe('App shell (calculator view)', () => {
 
   it('loads the pinned pricing registry and shows the provenance stamp', async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/Pricing data as of 2025-09-01/)).toBeInTheDocument(), { timeout: 5000 });
+    await waitFor(() => expect(screen.getByText(/Pricing data as of 2026-07-03/)).toBeInTheDocument(), { timeout: 5000 });
     // P2-A22: the price-provenance disclaimer is present in the snapshot stamp (scoped to that landmark).
     const stamp = screen.getByRole('complementary', { name: /pricing data provenance/i });
     expect(within(stamp).getByText(/not independently verified against/i)).toBeInTheDocument();

@@ -15,7 +15,7 @@ describe('resolveTokenizer (B2 oracle-driven)', () => {
     expect(resolveTokenizer('text-davinci-003').encoding).toBe('p50k_base');
   });
 
-  it('B2: fixes the premortem misroutes — babbage-002->r50k, gpt-4.5-preview->o200k', () => {
+  it('B2: fixes the premortem misroutes - babbage-002->r50k, gpt-4.5-preview->o200k', () => {
     expect(resolveTokenizer('babbage-002').encoding).toBe('r50k_base'); // NOT p50k
     expect(resolveTokenizer('gpt-4.5-preview').encoding).toBe('o200k_base'); // NOT cl100k
     expect(resolveTokenizer('davinci').encoding).toBe('r50k_base');
@@ -44,7 +44,7 @@ describe('resolveTokenizer (B2 oracle-driven)', () => {
     expect(r.flagForReview).toBe(false);
   });
 
-  it('routes open families to the transformers engine (not flagged — known family)', () => {
+  it('routes open families to the transformers engine (not flagged - known family)', () => {
     const r = resolveTokenizer('meta-llama/llama-3-8b-instruct');
     expect(r.engine).toBe('transformers');
     expect(r.family).toBe('llama');

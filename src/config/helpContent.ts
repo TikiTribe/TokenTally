@@ -13,15 +13,15 @@ export const MODEL_HELP =
 export const FIELD_HELP: Record<string, string> = {
   // Chatbot
   'chatbot.systemPrompt':
-    'Your bot’s fixed instructions, sent on every turn. This is the cacheable prefix and the single biggest cost lever: with prompt caching, turns after the first read it at a steep discount. Paste the real text — it is tokenized live in your browser and never uploaded. ' + TOKEN_CONVERSION,
+    'Your bot’s fixed instructions, sent on every turn. This is the cacheable prefix and the single biggest cost lever: with prompt caching, turns after the first read it at a steep discount. Paste the real text. It is tokenized live in your browser and never uploaded. ' + TOKEN_CONVERSION,
   'chatbot.avgUserMessageTokens':
     'Typical length of one user message. ~1.3 tokens/word (a 40-word question ≈ 50 tokens). Drives per-turn input cost.',
   'chatbot.avgResponseTokens':
-    'Typical length of the bot’s reply. Output tokens cost 3–4× input on most models, so this is a large lever. A 150-word answer ≈ 200 tokens.',
+    'Typical length of the bot’s reply. Output tokens cost 3 to 4× input on most models, so this is a large lever. A 150-word answer ≈ 200 tokens.',
   'chatbot.turnsPerConversation':
     'Back-and-forth exchanges in one conversation. Later turns re-send the accumulated context, so total cost grows faster than linearly with turns.',
   'chatbot.conversationsPerMonth':
-    'Total conversations per month. Multiplies everything below. Usually the top sensitivity factor — see the tornado chart on the result.',
+    'Total conversations per month. Multiplies everything below. Usually the top sensitivity factor. See the tornado chart on the result.',
   'chatbot.contextStrategy':
     'How much prior conversation is re-sent each turn: Minimal 50, Moderate 150, Full 300 tokens/turn. More context means better continuity but more input cost on every turn.',
   // Prompt / Batch
@@ -37,11 +37,11 @@ export const FIELD_HELP: Record<string, string> = {
     'Turns per call if you loop the model (1 = single-shot). Each extra turn re-sends the accumulated context.',
   // Agent
   'agent.preset':
-    'Seed defaults for common agent frameworks (LangChain, CrewAI, AutoGen, LlamaIndex). It is only a starting point — every number below stays editable.',
+    'Seed defaults for common agent frameworks (LangChain, CrewAI, AutoGen, LlamaIndex). It is only a starting point. Every number below stays editable.',
   'agent.toolSchemaTokens':
-    'Tokens in your tool/function definitions, re-sent (and cached) every step. A stable cached prefix — larger schemas cost more on every step.',
+    'Tokens in your tool/function definitions, re-sent (and cached) every step. A stable cached prefix, so larger schemas cost more on every step.',
   'agent.stepsPerRun':
-    'Tool-call iterations per run. Each step re-sends the growing observation history, so cost accumulates across steps — see the per-step chart on the result.',
+    'Tool-call iterations per run. Each step re-sends the growing observation history, so cost accumulates across steps. See the per-step chart on the result.',
   'agent.observationGrowthPerStep':
     'Tokens each tool result adds to the context, then re-sent on every later step. This super-linear growth is why long agent loops get expensive fast.',
   'agent.actionOutputTokens':
@@ -59,7 +59,7 @@ export const FIELD_HELP: Record<string, string> = {
     'Total crew runs per month.',
   // Denial of Wallet
   'dow.attackerRequestsPerMonth':
-    'Assumed hostile request volume per month. A defensive planning input — it bounds YOUR worst-case bill; it is not for planning an attack.',
+    'Assumed hostile request volume per month. A defensive planning input. It bounds YOUR worst-case bill and is not for planning an attack.',
   'dow.retryCeiling':
     'Worst-case forced-retry multiplier (minimum 1). Model a bug or adversary that retries each request several times.',
   'dow.fallbackInputTokens':
@@ -79,7 +79,7 @@ export const MODE_EXPLAINER: Record<string, { title: string; body: string }> = {
   chatbot: {
     title: 'How chatbot cost is modeled',
     body:
-      'Cost = first turn + (later turns × (turns − 1)), multiplied by conversations/month. Your system prompt is a cacheable prefix: with caching, later turns read it cheaply — the main savings lever. Context accumulates each turn per your context strategy. The result shows a central estimate, a conservative “no warm cache” upper bound, a per-component breakdown, and a sensitivity (tornado) chart.',
+      'Cost = first turn + (later turns × (turns − 1)), multiplied by conversations/month. Your system prompt is a cacheable prefix: with caching, later turns read it cheaply, which is the main savings lever. Context accumulates each turn per your context strategy. The result shows a central estimate, a conservative “no warm cache” upper bound, a per-component breakdown, and a sensitivity (tornado) chart.',
   },
   prompt: {
     title: 'How batch / prompt cost is modeled',
@@ -99,6 +99,6 @@ export const MODE_EXPLAINER: Record<string, { title: string; body: string }> = {
   denial_of_wallet: {
     title: 'What Denial of Wallet estimates',
     body:
-      'A DEFENSIVE, opt-in worst-case estimator. It bounds YOUR maximum monthly spend if an adversary fills the maximum context, maxes output, and forces retries — so you can set budget, rate-limit, and output caps. Test only systems you are authorized to test.',
+      'A DEFENSIVE, opt-in worst-case estimator. It bounds YOUR maximum monthly spend if an adversary fills the maximum context, maxes output, and forces retries, so you can set budget, rate-limit, and output caps. Test only systems you are authorized to test.',
   },
 };

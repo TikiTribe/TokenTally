@@ -1,7 +1,7 @@
 // Chatbot workload: conversations of T turns, each turn re-hitting the cached system prompt and carrying
 // linearly accumulating context. Maps to one bursty WarmScenario (spec D6): arrivals = conversations*turns.
 // P1-A6: the within-burst warmth needs a real activeFraction derived from the burst structure
-// (arrivals*avgTurnGap / month) — defaulting it to 1 collapses the within-burst rate to the monthly average
+// (arrivals*avgTurnGap / month) - defaulting it to 1 collapses the within-burst rate to the monthly average
 // and bills turns 2+ as cold (~4x too many writes at SMB volumes). P1-A10: cold onsets are per-prefix, so
 // burstsPerMonth = conversations / K (the engine multiplies by K). P1-A9: per-arrival input is clamped to
 // the context window. Owner: engine. Version: Phase 1.
@@ -25,7 +25,7 @@ export function chatbotForecast(cfg: ChatbotConfig): WorkloadForecast {
   const k = Math.max(1, Math.floor(cfg.distinctSystemPrompts ?? 1));
   const gap = Math.max(0, cfg.avgTurnGapSeconds ?? DEFAULT_TURN_GAP_SECONDS);
 
-  // A6: fraction of wall-clock time a GIVEN prefix is "busy" (in a conversation) — sets the within-burst
+  // A6: fraction of wall-clock time a GIVEN prefix is "busy" (in a conversation) - sets the within-burst
   // rate. Divide by K: each of K distinct prefixes is active only 1/K of the total busy time, so the
   // within-conversation warmth (turns gap-seconds apart) stays K-independent, as physics demands.
   const activeFraction = Math.min(1, (arrivals * gap) / (SECONDS_PER_MONTH * k));

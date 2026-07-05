@@ -5,7 +5,7 @@ import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 // A bare "±5%" accuracy claim (incl. decimal "±5.0%" and prose "±5 percent" variants, ASCII +/-5%), or a
-// "100%" adjacent to test/coverage. NOTE: we deliberately do NOT match a bare "5%" with no ± prefix — that
+// "100%" adjacent to test/coverage. NOTE: we deliberately do NOT match a bare "5%" with no ± prefix - that
 // would false-positive on legitimate mentions (e.g. "a 5% cache hit rate") and on the scoped per-badge copy.
 const BANNED = [
   { re: /±\s?5(?:\.\d)?\s?(%|percent)/i, why: 'unqualified "±5%" accuracy claim (precision is scoped per badge)' },
@@ -28,7 +28,7 @@ export function scanText(name, text) {
 // Only scan + exit as a CLI, not when imported by a test.
 if (import.meta.url === `file://${process.argv[1]}`) {
   const offenders = [];
-  // P2-A17: also scan the launch-facing docs (explicit allowlist — NOT every *.md, which would pull in stale
+  // P2-A17: also scan the launch-facing docs (explicit allowlist - NOT every *.md, which would pull in stale
   // internal notes and flood the gate).
   for (const doc of ['index.html', 'README.md', 'DEPLOYMENT.md']) {
     if (existsSync(doc)) offenders.push(...scanText(doc, readFileSync(doc, 'utf8')));
@@ -39,14 +39,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       for (const e of readdirSync(d)) {
         const p = join(d, e);
         if (statSync(p).isDirectory()) walk(p);
-        // include .map (sourcesContent) and .svg — any text asset the deploy actually serves.
+        // include .map (sourcesContent) and .svg - any text asset the deploy actually serves.
         else if (/\.(html|js|css|txt|json|map|svg)$/.test(e)) offenders.push(...scanText(p, readFileSync(p, 'utf8')));
       }
     };
     walk(dir);
   }
   if (offenders.length > 0) {
-    console.error('assert-honest-claims FAILED — shipped copy makes an unqualified accuracy claim:');
+    console.error('assert-honest-claims FAILED - shipped copy makes an unqualified accuracy claim:');
     for (const o of offenders) console.error('  ' + o);
     process.exit(1);
   }

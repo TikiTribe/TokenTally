@@ -33,7 +33,7 @@ function sanePrice(v: number | null, unit: BillingUnit): boolean {
 
 export function detectBillingUnit(e: RawEntry): BillingUnit {
   // A5: per_character wins when present (Vertex's real billing unit; gemini-1.5-pro and
-  // medlm carry both a per-character and a per-token rate — the per-character rate is billed).
+  // medlm carry both a per-character and a per-token rate - the per-character rate is billed).
   if (num(e.input_cost_per_character) !== null) return 'per_character';
   if (num(e.input_cost_per_second) !== null && num(e.input_cost_per_token) === null) return 'per_second';
   if (num(e.input_dbu_cost_per_token) !== null && num(e.input_cost_per_token) === null) return 'dbu';

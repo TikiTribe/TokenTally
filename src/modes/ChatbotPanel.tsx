@@ -17,7 +17,7 @@ export default function ChatbotPanel(): JSX.Element {
     <div className="card">
       <ModeExplainer mode="chatbot" />
       <ModelSelector mode="chatbot" help={MODEL_HELP} />
-      <TokenizedTextArea label="System prompt" fieldId="chatbot.systemPrompt" modelId={modelId} value={i.systemPromptText} onChange={(v) => patch('chatbot', { systemPromptText: v })} hint="Cached prefix — the caching value lever" help={FIELD_HELP['chatbot.systemPrompt']} />
+      <TokenizedTextArea label="System prompt" fieldId="chatbot.systemPrompt" modelId={modelId} value={i.systemPromptText} onChange={(v) => patch('chatbot', { systemPromptText: v })} hint="Cached prefix (the caching value lever)" help={FIELD_HELP['chatbot.systemPrompt']} />
       <NumberField label="Avg user message (tokens)" value={i.avgUserMessageTokens} onChange={(v) => patch('chatbot', { avgUserMessageTokens: v })} help={FIELD_HELP['chatbot.avgUserMessageTokens']} />
       <NumberField label="Avg response (tokens)" value={i.avgResponseTokens} onChange={(v) => patch('chatbot', { avgResponseTokens: v })} help={FIELD_HELP['chatbot.avgResponseTokens']} />
       <NumberField label="Turns per conversation" value={i.turnsPerConversation} onChange={(v) => patch('chatbot', { turnsPerConversation: v })} help={FIELD_HELP['chatbot.turnsPerConversation']} />

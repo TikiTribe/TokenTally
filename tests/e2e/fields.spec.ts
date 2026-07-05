@@ -1,4 +1,4 @@
-// FIELD VALIDATION — every field with hostile/edge inputs (0, negative, empty, huge). Asserts the documented
+// FIELD VALIDATION - every field with hostile/edge inputs (0, negative, empty, huge). Asserts the documented
 // clamps hold, nothing renders NaN/Infinity/negative, and the "never a silent $0" invariant: a real per-token
 // forecast may legitimately show $0 for zero volume, but disabled/unmodeled states show an honest note instead.
 import { test, expect } from '@playwright/test';

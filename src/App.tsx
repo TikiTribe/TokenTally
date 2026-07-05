@@ -117,7 +117,7 @@ function App(): JSX.Element {
         </nav>
 
         <main id="main" className="app-main">
-          <h1 className="sr-only">TokenTally — LLM cost calculator</h1>
+          <h1 className="sr-only">TokenTally - LLM cost calculator</h1>
           <section role="tabpanel" id={`panel-${mode}`} aria-labelledby={`tab-${mode}`}>
             <Suspense fallback={<div className="card">Loading…</div>}>
               <Panel />

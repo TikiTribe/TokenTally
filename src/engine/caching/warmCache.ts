@@ -1,6 +1,6 @@
 // Closed-form cross-run warm cache (spec §5.3). Pure math; no Date.now(). Warmth is a probability in
 // [0,1]: the memoryless renewal kernel p_warm = 1 - e^(-rate·T) is the probability the prior
-// inter-arrival for a prefix fell within the TTL (assumes Poisson/independent arrivals — see
+// inter-arrival for a prefix fell within the TTL (assumes Poisson/independent arrivals - see
 // cost-core-notes). C5: a finite-input firewall so a hostile/empty numeric never leaks NaN/Infinity.
 // Owner: TokenTally engine. Version: 0C.
 import { SECONDS_PER_MONTH } from '@/engine/caching/policy';
@@ -37,7 +37,7 @@ export function archetypeARange(rateS: number, tEffS: number): WarmthRange {
 
 // C2 (corrected per review): the burst onsets are GUARANTEED-cold arrivals (each starts a burst after
 // an idle gap ≫ TTL); the remaining within-burst arrivals warm at p_warm. A cache write happens at most
-// once per arrival, so total writes are capped at arrivals — the earlier `arrivals·(1-p) + onsets·K`
+// once per arrival, so total writes are capped at arrivals - the earlier `arrivals·(1-p) + onsets·K`
 // both double-counted the onsets and could exceed arrivals (making the central cost exceed the
 // conservative p_warm=0 reference and the "up to" saving go negative).
 export function writesPerMonth(lambdaPerMonth: number, k: number, pWarm: number, onsets = 0): number {

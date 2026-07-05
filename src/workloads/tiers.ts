@@ -1,8 +1,8 @@
 // P1-A7: per-tier-band pricing for accumulating context. `effectiveInputRate` is a STEP function of
 // (prefix + perArrivalInput), so folding accumulation to a single mean mis-prices a workload whose context
 // straddles a 128k/200k price tier (DS2 worked a 41.5% understatement). This module partitions the `units`
-// accumulation levels (input_k = base + (k-1)*growth) into contiguous bands that share one tier — analytic,
-// O(tiers) not O(units), so a hostile stepsPerRun cannot make it loop unboundedly — and prices the
+// accumulation levels (input_k = base + (k-1)*growth) into contiguous bands that share one tier - analytic,
+// O(tiers) not O(units), so a hostile stepsPerRun cannot make it loop unboundedly - and prices the
 // accumulating input/output/reasoning bars exactly per band. The warm-cache PREFIX cost stays with
 // monthlyWarmCost (priced at the mean tier; a second-order effect). Pure. Owner: engine. Version: Phase 1.
 import { tierFor, effectiveInputRate, effectiveOutputRate } from '@/engine/cost/rates';

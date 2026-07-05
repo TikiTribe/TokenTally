@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { breakEvenWarmth, breakEvenArrivals } from '@/engine/caching/breakEven';
 
-describe('break-even (§5.3 W2, CORRECTED per C1 — incremental write penalty)', () => {
+describe('break-even (§5.3 W2, CORRECTED per C1 - incremental write penalty)', () => {
   it('p_warm* = (cacheWrite-input)/(cacheWrite-cacheRead) for Claude-Sonnet-like rates', () => {
-    // 0.75/3.45 = 0.217391 — NOT the spec-literal 0.581395
+    // 0.75/3.45 = 0.217391 - NOT the spec-literal 0.581395
     expect(breakEvenWarmth(3.0, 0.3, 3.75)).toBeCloseTo(0.217391, 6);
   });
   it('solves the corrected break-even arrivals for T=300, K=1', () => {

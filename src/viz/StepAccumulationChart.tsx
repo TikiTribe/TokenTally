@@ -1,5 +1,5 @@
 // Phase 2D agent step-accumulation chart (hand-rolled SVG). Plots per-step cost from WorkloadForecast.steps
-// VERBATIM (matches the engine — the step dollars foot to the headline for cache-null models, P2-A1/A11).
+// VERBATIM (matches the engine - the step dollars foot to the headline for cache-null models, P2-A1/A11).
 // Renders nothing when steps is null (chatbot/prompt). CSP-safe (SVG attrs only), with a data-table
 // alternative. Owner: TokenTally UI. Version: Phase 2D.
 import { VizFigure } from '@/viz/vizA11y';

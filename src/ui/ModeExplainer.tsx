@@ -1,4 +1,4 @@
-// Collapsible "How this works" explainer shown at the top of each mode panel. Plain <details>/<summary> —
+// Collapsible "How this works" explainer shown at the top of each mode panel. Plain <details>/<summary> -
 // no JS, keyboard-accessible natively, CSP-safe. Owner: TokenTally UI. Version: help-1.
 import { MODE_EXPLAINER } from '@/config/helpContent';
 

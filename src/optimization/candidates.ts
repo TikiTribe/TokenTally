@@ -1,5 +1,5 @@
 // Candidate transforms for the optimizer. Each takes the workload base and yields zero or more altered
-// configs plus a label/rationale; optimize() prices each and keeps the ones that strictly save. Pure — no
+// configs plus a label/rationale; optimize() prices each and keeps the ones that strictly save. Pure - no
 // global registry read (deployments are passed in, P1-A21). Dynamic field writes go through an allowlist +
 // dangerous-key guard (P1-A28) so a future Phase-3 import path cannot drive a __proto__/constructor write.
 // Crew is intentionally excluded (P1-A22: optimizing a crew = optimizing each member, composed in Phase 2).

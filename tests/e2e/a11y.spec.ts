@@ -1,4 +1,4 @@
-// P2 (2E): WCAG AA verification with a same-origin vendored axe (no CDN — CSP forbids it; @axe-core/playwright
+// P2 (2E): WCAG AA verification with a same-origin vendored axe (no CDN - CSP forbids it; @axe-core/playwright
 // injects axe via the debugger, which bypasses the page CSP). Scans the shell + every mode in BOTH themes and
 // fails on any serious/critical WCAG 2.0/2.1 A/AA violation, served under the real vercel.json CSP.
 import { test, expect, type Page } from '@playwright/test';

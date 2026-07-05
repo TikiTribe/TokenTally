@@ -1,7 +1,7 @@
 // D16: the cache policy constants (WRITE_MULT, T_EFF) are UNVERIFIED assumptions that drift as providers
 // reprice. This deterministic test validates POLICY_REVERIFIED's format and guards against a rollback to a
 // stale date; the LIVE "is it > N days old NOW" staleness gate is scripts/ci/assert-policy-fresh.mjs (a CI
-// script that may read the real date — engine code may not use Date.now()).
+// script that may read the real date - engine code may not use Date.now()).
 import { describe, it, expect } from 'vitest';
 import { POLICY_REVERIFIED, POLICY_VERSION } from '@/engine/caching/policy';
 

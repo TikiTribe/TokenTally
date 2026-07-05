@@ -5,7 +5,7 @@
 //
 // This harness validates the MECHANICS. A real promotion (markFamilyExact) must be driven by cases
 // carrying real capture provenance (SpotCheckCase.capturedAt/endpoint/apiModelSnapshot/rawUsage);
-// numbers must NEVER be edited toward the tool's own output — reconcile only by re-capturing from the
+// numbers must NEVER be edited toward the tool's own output - reconcile only by re-capturing from the
 // API or fixing the wrapper constants.
 import type { SpotCheckCase, SpotCheckResult } from '@/types/tokenizer';
 

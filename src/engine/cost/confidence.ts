@@ -1,7 +1,7 @@
 // Confidence-range composition (spec §5.4, C4). Composes a directional systematic tokenizer-bias band
 // with an independent input-variance band into an honest interval. Rules: (1) both bands null -> a
 // point estimate labeled unmodeled (never a fabricated interval); (2) the tokenizer band is honored
-// AS GIVEN (already directional from 0B — not symmetrized); (3) the systematic and independent bands
+// AS GIVEN (already directional from 0B - not symmetrized); (3) the systematic and independent bands
 // add, with any multiple independent sources quadrature-combined by the caller before this call;
 // (4) the low bound is clamped to >= 0 (never a negative dollar cost); (5) NaN-safe. Owner: engine. 0C.
 import type { ConfidenceRange } from '@/types/engine';

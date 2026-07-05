@@ -1,8 +1,8 @@
 // Linear context accumulation. Unit k (1-indexed) holds base + (k-1)*growth tokens. Because the cost core
 // is linear in per-arrival tokens WITHIN a single price tier, the monthly input-token dollars from feeding
-// the MEAN equal those from summing every unit — so each workload stays a single WarmScenario (spec D6).
+// the MEAN equal those from summing every unit - so each workload stays a single WarmScenario (spec D6).
 // `total` is the token-conservation oracle for the reconciliation tests. (Across a 128k/200k tier boundary
-// the mean is NOT exact — see tiers.ts / P1-A7.) Pure; hostile inputs clamp to finite >= 0.
+// the mean is NOT exact - see tiers.ts / P1-A7.) Pure; hostile inputs clamp to finite >= 0.
 // Owner: TokenTally engine. Version: Phase 1.
 const nn = (x: number, d = 0): number => (Number.isFinite(x) && x >= 0 ? x : d);
 

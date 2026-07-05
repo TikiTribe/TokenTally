@@ -27,7 +27,7 @@ export function accuracyNoteFor(model: ModelRecord, band: TokenizerBand, assumpt
       break;
   }
   // P1-A17: preset-seeded inputs are unvalidated defaults regardless of the tokenizer tier.
-  return assumptionsSource ? `${base}; inputs are ${assumptionsSource} — tune to your workload` : base;
+  return assumptionsSource ? `${base}; inputs are ${assumptionsSource} - tune to your workload` : base;
 }
 
 export function disabledForecast(kind: WorkloadKind): WorkloadForecast {

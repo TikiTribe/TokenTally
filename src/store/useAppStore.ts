@@ -27,7 +27,7 @@ const DEFAULT_INPUTS: ModeInputs = {
 };
 
 // A safe, present, cacheable per_token default; a wrong key degrades to "select a model" (never $0), so an
-// imprecise default is harmless — the ModelSelector populates real options once the registry is ready.
+// imprecise default is harmless - the ModelSelector populates real options once the registry is ready.
 const DEFAULT_SELECTION_KEY: ModelSelection = { canonicalId: 'gpt-4o', deployment: 'openai' };
 const DEFAULT_SELECTION: Record<Mode, ModelSelection> = {
   chatbot: { ...DEFAULT_SELECTION_KEY }, prompt: { ...DEFAULT_SELECTION_KEY }, agent: { ...DEFAULT_SELECTION_KEY },

@@ -16,7 +16,7 @@ const money = (n: number): string => `$${n.toLocaleString(undefined, { maximumFr
 function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoBar[] }): JSX.Element {
   const c = f.cost;
   if (!c.applicable) {
-    return <p style={{ color: 'var(--text-muted)' }}>{f.accuracyNote}</p>; // non-per_token etc — honest note, not $0
+    return <p style={{ color: 'var(--text-muted)' }}>{f.accuracyNote}</p>; // non-per_token etc - honest note, not $0
   }
   const band = c.confidence;
   return (
@@ -26,8 +26,8 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
       </output>
       <p data-testid="confidence-line" style={{ margin: '0.25rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
         {band.unmodeled
-          ? 'Point estimate; variance unmodeled.'
-          : `Range ${money(band.low)} – ${money(band.high)} · conservative (no warm cache) ${money(c.conservativeTotal)}`}
+          ? 'Point estimate. Variance unmodeled.'
+          : `Range ${money(band.low)} to ${money(band.high)} · conservative (no warm cache) ${money(c.conservativeTotal)}`}
       </p>
       <p><span className="badge badge-estimate" data-testid="accuracy-badge">{f.accuracyNote}</span></p>
       {/* §13 cut line: the cross-run warm-cache view + break-even. */}
@@ -50,13 +50,13 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
 }
 
 function DowResult({ r }: { r: DenialOfWalletResult }): JSX.Element {
-  // P2-A9/A20: never a silent $0 — disabled/unmodeled/zero renders the honest note.
+  // P2-A9/A20: never a silent $0 - disabled/unmodeled/zero renders the honest note.
   if (!r.enabled || r.confidence.unmodeled || r.worstCaseMonthly === 0) {
     return <p style={{ color: 'var(--text-muted)' }}>{r.note}</p>;
   }
   return (
     <div>
-      {/* F-SEC-2/P2-A20: the guardrail travels WITH the figure — disclaimer + VDP link render before the number,
+      {/* F-SEC-2/P2-A20: the guardrail travels WITH the figure - disclaimer + VDP link render before the number,
           not only in the (unmountable) input panel. */}
       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{r.disclaimer}</p>
       <p style={{ fontSize: '0.85rem' }}>

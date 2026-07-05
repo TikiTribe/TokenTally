@@ -1,5 +1,5 @@
 // Accessible, CSP-safe help tooltip. No inline scripts (script-src 'self'): all handlers are React synthetic
-// events + a document ESC/pointer listener in a useEffect. WCAG 2.1 SC 1.4.13 compliant — shows on BOTH hover
+// events + a document ESC/pointer listener in a useEffect. WCAG 2.1 SC 1.4.13 compliant - shows on BOTH hover
 // and focus, is dismissable (ESC), and is hoverable/persistent. Visibility is a single source of truth:
 // open = hover || focus, so moving the mouse away never dismisses a focus-opened tip, and a short close delay
 // bridges the gap between the button and the floating bubble so a pointer user can move onto the content

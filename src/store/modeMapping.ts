@@ -67,7 +67,7 @@ export function mapCrew(i: CrewInputs, model: ModelRecord, snapshotVersion: stri
     observationGrowthPerStep: 300, actionOutputTokens: 120, stepsPerRun: i.stepsPerMember,
     runsPerMonth: i.runsPerMonth, snapshotVersion,
   };
-  // Review fix (#3): clamp to the engine's cap BEFORE Array.from — a hostile memberCount (e.g. 1e9) would
+  // Review fix (#3): clamp to the engine's cap BEFORE Array.from - a hostile memberCount (e.g. 1e9) would
   // otherwise hang the main thread (or RangeError) building millions of objects crewForecast then discards.
   const count = Math.min(MAX_CREW_MEMBERS, Math.max(1, Math.floor(i.memberCount) || 1));
   return {

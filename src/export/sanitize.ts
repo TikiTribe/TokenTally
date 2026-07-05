@@ -8,7 +8,7 @@ const NEEDS_QUOTING = /[",\n\r]/;
 export function sanitizeForCSV(value: string | number): string {
   let s = String(value);
   // Neutralize a formula/control-char lead by prefixing a literal apostrophe (kept inside the quotes if the
-  // field is later wrapped) — a spreadsheet then renders the cell as text, not a formula.
+  // field is later wrapped) - a spreadsheet then renders the cell as text, not a formula.
   if (INJECTION_START.test(s)) s = `'${s}`;
   // Escape embedded double-quotes ALWAYS (not only when the field is wrapped).
   s = s.replace(/"/g, '""');

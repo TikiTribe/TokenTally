@@ -27,7 +27,7 @@ describe('heuristicEstimate (B5: error band + char-class awareness)', () => {
     expect(e.count).toBeLessThan(20);
   });
 
-  it('does NOT under-count CJK — count exceeds chars/4 and the band widens + flags (B5)', () => {
+  it('does NOT under-count CJK - count exceeds chars/4 and the band widens + flags (B5)', () => {
     const cjk = '你好世界你好世界你好世界你好世界'; // 16 CJK chars, no spaces
     const e = heuristicEstimate(cjk, 'unknown');
     expect(e.count).toBeGreaterThan(cjk.length / 4); // denser than the Latin 4-chars/token rule

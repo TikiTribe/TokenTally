@@ -35,7 +35,7 @@ const within1pct = (actual: number, expected: number): boolean =>
   Math.abs(actual - expected) / expected < 0.01;
 
 describe('monthlyWarmCost integration (§8 hand-verified, C10/C12/C13)', () => {
-  it('Scenario A: dense Claude breakpoint cache — total within 1% of the hand calc ($287.13)', () => {
+  it('Scenario A: dense Claude breakpoint cache - total within 1% of the hand calc ($287.13)', () => {
     // p_warm = 1-e^-5 = 0.9932621; writes = 43200*0.0067379 = 291.08; warm = 42908.92.
     // cacheWrite 291.08*2000*3.75/1e6 = 2.1831; cacheReads 42908.92*2000*0.3/1e6 = 25.7454;
     // input 43200*500*3/1e6 = 64.8; output 43200*300*15/1e6 = 194.4; total = 287.128.

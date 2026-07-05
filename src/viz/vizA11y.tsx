@@ -1,6 +1,6 @@
 // Phase 2D shared chart a11y wrapper. Every hand-rolled SVG chart is decorative (aria-hidden) and paired
 // with a visually-hidden data table that IS the accessible representation (WCAG: charts need a text
-// alternative + keyboard-reachable data). No injected styles — SVG attributes only, so it is CSP-safe under
+// alternative + keyboard-reachable data). No injected styles - SVG attributes only, so it is CSP-safe under
 // style-src 'self'. Owner: TokenTally UI. Version: Phase 2D.
 import type { ReactNode } from 'react';
 

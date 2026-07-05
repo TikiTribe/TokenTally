@@ -1,9 +1,9 @@
 // Shared E2E helpers for the comprehensive suite. Not a *.spec.ts, so Playwright does not run it as a test.
-// Everything drives the REAL rendered UI (built dist/ served under the vercel.json CSP) — no engine imports,
+// Everything drives the REAL rendered UI (built dist/ served under the vercel.json CSP) - no engine imports,
 // so the math assertions validate the shipped pipeline end to end, not a re-import of the same functions.
 import { expect, type Page, type Locator } from '@playwright/test';
 
-// Registry-ready gate: go straight to the calculator view (#calculator) — '/' is now the marketing landing.
+// Registry-ready gate: go straight to the calculator view (#calculator) - '/' is now the marketing landing.
 // The snapshot stamp renders "Pricing data as of …" only once the catalog has loaded.
 export async function waitReady(page: Page): Promise<void> {
   await page.goto('/#calculator');
@@ -29,13 +29,18 @@ export async function setField(page: Page, label: string, value: string | number
   await input.fill(String(value));
 }
 
+// The model picker is a searchable combobox (not a native select): focus, type the id, click the exact option.
 export async function selectModel(page: Page, key: string): Promise<void> {
-  await page.getByLabel('Model', { exact: true }).selectOption(key);
+  const [canonicalId, deployment] = key.split('|');
+  const input = page.getByLabel('Model', { exact: true });
+  await input.click();
+  await input.fill(canonicalId!);
+  await page.getByRole('option', { name: `${canonicalId} (${deployment})`, exact: true }).first().click();
 }
 
 // "$1,234.56" -> 1234.56 ; "$483,840" -> 483840 ; "$0" -> 0
 export function parseMoney(text: string): number {
-  const m = text.match(/\$\s*([\d.,]+)/); // single char class — no nested quantifier (ReDoS-safe)
+  const m = text.match(/\$\s*([\d.,]+)/); // single char class - no nested quantifier (ReDoS-safe)
   if (!m) throw new Error(`no money token in: ${JSON.stringify(text)}`);
   return Number(m[1].replace(/,/g, ''));
 }

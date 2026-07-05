@@ -1,7 +1,7 @@
 // Multi-agent (crew/group chat): sum of per-member agent runs + optional orchestrator + shared-transcript
 // growth (each member re-reads the growing shared transcript, so its per-step context accumulates an extra
 // term). All members run at the crew's runsPerMonth. Costs add across members; the confidence band is the
-// ADDITIVE sum — a conservative fully-correlated upper bound (P1-A30), not a percentile interval (a wider
+// ADDITIVE sum - a conservative fully-correlated upper bound (P1-A30), not a percentile interval (a wider
 // band is the safe honesty error; independent-variance narrowing is a Phase-2 refinement). The member list
 // is capped so a hostile crew size cannot iterate unboundedly (P1-A12). Owner: engine. Version: Phase 1.
 import { agentForecast } from '@/workloads/agent';
@@ -65,7 +65,7 @@ export function crewForecast(cfg: CrewConfig): WorkloadForecast {
     cost,
     arrivalsPerMonth: arrivals,
     accuracyNote:
-      `estimate: crew cost sums per-member forecasts — conservative fully-correlated upper bound` +
+      `estimate: crew cost sums per-member forecasts - conservative fully-correlated upper bound` +
       ` (independent-variance narrowing is a Phase-2 refinement)${cappedNote}`,
     snapshotVersion: cfg.snapshotVersion ?? forecasts[0]?.snapshotVersion ?? 'unknown',
     formula: 'crew: Σ member agent forecasts + orchestrator + shared-transcript growth',

@@ -1,5 +1,5 @@
 // §5.8 permalink: round-trips config, STRIPS prompt text, and DEFENSIVELY rejects hostile decode input
-// (proto-pollution, bad types, oversized) — never spreads untrusted data into state.
+// (proto-pollution, bad types, oversized) - never spreads untrusted data into state.
 import { describe, it, expect } from 'vitest';
 import { encodePermalink, decodePermalink } from '@/store/permalink';
 import type { ModeInputs, ModelSelection, Mode } from '@/store/types';

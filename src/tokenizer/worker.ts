@@ -1,7 +1,7 @@
 // Tokenizer web-worker boundary. The pure message handler is unit-tested; the listener is installed
 // ONLY inside a real worker global. `self instanceof WorkerGlobalScope` is false on the browser main
 // thread (self===window) and in jsdom/node, so importing this module off-worker is a genuine no-op
-// (B4) — the earlier `typeof self.postMessage === 'function'` guard was true on the main thread and
+// (B4) - the earlier `typeof self.postMessage === 'function'` guard was true on the main thread and
 // would have hijacked window.onmessage into a cross-window tokenization oracle. Uses addEventListener,
 // not onmessage=, so it never clobbers another listener. Adapters are registered by the worker
 // bootstrap (bootstrap.ts) in Phase 2; debounce lives at the UI call site, not here.

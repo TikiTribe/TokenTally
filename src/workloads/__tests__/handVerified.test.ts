@@ -1,6 +1,6 @@
 // P1-A8 / spec §8: hand-verified scenarios within 1% of hand math, per workload AND billing unit, plus the
 // cross-workload invariants. These oracles exercise the warm-cache, tier, per_character, and reasoning paths
-// the earlier vacuous (cache:null, tiers:[]) oracle could not — written to fail on A6/A7 regressions.
+// the earlier vacuous (cache:null, tiers:[]) oracle could not - written to fail on A6/A7 regressions.
 import { describe, it, expect } from 'vitest';
 import { chatbotForecast, promptForecast, agentForecast, crewForecast } from '@/workloads';
 import { denialOfWallet } from '@/optimization';

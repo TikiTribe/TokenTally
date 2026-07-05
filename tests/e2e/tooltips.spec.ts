@@ -1,4 +1,4 @@
-// HELP / TOOLTIP behavior — the instructions layer is user-facing, so it is tested too: field tooltips open
+// HELP / TOOLTIP behavior - the instructions layer is user-facing, so it is tested too: field tooltips open
 // on focus + hover, expose their content, dismiss on ESC (WCAG 1.4.13), and the per-mode explainer expands.
 import { test, expect } from '@playwright/test';
 import { waitReady, selectMode, MODE_TABS } from './helpers';
@@ -6,7 +6,7 @@ import { waitReady, selectMode, MODE_TABS } from './helpers';
 test.describe('help & tooltips', () => {
   // NOTE: the closed bubble is sr-only (1x1 clip), so Playwright's bounding-box toBeVisible() reports it
   // "visible" even when closed. The REAL open signal is aria-expanded on the button + the is-open class on the
-  // bubble — assert those so a broken open path actually fails the test.
+  // bubble - assert those so a broken open path actually fails the test.
   test('field tooltip opens on focus, exposes its content, and dismisses on ESC', async ({ page }) => {
     await waitReady(page);
     const row = page.locator('.field-label-row', { hasText: 'Avg response (tokens)' });

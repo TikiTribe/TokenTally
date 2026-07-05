@@ -9,7 +9,7 @@ export interface WarmthRange {
 }
 
 // C4: honest cost interval. `unmodeled: true` means a point estimate with unmodeled variance
-// (low === high === mid) — never a fabricated interval.
+// (low === high === mid) - never a fabricated interval.
 export interface ConfidenceRange {
   low: number;
   mid: number;
@@ -31,8 +31,8 @@ export interface CostWaterfall {
   total: number; // sum of the non-null component costs only
 }
 
-// C3: `quantity` is in the unit's NATIVE denomination — tokens for per_token, CHARACTERS for
-// per_character — so a per-character SKU is not mis-billed on a token count.
+// C3: `quantity` is in the unit's NATIVE denomination - tokens for per_token, CHARACTERS for
+// per_character - so a per-character SKU is not mis-billed on a token count.
 export interface WaterfallBarInput {
   label: string;
   quantity: number;
@@ -62,7 +62,7 @@ export interface WarmCostResult {
   applicable: boolean; // C13: false for non-token billing units (warm-cache modeling opts out)
   warmth: number | WarmthRange | null; // point (breakpoint/storage), range (automatic), or null (n/a)
   centralTotal: number;
-  conservativeTotal: number; // p_warm=0 total — the W6 reference AND the Denial-of-Wallet seam (C10/C12)
+  conservativeTotal: number; // p_warm=0 total - the W6 reference AND the Denial-of-Wallet seam (C10/C12)
   savingsUpTo: { central: number; conservativeReference: number; qualifier: 'up_to' };
   writesPerMonth: number;
   waterfall: CostWaterfall;

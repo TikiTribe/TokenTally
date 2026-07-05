@@ -1,4 +1,4 @@
-/* Landing page styles (LandingPage.tsx) — bold modern SaaS. All colors come from the theme tokens defined in
+/* Landing page styles (LandingPage.tsx) - bold modern SaaS. All colors come from the theme tokens defined in
    index.css, so this adapts to light/dark automatically. CSP-safe (no external assets). */
 .lp {
   --lp-max: 1120px;
@@ -341,7 +341,7 @@
   }
   .lp-final__inner .btn-primary {
     background: #fff;
-    /* Fixed dark indigo (7:1 on white) — NOT var(--brand), which lightens to indigo-400 in dark theme and
+    /* Fixed dark indigo (7:1 on white) - NOT var(--brand), which lightens to indigo-400 in dark theme and
        would drop below AA on this always-white button. */
     color: #4338ca;
     box-shadow: var(--shadow-lg);

@@ -11,7 +11,7 @@ import type { CacheSpec } from '@/types/registry';
 const bSpec = (over: Partial<CacheSpec> = {}): CacheSpec => ({
   archetype: 'breakpoint_ttl',
   cacheReadPerMToken: 0.3,
-  cacheWritePerMToken: 3.75, // = base 3.0 * WRITE_MULT.min5 (1.25) — conforming
+  cacheWritePerMToken: 3.75, // = base 3.0 * WRITE_MULT.min5 (1.25) - conforming
   rateUnavailable: false,
   readUnavailable: false,
   ...over,

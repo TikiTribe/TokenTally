@@ -11,7 +11,7 @@ export function getStoredTheme(): ThemeMode {
     const v = localStorage.getItem(KEY);
     if (v === 'light' || v === 'dark' || v === 'system') return v;
   } catch {
-    // localStorage blocked (private mode / disabled) — fall through to system.
+    // localStorage blocked (private mode / disabled) - fall through to system.
   }
   return 'system';
 }
