@@ -402,8 +402,8 @@
   .combo__opt[aria-selected='true'] {
     font-weight: 600;
   }
-  .combo__empty,
-  .combo__more {
+  .combo__more,
+  .combo__list--msg {
     padding: 0.5rem 0.6rem;
     font-size: 0.82rem;
     color: var(--text-muted);

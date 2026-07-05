@@ -35,5 +35,19 @@ for (const theme of ['light', 'dark'] as const) {
       const v = await seriousViolations(page);
       expect(v, `${theme} / ${mode}: ${JSON.stringify(v)}`).toEqual([]);
     }
+
+    // 3) the OPEN model combobox — the interactive listbox (options, group headers) and the no-match state,
+    // which the settled-UI scan above cannot see (the picker is collapsed at rest).
+    await page.getByRole('tab', { name: /^Chatbot/ }).click();
+    const model = page.getByLabel('Model', { exact: true });
+    await model.click();
+    await model.fill('claude');
+    await page.waitForTimeout(200);
+    const openV = await seriousViolations(page);
+    expect(openV, `${theme} / combobox open: ${JSON.stringify(openV)}`).toEqual([]);
+    await model.fill('zzz-not-a-real-model'); // no-match: must not leave an option-less listbox
+    await page.waitForTimeout(200);
+    const emptyV = await seriousViolations(page);
+    expect(emptyV, `${theme} / combobox no-match: ${JSON.stringify(emptyV)}`).toEqual([]);
   });
 }

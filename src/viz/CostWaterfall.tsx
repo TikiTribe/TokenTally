@@ -20,7 +20,7 @@ export function CostWaterfall(props: { waterfall: CostWaterfallData }): JSX.Elem
             </span>
             <span data-testid={`waterfall-${c.label}`} style={{ fontSize: '0.85rem', textAlign: 'right' }}>
               {c.cost === null
-                ? `${c.nativeRate ?? '-'} / M ${c.nativeUnit ?? 'unit'}`
+                ? `${c.nativeRate ?? 'n/a'} / M ${c.nativeUnit ?? 'unit'}`
                 : money(c.cost)}
             </span>
           </li>

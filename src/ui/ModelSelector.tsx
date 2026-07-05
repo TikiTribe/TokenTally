@@ -91,11 +91,12 @@ export function ModelSelector(props: { mode: Mode; help?: string }): JSX.Element
     setQuery('');
   };
 
+  const last = Math.max(0, filtered.length - 1); // never negative, so the active index stays valid when empty
   const onKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); if (!open) { setOpen(true); return; } setActive((a) => Math.min(a + 1, filtered.length - 1)); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (!open) { setOpen(true); return; } setActive((a) => Math.min(a + 1, last)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
     else if (e.key === 'Home' && open) { e.preventDefault(); setActive(0); }
-    else if (e.key === 'End' && open) { e.preventDefault(); setActive(filtered.length - 1); }
+    else if (e.key === 'End' && open) { e.preventDefault(); setActive(last); }
     else if (e.key === 'Enter' && open) { e.preventDefault(); const o = filtered[active]; if (o) choose(o); }
     else if (e.key === 'Escape') { setOpen(false); setQuery(''); }
   };
@@ -114,48 +115,48 @@ export function ModelSelector(props: { mode: Mode; help?: string }): JSX.Element
           className="input-field"
           type="text"
           role="combobox"
-          aria-expanded={open}
-          aria-controls={open ? listId : undefined}
+          aria-expanded={open && filtered.length > 0}
+          aria-controls={open && filtered.length > 0 ? listId : undefined}
           aria-autocomplete="list"
           aria-activedescendant={activeId}
           aria-describedby={props.help ? `${inputId}-tip` : undefined}
           autoComplete="off"
           disabled={registryStatus !== 'ready'}
-          placeholder={registryStatus !== 'ready' ? 'Loading models…' : 'Search 2,300+ models…'}
+          placeholder={registryStatus !== 'ready' ? 'Loading models…' : `Search ${all.length.toLocaleString()} models…`}
           value={open ? query : currentLabel}
           onFocus={() => { setOpen(true); setQuery(''); setActive(0); }}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); setActive(0); }}
           onKeyDown={onKeyDown}
         />
-        {open ? (
+        {open && filtered.length > 0 ? (
           <ul id={listId} role="listbox" aria-label="Models" className="combo__list" ref={listRef}>
-            {filtered.length === 0 ? (
-              <li role="presentation" className="combo__empty">No models match “{query}”.</li>
-            ) : (
-              filtered.map((o, i) => {
-                const header = i === 0 || filtered[i - 1]!.vendor !== o.vendor;
-                return (
-                  <li key={o.key} role="presentation">
-                    {header ? <div className="combo__group" aria-hidden="true">{o.vendor}</div> : null}
-                    <div
-                      id={`${listId}-opt-${i}`}
-                      role="option"
-                      aria-selected={o.key === currentKey}
-                      data-active={i === active}
-                      className={`combo__opt${i === active ? ' is-active' : ''}`}
-                      onMouseEnter={() => setActive(i)}
-                      onPointerDown={(e) => { e.preventDefault(); choose(o); }}
-                    >
-                      {o.label}
-                    </div>
-                  </li>
-                );
-              })
-            )}
+            {filtered.map((o, i) => {
+              const header = i === 0 || filtered[i - 1]!.vendor !== o.vendor;
+              return (
+                <li key={o.key} role="presentation">
+                  {header ? <div className="combo__group" aria-hidden="true">{o.vendor}</div> : null}
+                  <div
+                    id={`${listId}-opt-${i}`}
+                    role="option"
+                    aria-selected={o.key === currentKey}
+                    data-active={i === active}
+                    className={`combo__opt${i === active ? ' is-active' : ''}`}
+                    onMouseEnter={() => setActive(i)}
+                    onPointerDown={(e) => { e.preventDefault(); choose(o); }}
+                  >
+                    {o.label}
+                  </div>
+                </li>
+              );
+            })}
             {matches.length > MAX_RESULTS ? (
               <li role="presentation" className="combo__more">Showing {MAX_RESULTS} of {matches.length}. Keep typing to narrow.</li>
             ) : null}
           </ul>
+        ) : null}
+        {/* No-match: a status message (NOT an option-less listbox, which is invalid ARIA) that SR announces. */}
+        {open && filtered.length === 0 ? (
+          <div className="combo__list combo__list--msg" role="status" aria-live="polite">No models match “{query}”.</div>
         ) : null}
       </div>
     </div>

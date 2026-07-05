@@ -34,14 +34,15 @@ test.describe('model combobox (search + groups)', () => {
     await expect(page.getByRole('option', { name: 'claude-fable-5 (anthropic)', exact: true })).toBeVisible();
   });
 
-  test('keyboard: ArrowDown + Enter selects the active option', async ({ page }) => {
+  test('keyboard: type + Enter commits a selection (list closes, input shows the full label)', async ({ page }) => {
     await waitReady(page);
     const input = page.getByLabel('Model', { exact: true });
     await input.click();
-    await input.fill('gpt-4o-mini');
-    await input.press('ArrowDown'); // move onto the first result
+    await input.fill('gpt-4o-mini'); // active = first result
     await input.press('Enter');
-    await expect(input).toHaveValue(/gpt-4o-mini/);
+    // proves a selection happened (vs a no-op that would leave the list open with the raw query as the value):
+    await expect(page.getByRole('listbox', { name: 'Models' })).toBeHidden();
+    await expect(input).toHaveValue(/gpt-4o-mini.*\(.+\)/); // a "name (deployment)" label, not the bare query
   });
 
   test('a no-match query shows an honest empty state', async ({ page }) => {
