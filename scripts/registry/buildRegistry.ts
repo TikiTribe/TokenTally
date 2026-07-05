@@ -72,9 +72,13 @@ async function main(): Promise<void> {
         'Set it (and EXPECTED_SNAPSHOT_SHA256) to a verified upstream commit before building.',
     );
   }
-  // P2-A3: read the VENDORED body from disk (no network); the hash gate below is the supply-chain integrity check.
+  // P2-A3: read the VENDORED body from disk (no network).
   const body = readFileSync(VENDORED_SNAPSHOT, 'utf8');
-  // A4: verify the vendored body against the committed hash before parsing (supply-chain gate).
+  // A4: DEPLOY-TIME integrity gate. This guarantees the shipped artifact derives from exactly the reviewed
+  // bytes: it catches any later divergence between the committed vendor file and the committed constant. It
+  // is NOT a refresh-time defense against a hostile upstream commit (at refresh the constant is derived from
+  // the same freshly-fetched body, so the check is tautological then); that risk rests on SHA-pinning the
+  // upstream commit + human review of the refresh PR.
   const actualSha = createHash('sha256').update(body).digest('hex');
   if (actualSha !== EXPECTED_SNAPSHOT_SHA256) {
     throw new Error(

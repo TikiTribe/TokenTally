@@ -157,16 +157,21 @@ See `SECURITY.md` for complete security documentation.
 
 ## Pricing Data Updates
 
-TokenTally uses a **CSV-driven pricing update system** for quarterly maintenance:
+Pricing is a **pinned, hash-verified snapshot** of LiteLLM's `model_prices_and_context_window.json`, vendored
+into the repo (`scripts/registry/vendor/`) and hash-checked at build time. Nothing is fetched at deploy time,
+so production never depends on a live third-party call and a deleted upstream commit cannot break a deploy.
 
-1. **Edit CSV**: Update `data/pricing-update.csv` with new model pricing (11 columns)
-2. **Run Utility**: Execute `npm run update-pricing` for validation and code generation
-3. **Validation**: 15 validation rules ensure data quality (11 field + 4 business rules)
-4. **Auto-Generate**: Creates `src/config/pricingData.ts` with type-safe TypeScript code
+**Automated monthly refresh.** The `.github/workflows/refresh-pricing.yml` Action runs on the 1st of each
+month (and on demand via "Run workflow"). It re-pins the newest LiteLLM commit, re-vendors + re-hashes the
+file, regenerates `src/config/registry.generated.json`, and **opens a PR** with the model/price deltas. It
+never auto-merges: a human reviews the diff and merges on green CI.
 
-**Data Sources**:
-- **OpenAI**: https://openai.com/api/pricing/ (as of Jan 2025)
-- **Claude**: https://www.anthropic.com/pricing (as of Jan 2025)
+**One-time setup:** add a fine-grained PAT as the repo secret `REFRESH_PAT` (Contents + Pull requests:
+read/write) so the auto-PR triggers CI. Without it the PR still opens, but CI must be kicked off manually.
+
+**Manual refresh:** `node scripts/registry/refresh.mjs` (add `--dry-run` to only check whether an update is
+available). The script warns loudly if a `gpt-4o` anchor price changed, since the hand-computed E2E math
+oracles depend on it and would need a manual update.
 
 Pricing snapshot: **LiteLLM @ 8bb4e624, 2026-07-03** (2,300+ models)
 

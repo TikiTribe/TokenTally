@@ -1,0 +1,72 @@
+# Monthly pricing-catalog refresh. Re-vendors the newest LiteLLM prices file, re-pins + regenerates the
+# committed snapshot, and OPENS A PR (never auto-merges) so a human reviews the model/price deltas. Runs the
+# quick gate (typecheck + unit) before opening the PR; the PR itself runs full CI via branch protection.
+#
+# NOTE: for the PR's CI to run, this must push with a PAT (a PR opened by the default GITHUB_TOKEN does NOT
+# trigger workflows). Add a fine-grained PAT as the repo secret REFRESH_PAT (Contents: read/write, Pull
+# requests: read/write). Without it the PR still opens, but you must push an empty commit to trigger CI.
+#
+# SECURITY: every value derived from the upstream API (commit sha, date) is validated in refresh.mjs, then
+# passed to shell steps only via env: and referenced as quoted "$VARS" (no ${{ }} interpolation inside run:),
+# to avoid workflow command injection.
+name: refresh-pricing
+
+on:
+  schedule:
+    - cron: '0 6 1 * *' # 06:00 UTC on the 1st of each month
+  workflow_dispatch: {} # manual "run now" button
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-pricing
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.REFRESH_PAT || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - id: refresh
+        name: Refresh the pinned snapshot from LiteLLM
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # raise the GitHub API rate limit for the commit lookup
+          REFRESH_BODY_PATH: ${{ runner.temp }}/refresh-pr-body.md
+        run: node scripts/registry/refresh.mjs
+
+      - if: steps.refresh.outputs.changed == 'true'
+        name: Quick gate (typecheck + unit) before opening the PR
+        run: npm run test:ci
+
+      - if: steps.refresh.outputs.changed == 'true'
+        name: Open the refresh PR
+        env:
+          GH_TOKEN: ${{ secrets.REFRESH_PAT || github.token }}
+          R_SHORT: ${{ steps.refresh.outputs.short }}
+          R_DATE: ${{ steps.refresh.outputs.date }}
+          R_ANCHOR: ${{ steps.refresh.outputs.anchor_changed }}
+          BODY_PATH: ${{ runner.temp }}/refresh-pr-body.md
+        run: |
+          set -euo pipefail
+          BRANCH="chore/pricing-refresh-${R_DATE}-${R_SHORT}"
+          git config user.name 'tokentally-refresh[bot]'
+          git config user.email 'tokentally-refresh@users.noreply.github.com'
+          git checkout -b "$BRANCH"
+          git add scripts/registry/buildRegistry.ts scripts/registry/vendor src/config/registry.generated.json
+          git commit -m "chore(pricing): refresh catalog to LiteLLM @ ${R_SHORT} (${R_DATE})"
+          git push -u origin "$BRANCH"
+          TITLE="chore(pricing): monthly catalog refresh (${R_DATE})"
+          if [ "$R_ANCHOR" = "true" ]; then
+            TITLE="$TITLE [ANCHOR PRICE CHANGED - update the E2E oracles]"
+          fi
+          gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"
