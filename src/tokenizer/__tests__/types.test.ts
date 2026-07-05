@@ -28,6 +28,7 @@ describe('tokenizer types (0B amendments)', () => {
       awaitingAdapter: false,
       errorBand: null, // null only for an exact tiktoken content count (B5)
       truncated: false,
+      segments: ['The', ' world', '!'],
     };
     const estimate: TokenCount = {
       count: 100,
@@ -38,6 +39,7 @@ describe('tokenizer types (0B amendments)', () => {
       awaitingAdapter: false,
       errorBand: { relLow: -0.3, relHigh: 0.3 },
       truncated: false,
+      segments: null, // heuristic path exposes no real token pieces
     };
     expect(exact.errorBand).toBeNull();
     expect(estimate.errorBand?.relHigh).toBe(0.3);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tiktokenCount, tiktokenAdapter } from '@/tokenizer/tiktokenAdapter';
+import { tiktokenCount, tiktokenSegments, tiktokenAdapter } from '@/tokenizer/tiktokenAdapter';
 import type { TokenizerResolution } from '@/types/tokenizer';
 
 const res = (over: Partial<TokenizerResolution>): TokenizerResolution => ({
@@ -54,5 +54,21 @@ describe('B9: zero network egress during tokenization', () => {
       g.XMLHttpRequest = saved.XMLHttpRequest;
       g.WebSocket = saved.WebSocket;
     }
+  });
+});
+
+describe('tiktokenSegments (per-token pieces for the token stream)', () => {
+  it('reconstructs the input and has one piece per token (uncapped)', () => {
+    const text = 'The quick brown fox jumps over the lazy dog.';
+    const segs = tiktokenSegments(text, 'cl100k_base', 4000);
+    expect(segs.join('')).toBe(text);
+    expect(segs.length).toBe(tiktokenCount(text, 'cl100k_base'));
+  });
+  it('caps at the requested number of pieces', () => {
+    const long = 'a b c d e '.repeat(200); // ~800 tokens
+    expect(tiktokenSegments(long, 'o200k_base', 400)).toHaveLength(400);
+  });
+  it('empty text yields no pieces', () => {
+    expect(tiktokenSegments('', 'o200k_base', 400)).toEqual([]);
   });
 });

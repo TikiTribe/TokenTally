@@ -26,6 +26,18 @@ export function tiktokenCount(text: string, encoding: TiktokenEncoding): number 
   return encoder(encoding).encode(text).length;
 }
 
+// The per-token text pieces of `text` (first `cap` tokens), for the token-stream visualizer. Decodes each id
+// on its own so the pieces are the real token boundaries; join('') of the uncapped pieces reconstructs the input.
+export function tiktokenSegments(text: string, encoding: TiktokenEncoding, cap: number): string[] {
+  if (text.length === 0 || cap <= 0) return [];
+  const enc = encoder(encoding);
+  const ids = enc.encode(text);
+  const take = Math.min(ids.length, cap);
+  const out: string[] = [];
+  for (let i = 0; i < take; i++) out.push(enc.decode([ids[i]!]));
+  return out;
+}
+
 export const tiktokenAdapter: TokenizerAdapter = {
   engine: 'tiktoken',
   available: true,
@@ -34,5 +46,9 @@ export const tiktokenAdapter: TokenizerAdapter = {
       throw new Error('tiktokenAdapter requires a non-null encoding');
     }
     return tiktokenCount(text, resolution.encoding);
+  },
+  segments(text: string, resolution: TokenizerResolution, cap: number): string[] {
+    if (resolution.encoding === null) return [];
+    return tiktokenSegments(text, resolution.encoding, cap);
   },
 };

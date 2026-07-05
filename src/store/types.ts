@@ -75,6 +75,7 @@ export interface FieldTokenCount {
   badge: string;
   errorBand: { relLow: number; relHigh: number } | null;
   truncated: boolean;
+  segments: string[] | null; // per-token pieces for the token-stream visualizer; null on the heuristic path
 }
 
 export interface ModeInputs {

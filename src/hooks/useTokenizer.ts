@@ -23,6 +23,7 @@ export function useTokenizer(fieldId: string, modelId: string, text: string): vo
           badge: res.badge,
           errorBand: res.errorBand,
           truncated: res.truncated,
+          segments: res.segments,
         });
       });
     }, DEBOUNCE_MS);
