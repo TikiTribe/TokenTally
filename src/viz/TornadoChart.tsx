@@ -35,7 +35,9 @@ export function TornadoChart(props: { bars: TornadoBar[]; central: number }): JS
                   <span className="tornado__baseline" />
                   <span className="tornado__bar" style={{ left: `${left}%`, width: `${width}%` }} />
                 </span>
-                <span className="tornado__swing">±{money(b.swing / 2)}</span>
+                {/* Show the full swing |high - low|, matching the data table and the hover text. Not ±swing/2:
+                    that assumes the baseline is the midpoint of low/high, which fails for non-linear inputs. */}
+                <span className="tornado__swing">{money(b.swing)}</span>
               </li>
             );
           })}
