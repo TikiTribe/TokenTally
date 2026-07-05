@@ -8,6 +8,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { CostWaterfall } from '@/viz/CostWaterfall';
 import { StepAccumulationChart } from '@/viz/StepAccumulationChart';
 import { TornadoChart } from '@/viz/TornadoChart';
+import { CacheWarmthCurveLazy } from '@/viz/chartsLazy';
 import { ExportButtons } from '@/ui/ExportButtons';
 import { HelpTip } from '@/ui/HelpTip';
 import { money } from '@/ui/format';
@@ -85,6 +86,10 @@ function WorkloadResult({ f, tornado }: { f: WorkloadForecast; tornado: TornadoB
       <TornadoChart bars={tornado} central={f.monthlyCost} />
       <Suspense fallback={null}>
         <WhatIfPanel bars={tornado} />
+      </Suspense>
+      {/* Task A2 CSP/first-paint proof: recharts renders under script-src 'self'. Gated to real data + modes in B2. */}
+      <Suspense fallback={null}>
+        <CacheWarmthCurveLazy />
       </Suspense>
       <p data-testid="formula-line" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         Formula: {f.formula} · priced against snapshot {f.snapshotVersion.slice(0, 8)}

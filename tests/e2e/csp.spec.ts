@@ -39,6 +39,10 @@ test('driving the worker + engine (type + mode switch) raises no CSP violation',
   await page.getByRole('tab', { name: /^Agent$/ }).click();
   await expect(page.getByTestId('headline-cost')).toContainText('/ month', { timeout: 10000 });
 
+  // P2-A16 proof: the recharts chart (lazy `charts` chunk) must actually RENDER under script-src 'self' before
+  // we assert zero violations - a recharts <path> in the svg proves the library ran, not just that it loaded.
+  await expect(page.locator('figure[role="img"][aria-label*="Cache warmth"] svg path').first()).toBeVisible({ timeout: 10000 });
+
   const v = await violations(page);
   expect(v, `CSP violations: ${JSON.stringify(v)}`).toEqual([]);
 });
