@@ -140,10 +140,17 @@ jobs:
           set -euo pipefail
 
           # `gh pr checks --watch` errors out if no check has been registered yet, so wait for one to appear.
+          CHECKS_UP=false
           for _ in $(seq 1 20); do
-            if gh pr checks "$PR" >/dev/null 2>&1; then break; fi
+            if gh pr checks "$PR" >/dev/null 2>&1; then CHECKS_UP=true; break; fi
             sleep 15
           done
+          if [ "$CHECKS_UP" != "true" ]; then
+            echo "::error::No check ever registered on PR #$PR after 5 minutes. Expected the App-token PR to" \
+                 "fire ci.yml via pull_request - check that the workflow is enabled and its triggers are intact." \
+                 "PR #$PR is open and needs a human."
+            exit 1
+          fi
           gh pr checks "$PR" --watch --required --fail-fast --interval 20
 
           # required_conversation_resolution blocks the merge on any unresolved review thread (an automated
