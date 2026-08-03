@@ -27,6 +27,7 @@ describe('workload types', () => {
       snapshotVersion: 'abc123',
       formula: 'chatbot: cacheWrite+cacheReads+input+output',
       tierStraddle: false,
+  tierThresholds: [],
       contextTruncated: false,
       steps: null,
     };

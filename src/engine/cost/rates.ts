@@ -57,14 +57,18 @@ export function effectiveOutputRate(model: ModelRecord, tokens: number): number 
 export function effectiveCacheRates(
   model: ModelRecord,
   tokens: number,
-): { read: number | null; write: number | null } {
+): { read: number | null; write: number | null; writeHr1: number | null } {
   const cache = model.cache;
-  if (cache === null) return { read: null, write: null };
+  if (cache === null) return { read: null, write: null, writeHr1: null };
   // Per-field resolution, same reason as the input/output rates above.
   const read = cache.readUnavailable
     ? null
     : (highestDefined(tokens, model.tiers, (t) => t.cacheReadPerMToken) ?? cache.cacheReadPerMToken ?? null);
   const write =
     highestDefined(tokens, model.tiers, (t) => t.cacheWritePerMToken) ?? cache.cacheWritePerMToken ?? null;
-  return { read, write };
+  // Upstream's published 1-hour write rate, tier-aware. null means "not published", which sends the caller
+  // to the WRITE_MULT derivation rather than to a fabricated number.
+  const writeHr1 =
+    highestDefined(tokens, model.tiers, (t) => t.cacheWriteHr1PerMToken) ?? cache.cacheWriteHr1PerMToken ?? null;
+  return { read, write, writeHr1 };
 }

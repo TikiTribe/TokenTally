@@ -27,6 +27,7 @@ interface Rates {
   output: number | null;
   read: number | null;
   write: number | null;
+  writeHr1: number | null; // upstream's published 1-hour write rate, null when it does not publish one
   reasoning: number | null;
 }
 
@@ -90,7 +91,7 @@ export function monthlyWarmCost(scn: WarmScenario): WarmCostResult {
   // fallback must use the tier-aware rate or an above-cliff write is billed at the base rate.
   const coldPrefixRate =
     model.cache !== null && model.cache.cacheWritePerMToken !== undefined
-      ? (writeRateForTtl(model.cache, scn.ttl, rates.input, rates.write) ??
+      ? (writeRateForTtl(model.cache, scn.ttl, rates.input, rates.write, rates.writeHr1) ??
         rates.write ??
         model.cache.cacheWritePerMToken)
       : rates.input;

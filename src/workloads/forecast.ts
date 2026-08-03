@@ -8,7 +8,7 @@ import { monthlyWarmCost } from '@/engine';
 import { composeConfidence } from '@/engine/cost/confidence';
 import { buildWaterfall } from '@/engine/cost/costCore';
 import { effectiveInputRate, effectiveOutputRate } from '@/engine/cost/rates';
-import { detectStraddle, bandedAccumulatedCost, type BandedCost } from '@/workloads/tiers';
+import { detectStraddle, crossedThresholds, bandedAccumulatedCost, type BandedCost } from '@/workloads/tiers';
 import type { WarmScenario, WarmCostResult, WaterfallBarInput, CostComponentEntry } from '@/types/engine';
 import type { WorkloadForecast, WorkloadKind, StepProfile } from '@/types/workload';
 
@@ -49,18 +49,29 @@ function notModeled(p: AssembleParams, unit: string): WorkloadForecast {
     snapshotVersion: p.snapshotVersion,
     formula: `unmodeled:${unit}`,
     tierStraddle: false,
+    tierThresholds: [],
     contextTruncated: p.contextTruncated,
     steps: null,
   };
 }
+
+// Latin-text characters per token, matching ASCII_CHARS_PER_TOKEN in the tokenizer heuristic. Used ONLY to
+// put a per_character character count into the token unit that tier thresholds are specified in.
+const CHARS_PER_TOKEN_FOR_TIERS = 4;
 
 // Non-warm cost for a per_character SKU: no prompt cache, the prefix is re-sent as input each arrival, and
 // dollars come straight from buildWaterfall in the native (character) unit (C3/C9). Owner: engine.
 function perCharacterForecast(p: AssembleParams): WorkloadForecast {
   const scn = p.scenario;
   const chars = scn.prefixTokens + scn.perArrivalInputTokens; // "tokens" are characters for this SKU
-  const inRate = effectiveInputRate(scn.model, chars);
-  const outRate = effectiveOutputRate(scn.model, chars) ?? 0;
+  // Unit mismatch, deliberate and load-bearing: upstream names the tier fields
+  // `input_cost_per_character_above_128k_TOKENS`, so the RATE is per character while the THRESHOLD is in
+  // tokens. Comparing the character count directly against thresholdTokens tripped every cliff about 4x
+  // too early. Convert with the same Latin-text ratio the tokenizer heuristic uses. It is an estimate, but
+  // an estimate in the right unit beats an exact number in the wrong one.
+  const tierTokens = chars / CHARS_PER_TOKEN_FOR_TIERS;
+  const inRate = effectiveInputRate(scn.model, tierTokens);
+  const outRate = effectiveOutputRate(scn.model, tierTokens) ?? 0;
   const reasonRate = scn.model.reasoningPerMToken ?? 0;
   const bars: WaterfallBarInput[] = [
     { label: 'input', quantity: scn.arrivalsPerMonth * chars, rate: inRate, unit: 'per_character' },
@@ -84,6 +95,7 @@ function perCharacterForecast(p: AssembleParams): WorkloadForecast {
     snapshotVersion: p.snapshotVersion,
     formula: `${p.formula} [per_character, no cache]`,
     tierStraddle: false,
+    tierThresholds: [],
     contextTruncated: p.contextTruncated,
     steps: p.steps,
   };
@@ -164,6 +176,9 @@ export function assembleForecast(p: AssembleParams): WorkloadForecast {
     snapshotVersion: p.snapshotVersion,
     formula: p.formula,
     tierStraddle: straddle,
+    tierThresholds: straddle
+      ? crossedThresholds(scn.model, scn.prefixTokens, p.accum.base, p.accum.growth, p.accum.units)
+      : [],
     contextTruncated: p.contextTruncated,
     steps: p.steps,
   };

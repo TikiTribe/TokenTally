@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { partitionByTier, detectStraddle, bandedAccumulatedCost } from '@/workloads/tiers';
-import type { ModelRecord } from '@/types/registry';
+import { partitionByTier, detectStraddle, bandedAccumulatedCost, crossedThresholds } from '@/workloads/tiers';
+import type { ModelRecord, PriceTier } from '@/types/registry';
 
 // A model with a single 200k tier: <=200k input $3/Mtok, >200k input $6/Mtok (P1-A7 / DS2 worked example).
 const tiered: ModelRecord = {
@@ -48,5 +48,31 @@ describe('tiers (P1-A7)', () => {
     expect(b.total).toBeCloseTo(0.039, 6);
     expect(b.input).toBeCloseTo(0.03, 6);
     expect(b.output).toBeCloseTo(0.009, 6);
+  });
+});
+
+describe('crossedThresholds', () => {
+  const m = (tiers: PriceTier[]): ModelRecord =>
+    ({ inputPrice: 3, outputPrice: 15, tiers, cache: null, billingUnit: 'per_token' } as unknown as ModelRecord);
+
+  it('lists the rate-changing thresholds an accumulation actually crosses', () => {
+    // units run 100k -> 300k, crossing both 128k and 272k.
+    const model = m([
+      { thresholdTokens: 128000, inputPrice: 4, outputPrice: null },
+      { thresholdTokens: 272000, inputPrice: 6, outputPrice: null },
+      { thresholdTokens: 512000, inputPrice: 9, outputPrice: null }, // never reached
+    ]);
+    expect(crossedThresholds(model, 0, 100_000, 100_000, 3)).toEqual([128000, 272000]);
+  });
+
+  it('ignores a cache-only tier: crossing it changes no rate the user can act on', () => {
+    const model = m([{ thresholdTokens: 128000, inputPrice: null, outputPrice: null, cacheReadPerMToken: 1 }]);
+    expect(crossedThresholds(model, 0, 100_000, 100_000, 3)).toEqual([]);
+  });
+
+  it('returns [] for a single unit or a flat accumulation', () => {
+    const model = m([{ thresholdTokens: 128000, inputPrice: 4, outputPrice: null }]);
+    expect(crossedThresholds(model, 0, 100_000, 100_000, 1)).toEqual([]);
+    expect(crossedThresholds(model, 0, 100_000, 0, 5)).toEqual([]);
   });
 });

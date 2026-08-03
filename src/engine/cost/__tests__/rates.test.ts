@@ -75,7 +75,7 @@ describe('effective rates + tiers + readUnavailable (C8)', () => {
   });
 
   it('no cache -> null read and write', () => {
-    expect(effectiveCacheRates(model({ cache: null }), 100)).toEqual({ read: null, write: null });
+    expect(effectiveCacheRates(model({ cache: null }), 100)).toEqual({ read: null, write: null, writeHr1: null });
   });
 
   // Review finding: a higher PARTIAL tier must not shadow a lower COMPLETE one. Reachable now that tier

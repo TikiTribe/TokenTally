@@ -37,6 +37,11 @@ export async function exportPdf(result: EngineResult, mode: string, modelLabel: 
     line(`Range: $${f.cost.confidence.low.toFixed(2)} - $${f.cost.confidence.high.toFixed(2)}`);
     line(`Conservative (no warm cache): $${f.cost.conservativeTotal.toFixed(2)}`);
     line(`Accuracy: ${f.accuracyNote}`);
+    if (f.tierStraddle && f.tierThresholds.length > 0) {
+      line(
+        `Price cliff: crosses ${f.tierThresholds.map((t) => `${t / 1000}k`).join(' and ')} tokens. Above the threshold the provider reprices the entire request, not just the excess.`,
+      );
+    }
     line(`Snapshot: ${f.snapshotVersion.slice(0, 12)}`);
   } else if (result.kind === 'dow') {
     line(`Denial-of-Wallet worst case: ${result.result.enabled ? '$' + result.result.worstCaseMonthly.toFixed(2) : 'disabled'}`);

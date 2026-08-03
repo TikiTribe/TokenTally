@@ -26,12 +26,16 @@ export interface PriceTier {
   outputPrice: number | null;
   cacheReadPerMToken?: number;
   cacheWritePerMToken?: number;
+  cacheWriteHr1PerMToken?: number; // upstream's real above-threshold 1-hour write rate, when published
 }
 
 export interface CacheSpec {
   archetype: CacheArchetype;
   cacheReadPerMToken?: number;
   cacheWritePerMToken?: number;
+  // Upstream's PUBLISHED 1-hour write rate. Present for the SKUs that ship it, so the engine can use a
+  // real number instead of the WRITE_MULT.hr1 derivation, which policy.ts labels UNVERIFIED.
+  cacheWriteHr1PerMToken?: number;
   rateUnavailable: boolean;           // true when supports_prompt_caching but no rate at all in the data
   readUnavailable: boolean;           // A2: true when a write rate exists but no read rate, so the
                                       // cost core never treats an undefined cache-read rate as free

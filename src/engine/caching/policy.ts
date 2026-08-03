@@ -41,10 +41,15 @@ export function writeRateForTtl(
   ttl: CacheTtl,
   inputPrice: number,
   effectiveFiveMin?: number | null,
+  effectiveHr1?: number | null,
 ): number | null {
   const fiveMin = effectiveFiveMin ?? cache.cacheWritePerMToken;
   if (fiveMin === undefined) return null; // no write cost (Archetype A)
   if (ttl === 'min5') return fiveMin; // the real data
+  // Upstream publishes a real 1-hour write rate for many SKUs. Prefer it over the WRITE_MULT derivation
+  // below, which is an explicitly UNVERIFIED modeling assumption. Real data beats a multiplier.
+  const publishedHr1 = effectiveHr1 ?? cache.cacheWriteHr1PerMToken;
+  if (publishedHr1 !== undefined && publishedHr1 !== null) return publishedHr1;
   // C6: derive the 1-hr rate from the BASE input rate, not by scaling the stored 5-min field - but only
   // when the stored 5-min rate actually equals base*1.25; a non-conforming SKU returns null (unknown),
   // never a fabricated guess.

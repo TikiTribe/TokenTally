@@ -34,6 +34,9 @@ export interface WorkloadForecast {
   snapshotVersion: string; // pricing snapshot that priced this forecast (P1-A16); 'unknown' if not supplied
   formula: string; // stable derivation trace (mapping name + ordered waterfall labels) (P1-A16)
   tierStraddle: boolean; // P1-A7: accumulation crossed an above-threshold price tier -> per-band pricing used
+  // The thresholds crossed, ascending, so the UI can say WHICH cliff and how close the workload sits to it.
+  // Empty when nothing was crossed. Only rate-changing tiers are listed.
+  tierThresholds: number[];
   contextTruncated: boolean; // P1-A9: per-arrival input was clamped to the model context window
   steps: StepProfile[] | null; // accumulation profile for agent/crew; null for chatbot/prompt
 }

@@ -124,12 +124,13 @@ export function parseKey(
 // upstream snapshot currently carries 128k/200k/256k/272k/512k, and that set changes without notice.
 //
 // Only the bare `_above_<N>k_tokens` suffix counts. The `_flex` / `_priority` / `_batches` variants are
-// different service products, not the standard rate this calculator models, and the `_above_1hr_above_<N>k`
-// long-TTL cache-write variant is not a rate parseTiers reads.
+// different service products, not the standard rate this calculator models. The `_above_1hr_above_<N>k`
+// long-TTL cache-write variant IS read: it is upstream's real above-cliff 1-hour rate, and using it beats
+// deriving one from an unverified multiplier.
 // Covers all four rate kinds so a cache-only tier (a real shape: threshold with no input override) is still
 // discovered.
 const TIER_KEY =
-  /^(?:(?:input|output)_cost_per_(?:token|character)|cache_(?:read|creation)_input_token_cost)_above_(\d+)k_tokens$/;
+  /^(?:(?:input|output)_cost_per_(?:token|character)|cache_(?:read|creation)_input_token_cost(?:_above_1hr)?)_above_(\d+)k_tokens$/;
 // Any `_above_*_tokens` key whose label this parser does NOT understand. Counted rather than ignored: a
 // label shape we cannot read (`_above_1m_tokens`, a raw token count) reproduces the exact silent
 // flat-pricing bug this module exists to prevent, and silence is how it stayed hidden last time.
@@ -137,7 +138,7 @@ const TIER_KEY =
 const UNPARSED_TIER_KEY = /_above_[^_]*_tokens$/;
 // Service-tier routing, the long-TTL cache-write variant, and the per-modality (audio/image/video) rates
 // are all deliberately unmodelled by this text-token calculator, so they are not "missed" shapes.
-const KNOWN_OUT_OF_SCOPE = /(_flex|_priority|_batches)$|_above_1hr_above_|_per_(?:audio|image|video)/;
+const KNOWN_OUT_OF_SCOPE = /(_flex|_priority|_batches)$|_per_(?:audio|image|video)/;
 // A4: a threshold is only trusted inside a plausible band. 0k would reprice from the first token, and an
 // absurd label is upstream noise. Real thresholds observed span 128k..512k. The label is unbounded in
 // length so a future `_above_2000k_tokens` (a 2M-token context tier) parses, which is what makes this
@@ -206,7 +207,8 @@ export function parseTiers(e: RawEntry, unit: BillingUnit): PriceTier[] {
     const out = saneNum(e[outputField(label)], unit);
     const cr = saneNum(e[`cache_read_input_token_cost_above_${label}_tokens`], 'per_token');
     const cw = saneNum(e[`cache_creation_input_token_cost_above_${label}_tokens`], 'per_token');
-    if (inp === null && out === null && cr === null && cw === null) continue;
+    const cwHr1 = saneNum(e[`cache_creation_input_token_cost_above_1hr_above_${label}_tokens`], 'per_token');
+    if (inp === null && out === null && cr === null && cw === null && cwHr1 === null) continue;
     tiers.push({
       thresholdTokens: threshold,
       // null (not 0) when this tier carries no input override, so the cost core reads it as
@@ -215,6 +217,7 @@ export function parseTiers(e: RawEntry, unit: BillingUnit): PriceTier[] {
       outputPrice: out === null ? null : out * perUnitScale,
       ...(cr !== null ? { cacheReadPerMToken: cr * PER_MILLION } : {}),
       ...(cw !== null ? { cacheWritePerMToken: cw * PER_MILLION } : {}),
+      ...(cwHr1 !== null ? { cacheWriteHr1PerMToken: cwHr1 * PER_MILLION } : {}),
     });
   }
   return tiers;
@@ -244,12 +247,14 @@ function archetypeFor(provider: string, e: RawEntry): CacheArchetype {
 export function resolveCacheSpec(e: RawEntry, provider: string): CacheSpec | null {
   const readRaw = num(e.cache_read_input_token_cost) ?? num(e.input_cost_per_token_cache_hit);
   const writeRaw = num(e.cache_creation_input_token_cost);
+  const writeHr1Raw = num(e.cache_creation_input_token_cost_above_1hr);
   const supported = e.supports_prompt_caching === true || readRaw !== null || writeRaw !== null;
   if (!supported) return null;
   const archetype = archetypeFor(provider, e);
   // A4: an insane (negative / ~1000x) raw cache rate is omitted, never trusted as a real price.
   const read = readRaw !== null && sanePrice(readRaw, 'per_token') ? readRaw : null;
   const write = writeRaw !== null && sanePrice(writeRaw, 'per_token') ? writeRaw : null;
+  const writeHr1 = writeHr1Raw !== null && sanePrice(writeHr1Raw, 'per_token') ? writeHr1Raw : null;
   if (read === null && write === null) {
     // Caching is supported but no usable rate exists: flag rateUnavailable, not free.
     return { archetype, rateUnavailable: true, readUnavailable: false };
@@ -258,6 +263,7 @@ export function resolveCacheSpec(e: RawEntry, provider: string): CacheSpec | nul
     archetype,
     ...(read !== null ? { cacheReadPerMToken: read * PER_MILLION } : {}),
     ...(write !== null ? { cacheWritePerMToken: write * PER_MILLION } : {}),
+    ...(writeHr1 !== null ? { cacheWriteHr1PerMToken: writeHr1 * PER_MILLION } : {}),
     rateUnavailable: false,
     // A2: a write rate with no read rate must never be read as $0 downstream.
     readUnavailable: write !== null && read === null,

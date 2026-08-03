@@ -63,6 +63,29 @@ export function partitionByTier(
   return bands;
 }
 
+// The distinct thresholds the accumulation actually crosses between unit 1 and unit `units`, ascending.
+// Only tiers that change a rate count: a cache-only tier crossed by a workload with no cache is not a
+// price cliff the user can act on, and reporting it would be a false signal.
+export function crossedThresholds(
+  model: ModelRecord,
+  prefixTokens: number,
+  base: number,
+  growth: number,
+  units: number,
+): number[] {
+  const u = Math.floor(nn(units));
+  if (u <= 1 || model.tiers.length === 0) return [];
+  const p = nn(prefixTokens);
+  const b = nn(base);
+  const g = nn(growth);
+  const lo = p + b;
+  const hi = p + b + g * (u - 1);
+  if (hi <= lo) return [];
+  return [...new Set(model.tiers.filter((t) => t.inputPrice !== null || t.outputPrice !== null).map((t) => t.thresholdTokens))]
+    .filter((T) => T >= lo && T < hi)
+    .sort((x, y) => x - y);
+}
+
 // True when unit 1 and unit `units` select different tiers (the accumulation crosses a threshold).
 export function detectStraddle(
   model: ModelRecord,
