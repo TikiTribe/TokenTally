@@ -161,11 +161,22 @@ Pricing is a **pinned, hash-verified snapshot** of LiteLLM's `model_prices_and_c
 into the repo (`scripts/registry/vendor/`) and hash-checked at build time. Nothing is fetched at deploy time,
 so production never depends on a live third-party call and a deleted upstream commit cannot break a deploy.
 
-**Automated monthly refresh.** The `.github/workflows/refresh-pricing.yml` Action runs on the 1st of each
-month (and on demand via "Run workflow"). It re-pins the newest LiteLLM commit, re-vendors + re-hashes the
-file, regenerates `src/config/registry.generated.json`, and **opens a PR** with the model/price deltas, then
-triggers that PR's CI itself (via `workflow_dispatch`, which the built-in token is allowed to fire). It never
-auto-merges: a human reviews the diff and merges once CI is green. No secret or PAT setup is needed.
+**Automated weekly refresh.** The `.github/workflows/refresh-pricing.yml` Action runs every Monday at 06:00
+UTC (and on demand via "Run workflow"). It re-pins the newest LiteLLM commit, re-vendors + re-hashes the
+file, regenerates `src/config/registry.generated.json`, and opens a PR with the model/price deltas. It runs
+as a repo-scoped GitHub App (`REFRESH_BOT_APP_ID` / `REFRESH_BOT_PRIVATE_KEY`), so that PR triggers CI
+normally.
+
+**It auto-merges a routine refresh, and holds anything unusual for a human.** The vendored snapshot's sha256
+is computed from the same fetch it verifies, so it proves reproducibility, not authenticity, and cannot
+detect a hostile or erroneous upstream price edit. The control is a deterministic budget in
+`scripts/registry/refresh.mjs`: the PR is held for review whenever any shipped model's input, output or cache
+rate moves more than 50%, whenever a rate appears, vanishes or hits zero, whenever more than 25 models change
+price or more than 100 are removed in one refresh, whenever a price-tier structure changes on a shipped
+model, whenever a `gpt-4o` anchor moves, or whenever the diff touches a path outside the pricing allowlist.
+A refresh inside all of those bounds merges and deploys unattended.
+
+Residual risk, stated plainly: a single model's rate can move up to 50% and ship without a human reading it.
 
 **Manual refresh:** `node scripts/registry/refresh.mjs` (add `--dry-run` to only check whether an update is
 available). The script warns loudly if a `gpt-4o` anchor price changed, since the hand-computed E2E math

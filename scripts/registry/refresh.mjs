@@ -106,6 +106,58 @@ const tierChanged = [...newTiers.entries()]
   .filter(([k, v]) => oldTiers.has(k) && oldTiers.get(k) !== v)
   .map(([k]) => k)
   .sort();
+// PRICE-DELTA BUDGET (security scan F1/F2/F3). The sha256 pin is TAUTOLOGICAL at refresh time: it is
+// computed from the same bytes it verifies, so it proves reproducibility, not authenticity. buildRegistry.ts
+// named "human review of the refresh PR" as the compensating control, and auto-merge removed it. The path
+// allowlist plus two gpt-4o anchors do not replace it: neither anchor has a tier, and no anchor covers the
+// other 2,384 models, so an upstream edit halving a Claude rate would have shipped unattended.
+//
+// This is the replacement control, and it is deterministic rather than a human gate, so a routine refresh
+// still ships unattended as intended. Thresholds are calibrated against the real 2026-07-31 refresh
+// (8bb4e624 -> bf1a8fe4), which moved 2 models, max single move 46%, and dropped 24 deprecated models.
+const MAX_REL_MOVE = 0.5;      // any single shipped rate moving >50% (legit observed max: 46%)
+const MAX_CHANGED_MODELS = 25; // mass-edit tripwire (legit observed: 2)
+const MAX_REMOVED_MODELS = 100; // upstream deprecates in batches (legit observed: 24)
+
+const ratesOf = (m) => ({
+  input: m.inputPrice,
+  output: m.outputPrice,
+  cacheRead: m.cache?.cacheReadPerMToken ?? null,
+  cacheWrite: m.cache?.cacheWritePerMToken ?? null,
+});
+const oldByKey = new Map(oldSnap.models.map((m) => [`${m.canonicalId}|${m.deployment}`, m]));
+const newByKey = new Map(newSnap.models.map((m) => [`${m.canonicalId}|${m.deployment}`, m]));
+const suspiciousMoves = [];
+let changedModelCount = 0;
+let removedModelCount = 0;
+for (const [k, om] of oldByKey) {
+  const nm = newByKey.get(k);
+  if (nm === undefined) { removedModelCount += 1; continue; }
+  const a = ratesOf(om);
+  const b = ratesOf(nm);
+  let changed = false;
+  for (const field of ['input', 'output', 'cacheRead', 'cacheWrite']) {
+    const x = a[field];
+    const y = b[field];
+    if (x === null && y === null) continue;
+    if (x === y) continue;
+    changed = true;
+    // A rate appearing, vanishing, or hitting zero is the poisoning shape (a "free" model reads as $0),
+    // and has no meaningful relative delta. Always hold.
+    if (x === null || y === null || x === 0 || y === 0) {
+      suspiciousMoves.push(`${k} ${field}: ${x} -> ${y}`);
+      continue;
+    }
+    const rel = Math.abs(y - x) / x;
+    if (rel > MAX_REL_MOVE) suspiciousMoves.push(`${k} ${field}: ${x} -> ${y} (${Math.round(rel * 100)}%)`);
+  }
+  if (changed) changedModelCount += 1;
+}
+const priceReview =
+  suspiciousMoves.length > 0 ||
+  changedModelCount > MAX_CHANGED_MODELS ||
+  removedModelCount > MAX_REMOVED_MODELS;
+
 const unparsedBefore = oldSnap.unparsedTierKeyCount ?? 0;
 const unparsedNow = newSnap.unparsedTierKeyCount ?? 0;
 // Latching, not edge-triggered. Gating on an INCREASE meant that once any unreadable key merged, every
@@ -113,20 +165,25 @@ const unparsedNow = newSnap.unparsedTierKeyCount ?? 0;
 // invariant is "zero unreadable threshold keys", so any non-zero count holds the PR for a human.
 const unparsedUp = unparsedNow > 0;
 const tierReview = tierChanged.length > 0 || unparsedUp;
+const holdForHuman = tierReview || priceReview;
 
 const headline = `Refreshed to LiteLLM @ \`${sha.slice(0, 8)}\` (${date}). ${newSnap.models.length} models (${oldSnap.models.length} before): ${added.length} added, ${removed.length} removed.`;
 const anchorLine = anchorChanged.length
   ? `WARNING: anchor price changed for ${anchorChanged.join(', ')}. The hand-computed E2E math oracles (chatbot $143.75, etc.) will FAIL and must be updated by hand before merge. old ${JSON.stringify(oldAnchors)} new ${JSON.stringify(newAnchors)}`
   : `Anchor prices unchanged (${ANCHORS.join(', ')}), so the E2E math oracles still hold.`;
+const priceLine = priceReview
+  ? `PRICE REVIEW REQUIRED: ${suspiciousMoves.length} rate move(s) beyond the delta budget, ${changedModelCount} model(s) changed price, ${removedModelCount} removed. The sha256 pin cannot detect a hostile upstream edit (it is derived from the same fetch), so this budget is the control. Check these before merging:\n${suspiciousMoves.slice(0, 40).map((m) => `- ${m}`).join('\n')}${suspiciousMoves.length > 40 ? `\n...and ${suspiciousMoves.length - 40} more` : ''}`
+  : `Price deltas inside budget: ${changedModelCount} model(s) changed price (limit ${MAX_CHANGED_MODELS}), ${removedModelCount} removed (limit ${MAX_REMOVED_MODELS}), no single rate moved more than ${MAX_REL_MOVE * 100}%.`;
 const tierLine = tierReview
   ? `REVIEW REQUIRED: ${tierChanged.length} already-shipped model(s) changed their price-tier structure${unparsedUp ? `, and the snapshot carries ${unparsedNow} unreadable threshold key(s) (was ${unparsedBefore}) that may be pricing a model flat above a real cliff` : ''}. Auto-merge is disabled for this PR because a tier change silently reprices long-context forecasts. Check these before merging:\n${tierChanged.slice(0, 40).map((k) => `- ${k}`).join('\n')}${tierChanged.length > 40 ? `\n...and ${tierChanged.length - 40} more` : ''}`
   : `No tier changes on already-shipped models, and no unreadable threshold keys (${unparsedNow}).`;
 const list = (arr) => (arr.length ? arr.slice(0, 300).map((k) => `- ${k}`).join('\n') + (arr.length > 300 ? `\n…and ${arr.length - 300} more` : '') : '_none_');
-const body = `${headline}\n\n${anchorLine}\n\n${tierLine}\n\n<details><summary>${added.length} added</summary>\n\n${list(added)}\n</details>\n\n<details><summary>${removed.length} removed</summary>\n\n${list(removed)}\n</details>\n\nAuto-generated by the weekly \`refresh-pricing\` workflow, which waits for this PR's \`ci\` run and then **merges it automatically once that run is green** — the full run, not the pre-PR quick gate, is what executes the hand-computed E2E math oracles, so it is the gate that catches a broken anchor price. Auto-merge is skipped and this PR waits for a human if the diff touches anything outside the pricing artifact allowlist, if an anchor price changed, or if \`ci\` is red.`;
+const body = `${headline}\n\n${anchorLine}\n\n${priceLine}\n\n${tierLine}\n\n<details><summary>${added.length} added</summary>\n\n${list(added)}\n</details>\n\n<details><summary>${removed.length} removed</summary>\n\n${list(removed)}\n</details>\n\nAuto-generated by the weekly \`refresh-pricing\` workflow, which waits for this PR's \`ci\` run and then **merges it automatically once that run is green** — the full run, not the pre-PR quick gate, is what executes the hand-computed E2E math oracles, so it is the gate that catches a broken anchor price. Auto-merge is skipped and this PR waits for a human if the diff touches anything outside the pricing artifact allowlist, if an anchor price changed, or if \`ci\` is red.`;
 
 console.log(headline);
 console.log(anchorLine);
 console.log(tierLine);
+console.log(priceLine);
 const bodyPath = process.env.REFRESH_BODY_PATH ?? '.refresh-pr-body.md';
 writeFileSync(bodyPath, body);
 setOutput('changed', 'true');
@@ -134,4 +191,4 @@ setOutput('sha', sha);
 setOutput('short', sha.slice(0, 8));
 setOutput('date', date);
 setOutput('anchor_changed', anchorChanged.length ? 'true' : 'false');
-setOutput('tier_review', tierReview ? 'true' : 'false');
+setOutput('tier_review', holdForHuman ? 'true' : 'false');

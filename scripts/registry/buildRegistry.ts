@@ -80,9 +80,12 @@ async function main(): Promise<void> {
   const body = readFileSync(VENDORED_SNAPSHOT, 'utf8');
   // A4: DEPLOY-TIME integrity gate. This guarantees the shipped artifact derives from exactly the reviewed
   // bytes: it catches any later divergence between the committed vendor file and the committed constant. It
-  // is NOT a refresh-time defense against a hostile upstream commit (at refresh the constant is derived from
-  // the same freshly-fetched body, so the check is tautological then); that risk rests on SHA-pinning the
-  // upstream commit + human review of the refresh PR.
+  // is NOT a refresh-time defense against a hostile upstream commit: at refresh the constant is derived from
+  // the same freshly-fetched body, so the check is tautological then. That risk rests on SHA-pinning the
+  // upstream commit plus the PRICE-DELTA BUDGET in scripts/registry/refresh.mjs, which holds the refresh PR
+  // for a human whenever a shipped rate moves beyond the budget. Human review of every refresh PR used to be
+  // the control and is no longer, since the refresh auto-merges; do not reintroduce that claim here without
+  // reintroducing the gate.
   const actualSha = createHash('sha256').update(body).digest('hex');
   if (actualSha !== EXPECTED_SNAPSHOT_SHA256) {
     throw new Error(
