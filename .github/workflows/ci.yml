@@ -9,8 +9,8 @@ on:
   pull_request:
   push:
     branches: [feat/realtime-determinism-engine]
-  # Allows the refresh-pricing workflow to run CI on its own bot-opened PR branch: a PR opened by the
-  # built-in GITHUB_TOKEN does not trigger pull_request, but workflow_dispatch is the documented exception.
+  # Manual "run now" button. refresh-pricing no longer needs it: its PR is opened by a GitHub App token,
+  # which fires pull_request normally (the built-in GITHUB_TOKEN does not).
   workflow_dispatch:
 
 permissions:
