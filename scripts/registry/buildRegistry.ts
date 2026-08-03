@@ -17,8 +17,9 @@ import type { RegistrySnapshot, ModelRecord } from '../../src/types/registry';
 // live is a manual/CI refresh job, never `npm run build`). Provenance URL kept for that refresh:
 // https://raw.githubusercontent.com/BerriAI/litellm/<PINNED_COMMIT>/model_prices_and_context_window.json
 // (source is LiteLLM's canonical pricing file; the same schema tokencost mirrors, but current - the mirror lags.)
-// Refreshed 2026-07-04 from LiteLLM @ 8bb4e624 (2026-07-03): 2932 upstream entries, adds Opus 4.5-4.8,
-// Sonnet 4.5/4.6/5, Haiku 4.5, Fable 5, GPT-5.x, Gemini 2.5, Qwen3, etc. gpt-4o/gpt-4o-mini pricing unchanged.
+// Per-refresh provenance is deliberately NOT restated in prose here: refresh.mjs rewrites only the two
+// constants below, so any dated summary would silently rot. The current pin's date and model count live in
+// src/config/registry.generated.json (snapshotDate / snapshotVersion); the deltas live in the refresh PRs.
 export const PINNED_COMMIT = 'bf1a8fe40329eb018ef420057766ce95a43baaa3';
 export const EXPECTED_SNAPSHOT_SHA256 = 'ba37bb46dc4662f4bfed71db90168644ef917713fa073bd397775376d55a6b1c';
 const VENDORED_SNAPSHOT = new URL(`./vendor/model_prices.${PINNED_COMMIT.slice(0, 8)}.json`, import.meta.url);
