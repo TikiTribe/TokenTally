@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
+import registrySnapshot from '@/config/registry.generated.json'; // assert against the artifact, not a literal (refresh-proof)
 
 const get = () => useAppStore.getState();
 
@@ -38,7 +39,10 @@ describe('useAppStore transitions', () => {
   it('ensureRegistry loads the pinned snapshot and is idempotent', async () => {
     await get().ensureRegistry();
     expect(get().registryStatus).toBe('ready');
-    expect(get().snapshotMeta?.snapshotVersion).toBe('8bb4e624126bd02dbc5190cdc40e520ba93502c9');
+    // The store must surface the committed artifact's pin. Comparing to the artifact (not a hardcoded SHA)
+    // keeps this green across a catalog refresh; the hex shape check keeps it from passing on a junk value.
+    expect(get().snapshotMeta?.snapshotVersion).toBe(registrySnapshot.snapshotVersion);
+    expect(get().snapshotMeta?.snapshotVersion).toMatch(/^[0-9a-f]{40}$/);
     expect((get().snapshotMeta?.droppedCount ?? 0)).toBeGreaterThan(0);
     // second call is a no-op (still ready)
     await get().ensureRegistry();
