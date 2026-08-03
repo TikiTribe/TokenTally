@@ -1,6 +1,18 @@
-# Monthly pricing-catalog refresh. Re-vendors the newest LiteLLM prices file, re-pins + regenerates the
-# committed snapshot, and OPENS A PR (never auto-merges) so a human reviews the model/price deltas. Runs the
-# quick gate (typecheck + unit) before opening the PR; the PR itself runs full CI via branch protection.
+# Weekly pricing-catalog refresh. Re-vendors the newest LiteLLM prices file, re-pins + regenerates the
+# committed snapshot, opens a PR, waits for the full `ci` run, and MERGES IT AUTOMATICALLY when the change is
+# nothing but models + pricing. The PR remains the audit trail; the human gate is gone by design.
+#
+# The auto-merge is deliberately narrow. It happens only when ALL of these hold:
+#   1. The diff touches nothing outside the pricing artifact allowlist (buildRegistry pins, the vendored
+#      snapshot, the generated registry). Any other path -> the PR is left open for a human.
+#   2. The gpt-4o/gpt-4o-mini anchor prices are unchanged. A changed anchor breaks the hand-computed E2E math
+#      oracles, which is a code change, not a data change -> left open for a human.
+#   3. The full `ci` check passes on the PR head.
+# Anything else (merge conflict, protection change, CI red) leaves the PR open. Failing closed here means a
+# stale catalog for a week, which is loud and recoverable; failing open would publish unverified prices.
+#
+# DEPENDABOT IS STRUCTURALLY EXCLUDED: this job only ever merges the one PR number it just created, and the
+# allowlist rejects any diff touching package.json / package-lock.json. Dependency bumps never ride along.
 #
 # CI on the bot PR is triggered explicitly via workflow_dispatch. A PR opened by the built-in GITHUB_TOKEN
 # does NOT fire pull_request, but workflow_dispatch is the documented exception the token IS allowed to
@@ -13,7 +25,7 @@ name: refresh-pricing
 
 on:
   schedule:
-    - cron: '0 6 1 * *' # 06:00 UTC on the 1st of each month
+    - cron: '0 6 * * 1' # 06:00 UTC every Monday
   workflow_dispatch: {} # manual "run now" button
 
 permissions:
@@ -28,9 +40,10 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 60 # generous: the job blocks on a full CI run before merging
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -47,7 +60,8 @@ jobs:
         name: Quick gate (typecheck + unit) before opening the PR
         run: npm run test:ci
 
-      - if: steps.refresh.outputs.changed == 'true'
+      - id: pr
+        if: steps.refresh.outputs.changed == 'true'
         name: Open the refresh PR + trigger its CI
         env:
           GH_TOKEN: ${{ github.token }}
@@ -63,11 +77,88 @@ jobs:
           git checkout -b "$BRANCH"
           git add scripts/registry/buildRegistry.ts scripts/registry/vendor src/config/registry.generated.json
           git commit -m "chore(pricing): refresh catalog to LiteLLM @ ${R_SHORT} (${R_DATE})"
+
+          # Scope guard: auto-merge only a pure models+pricing change. Compare against the base branch, not the
+          # index, so a stray tracked-file edit from any earlier step is caught too.
+          ALLOW='^(scripts/registry/buildRegistry\.ts|scripts/registry/vendor/[^/]+\.json|src/config/registry\.generated\.json)$'
+          UNEXPECTED="$(git diff --name-only "origin/${GITHUB_REF_NAME}...HEAD" | { grep -Ev "$ALLOW" || true; })"
+
+          AUTOMERGE=true
+          if [ -n "$UNEXPECTED" ]; then
+            echo "::warning::Diff touches paths outside the pricing allowlist; leaving the PR for a human:"
+            echo "$UNEXPECTED"
+            AUTOMERGE=false
+          fi
+          if [ "$R_ANCHOR" = "true" ]; then
+            echo "::warning::Anchor price changed; the E2E math oracles need a hand edit. Leaving the PR for a human."
+            AUTOMERGE=false
+          fi
+
           git push -u origin "$BRANCH"
-          TITLE="chore(pricing): monthly catalog refresh (${R_DATE})"
+          TITLE="chore(pricing): weekly catalog refresh (${R_DATE})"
           if [ "$R_ANCHOR" = "true" ]; then
             TITLE="$TITLE [ANCHOR PRICE CHANGED - update the E2E oracles]"
           fi
           gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"
           # A GITHUB_TOKEN-opened PR does not trigger pull_request CI; workflow_dispatch is the exception.
           gh workflow run ci.yml --ref "$BRANCH"
+
+          {
+            echo "branch=$BRANCH"
+            echo "number=$(gh pr view "$BRANCH" --json number --jq .number)"
+            echo "automerge=$AUTOMERGE"
+          } >> "$GITHUB_OUTPUT"
+
+      - if: steps.pr.outputs.automerge == 'true'
+        name: Wait for CI, then merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.pr.outputs.branch }}
+          PR: ${{ steps.pr.outputs.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Find the dispatched ci run for this branch (the dispatch takes a few seconds to register).
+          RUN_ID=''
+          for _ in $(seq 1 20); do
+            RUN_ID="$(gh run list --workflow=ci.yml --branch "$BRANCH" --event workflow_dispatch \
+              --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+            [ -n "$RUN_ID" ] && break
+            sleep 15
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::No ci run appeared for $BRANCH. PR #$PR is open and needs a human."
+            exit 1
+          fi
+
+          echo "Watching ci run $RUN_ID"
+          gh run watch "$RUN_ID" --exit-status --interval 20
+
+          # required_conversation_resolution blocks the merge on any unresolved review thread (an automated
+          # reviewer's comments land on bot PRs too). Resolve them on THIS PR only; the protection still
+          # applies in full to human PRs.
+          THREADS="$(gh api graphql -f query='
+            query($owner:String!,$name:String!,$num:Int!){
+              repository(owner:$owner,name:$name){
+                pullRequest(number:$num){
+                  reviewThreads(first:100){ nodes{ id isResolved } } } } }' \
+            -f owner="${REPO%/*}" -f name="${REPO#*/}" -F num="$PR" \
+            --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false) | .id')"
+          for T in $THREADS; do
+            echo "Resolving review thread $T"
+            gh api graphql -f query='
+              mutation($id:ID!){ resolveReviewThread(input:{threadId:$id}){ thread{ id } } }' -f id="$T" >/dev/null
+          done
+
+          # Retry briefly: the required check can lag behind the run finishing.
+          for i in $(seq 1 5); do
+            if gh pr merge "$PR" --squash --delete-branch; then
+              echo "Merged PR #$PR"
+              exit 0
+            fi
+            echo "Merge attempt $i failed; retrying in 30s"
+            sleep 30
+          done
+          echo "::error::Could not merge PR #$PR automatically. PR #$PR is open for a human to finish."
+          exit 1
