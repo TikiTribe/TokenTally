@@ -62,5 +62,8 @@ export interface RegistrySnapshot {
   snapshotDate: string;               // ISO date passed in at build time
   droppedCount: number;
   conflictCount: number;              // A3: same (canonicalId, deployment) with divergent price; first wins
+  // Threshold-bearing upstream keys whose label shape this parser cannot read. Non-zero means some model
+  // may be priced flat above a real price cliff, which is the silent-understatement failure mode.
+  unparsedTierKeyCount: number;
   models: ModelRecord[];
 }

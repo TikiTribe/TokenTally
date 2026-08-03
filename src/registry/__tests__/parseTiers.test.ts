@@ -117,10 +117,27 @@ describe('parseTiers', () => {
 
   it('A4: rejects an implausible threshold label rather than trusting an upstream typo', () => {
     const e = {
-      input_cost_per_token_above_0k_tokens: 1e-6, // would reprice every request from token 1
-      input_cost_per_token_above_999999999k_tokens: 1e-6, // unreachable, pure noise
+      input_cost_per_token_above_0k_tokens: 1e-6, // below MIN: would reprice every request from token 1
+      input_cost_per_token_above_999999999k_tokens: 1e-6, // above MAX: unreachable, pure noise
       input_cost_per_token_above_200k_tokens: 6e-6, // the one real tier
     };
     expect(parseTiers(e, 'per_token').map((t) => t.thresholdTokens)).toEqual([200000]);
+  });
+
+  // Review finding: the digit cap used to make the upper bound unreachable, so this guard had no real
+  // coverage and the case above was actually being rejected by the regex, not by MAX_THRESHOLD_TOKENS.
+  it('A4: the MAX bound is load-bearing now that the label length is unbounded', () => {
+    // 100000001k = 1.00000001e11 tokens, past MAX_THRESHOLD_TOKENS but well inside a safe integer.
+    expect(parseTiers({ input_cost_per_token_above_100000001k_tokens: 1e-6 }, 'per_token')).toEqual([]);
+    // A plausible future label still parses: 2000k = a 2M-token context tier, which Gemini already ships.
+    expect(
+      parseTiers({ input_cost_per_token_above_2000k_tokens: 1e-6 }, 'per_token').map((t) => t.thresholdTokens),
+    ).toEqual([2000000]);
+  });
+
+  // SECURITY: the label reaches a property read, so it must stay digits-only.
+  it('never lets a non-numeric label reach the property lookup', () => {
+    const e = { input_cost_per_token_above___proto__k_tokens: 1e-6, output_cost_per_token_above_constructork_tokens: 1e-6 };
+    expect(parseTiers(e, 'per_token')).toEqual([]);
   });
 });

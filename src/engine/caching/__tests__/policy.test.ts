@@ -44,4 +44,14 @@ describe('cache policy constants + write-rate-by-TTL (C6/C7/C14)', () => {
     expect(typeof tEffFor('__proto__')).toBe('number');
     expect(tEffFor('__proto__')).toBe(tEffFor('some-unlisted-provider')); // both hit the default
   });
+
+  // Review finding: above a price cliff the CacheSpec field holds the BASE write rate, so the tier-aware
+  // rate must be passed in or every above-cliff cache write is billed at base.
+  it('uses the tier-aware 5-minute write rate when one is supplied', () => {
+    // base spec: 5-min write 3.75 (= base input 3.0 * 1.25). Above the cliff both double.
+    expect(writeRateForTtl(bSpec(), 'min5', 6.0, 7.5)).toBeCloseTo(7.5, 10);
+    // hr1 conformance now compares the TIER 5-min (7.5) against tier input 6.0 * 1.25 = 7.5, so it
+    // derives rather than bailing to null the way the base 3.75 did.
+    expect(writeRateForTtl(bSpec(), 'hr1', 6.0, 7.5)).toBeCloseTo(12.0, 10); // 6.0 * 2.0
+  });
 });

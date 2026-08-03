@@ -111,7 +111,7 @@ export function parseKey(
   return { canonicalId: parts[parts.length - 1] ?? rawKey, deployment: parts.slice(0, -1).join('/'), provider };
 }
 
-// A5: 128k/200k tier parsing is unit-aware for the input/output rate (per-token vs per-character),
+// A5: above-threshold tier parsing is unit-aware for the input/output rate (per-token vs per-character),
 // scaled by PER_MILLION only for token/char units; per_second/dbu tiers (none observed) stay raw.
 // Cache tiers (`cache_*_input_token_cost_above_*`) are always token rates, so always ×PER_MILLION.
 // A12: uses the single PER_MILLION constant.
@@ -129,9 +129,19 @@ export function parseKey(
 // Covers all four rate kinds so a cache-only tier (a real shape: threshold with no input override) is still
 // discovered.
 const TIER_KEY =
-  /^(?:(?:input|output)_cost_per_(?:token|character)|cache_(?:read|creation)_input_token_cost)_above_(\d{1,7})k_tokens$/;
-// A4: a threshold is only trusted inside a plausible band. 0k would reprice from the first token; an
-// absurd label is upstream noise. Real thresholds observed span 128k..512k.
+  /^(?:(?:input|output)_cost_per_(?:token|character)|cache_(?:read|creation)_input_token_cost)_above_(\d+)k_tokens$/;
+// Any `_above_*_tokens` key whose label this parser does NOT understand. Counted rather than ignored: a
+// label shape we cannot read (`_above_1m_tokens`, a raw token count) reproduces the exact silent
+// flat-pricing bug this module exists to prevent, and silence is how it stayed hidden last time.
+// Deliberately excludes the service-tier and long-TTL variants, which are known-out-of-scope, not missed.
+const UNPARSED_TIER_KEY = /_above_[^_]*_tokens$/;
+// Service-tier routing, the long-TTL cache-write variant, and the per-modality (audio/image/video) rates
+// are all deliberately unmodelled by this text-token calculator, so they are not "missed" shapes.
+const KNOWN_OUT_OF_SCOPE = /(_flex|_priority|_batches)$|_above_1hr_above_|_per_(?:audio|image|video)/;
+// A4: a threshold is only trusted inside a plausible band. 0k would reprice from the first token, and an
+// absurd label is upstream noise. Real thresholds observed span 128k..512k. The label is unbounded in
+// length so a future `_above_2000k_tokens` (a 2M-token context tier) parses, which is what makes this
+// bound load-bearing rather than decorative.
 const MIN_THRESHOLD_TOKENS = 1_000;
 const MAX_THRESHOLD_TOKENS = 100_000_000;
 
@@ -144,11 +154,26 @@ export function discoverTierThresholds(e: RawEntry): ReadonlyArray<readonly [num
     if (m === null) continue;
     const label = m[1] as string;
     const tokens = Number(label) * 1000;
+    // Order matters: the safe-integer check guards the range comparison against an absurdly long label
+    // (the regex no longer caps the digit count), and the range rejects a 0k or unreachable threshold.
     if (!Number.isSafeInteger(tokens)) continue;
     if (tokens < MIN_THRESHOLD_TOKENS || tokens > MAX_THRESHOLD_TOKENS) continue;
     found.set(tokens, `${label}k`);
   }
   return [...found.entries()].sort((a, b) => a[0] - b[0]);
+}
+
+// Threshold-bearing keys this parser could not read. Surfaced in the snapshot so a new upstream label
+// shape is loud instead of silently pricing a model flat above its cliff.
+export function countUnparsedTierKeys(e: RawEntry): number {
+  let n = 0;
+  for (const key of Object.keys(e)) {
+    if (!UNPARSED_TIER_KEY.test(key)) continue;
+    if (KNOWN_OUT_OF_SCOPE.test(key)) continue;
+    if (TIER_KEY.test(key)) continue;
+    n += 1;
+  }
+  return n;
 }
 
 export function parseTiers(e: RawEntry, unit: BillingUnit): PriceTier[] {
@@ -161,9 +186,16 @@ export function parseTiers(e: RawEntry, unit: BillingUnit): PriceTier[] {
     unit === 'per_character'
       ? `output_cost_per_character_above_${label}_tokens`
       : `output_cost_per_token_above_${label}_tokens`;
-  // A4: every tier rate passes the same sanity guard as the base rates; an insane (negative/~1000x)
+  // A4: every tier rate passes the same sanity guard as the base rates. An insane (negative or ~1000x)
   // or typo'd tier value is treated as absent (null), never scaled into the registry. Cache tiers
-  // are always per-token rates. Keys are derived from the hardcoded threshold list, not user input.
+  // are always per-token rates.
+  //
+  // SECURITY: the field keys below are no longer drawn from a hardcoded list. `label` now comes from an
+  // upstream JSON key, so the only thing keeping `e[inputField(label)]` from being an attacker-influenced
+  // property read is TIER_KEY's `\d+` capture: the label is digits only, and a digit string can never be
+  // `__proto__`, `constructor` or `prototype`. Anyone widening that character class MUST re-validate the
+  // captured label here, or this becomes a prototype-pollution surface that the A7 id firewall does not
+  // cover.
   const saneNum = (v: unknown, u: BillingUnit): number | null => {
     const n = num(v);
     return n !== null && sanePrice(n, u) ? n : null;

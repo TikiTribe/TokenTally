@@ -94,6 +94,7 @@ jobs:
           R_SHORT: ${{ steps.refresh.outputs.short }}
           R_DATE: ${{ steps.refresh.outputs.date }}
           R_ANCHOR: ${{ steps.refresh.outputs.anchor_changed }}
+          R_TIER_REVIEW: ${{ steps.refresh.outputs.tier_review }}
           BODY_PATH: ${{ runner.temp }}/refresh-pr-body.md
         run: |
           set -euo pipefail
@@ -116,7 +117,13 @@ jobs:
             AUTOMERGE=false
           fi
           if [ "$R_ANCHOR" = "true" ]; then
-            echo "::warning::Anchor price changed; the E2E math oracles need a hand edit. Leaving the PR for a human."
+            echo "::warning::Anchor price changed. The E2E math oracles need a hand edit. Leaving the PR for a human."
+            AUTOMERGE=false
+          fi
+          # A tier change is invisible to the anchor fingerprint but reprices long-context forecasts by up
+          # to 2x, so it must never ride the unattended path.
+          if [ "$R_TIER_REVIEW" = "true" ]; then
+            echo "::warning::Price-tier structure changed on already-shipped models, or a threshold key became unreadable. Leaving the PR for a human."
             AUTOMERGE=false
           fi
 
@@ -124,6 +131,9 @@ jobs:
           TITLE="chore(pricing): weekly catalog refresh (${R_DATE})"
           if [ "$R_ANCHOR" = "true" ]; then
             TITLE="$TITLE [ANCHOR PRICE CHANGED - update the E2E oracles]"
+          fi
+          if [ "$R_TIER_REVIEW" = "true" ]; then
+            TITLE="$TITLE [TIER CHANGE - review before merge]"
           fi
           # An App-token PR fires `pull_request` normally, so CI starts on its own (no dispatch needed).
           gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"

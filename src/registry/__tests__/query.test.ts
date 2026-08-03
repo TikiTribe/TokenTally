@@ -28,6 +28,7 @@ const snap: RegistrySnapshot = {
   snapshotDate: '2026-07-03',
   droppedCount: 0,
   conflictCount: 0,
+  unparsedTierKeyCount: 0,
   models: [
     rec({ canonicalId: 'anthropic.claude-3-5-sonnet', deployment: 'bedrock', inputPrice: 3, underlyingFamily: 'claude' }),
     rec({ canonicalId: 'anthropic.claude-3-5-sonnet', deployment: 'bedrock/us-gov-east-1', inputPrice: 3.6, underlyingFamily: 'claude' }),

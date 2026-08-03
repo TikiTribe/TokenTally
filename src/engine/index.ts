@@ -86,9 +86,13 @@ export function monthlyWarmCost(scn: WarmScenario): WarmCostResult {
   // Finding 3: the cold prefix write rate must be TTL-aware (hr1 = base*2.0, not the raw 5-min field).
   // breakpoint/storage: TTL write rate (fall back to the known 5-min data if the 1-hr derivation is
   // unavailable, never to base input which under-prices). automatic: no write premium -> base input.
+  // rates.write is tier-aware; model.cache.cacheWritePerMToken is not. Both the derivation and the
+  // fallback must use the tier-aware rate or an above-cliff write is billed at the base rate.
   const coldPrefixRate =
     model.cache !== null && model.cache.cacheWritePerMToken !== undefined
-      ? (writeRateForTtl(model.cache, scn.ttl, rates.input) ?? model.cache.cacheWritePerMToken)
+      ? (writeRateForTtl(model.cache, scn.ttl, rates.input, rates.write) ??
+        rates.write ??
+        model.cache.cacheWritePerMToken)
       : rates.input;
   const warmPrefixRate = rates.read ?? rates.input; // C8: null read -> base input (no free discount)
 

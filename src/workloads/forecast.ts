@@ -1,5 +1,5 @@
 // Shared forecast assembly: run one WarmScenario through monthlyWarmCost, and when the accumulation
-// straddles a 128k/200k price tier (P1-A7), correct the input/output/reasoning dollars via exact per-band
+// straddles an above-threshold price tier (P1-A7), correct the input/output/reasoning dollars via exact per-band
 // pricing while keeping the warm-cache prefix cost from the engine. The IOR cost is identical in the central
 // and conservative (p_warm=0) worlds - only the prefix cache differs - so the conservative correction is the
 // same additive warm-cache delta, and the confidence band recomposes exactly. Pure. Owner: engine.

@@ -77,6 +77,29 @@ describe('effective rates + tiers + readUnavailable (C8)', () => {
   it('no cache -> null read and write', () => {
     expect(effectiveCacheRates(model({ cache: null }), 100)).toEqual({ read: null, write: null });
   });
+
+  // Review finding: a higher PARTIAL tier must not shadow a lower COMPLETE one. Reachable now that tier
+  // discovery is data-driven and cache-only tiers are an anticipated shape.
+  it('resolves each rate against the highest tier that DEFINES it, not the highest tier overall', () => {
+    const cache: CacheSpec = { archetype: 'breakpoint_ttl', cacheReadPerMToken: 0.3, cacheWritePerMToken: 3.75, rateUnavailable: false, readUnavailable: false };
+    const m = model({
+      inputPrice: 3,
+      outputPrice: 15,
+      cache,
+      tiers: [
+        { thresholdTokens: 200000, inputPrice: 6, outputPrice: 30 },
+        { thresholdTokens: 272000, inputPrice: null, outputPrice: null, cacheReadPerMToken: 1 },
+      ],
+    });
+    // Above BOTH thresholds the 272k tier defines only the cache read, so input/output must still come
+    // from the 200k tier rather than collapsing to the $3/$15 base.
+    expect(effectiveInputRate(m, 300_000)).toBeCloseTo(6, 10);
+    expect(effectiveOutputRate(m, 300_000)).toBeCloseTo(30, 10);
+    expect(effectiveCacheRates(m, 300_000).read).toBeCloseTo(1, 10);
+    // Between the thresholds only the 200k tier applies.
+    expect(effectiveInputRate(m, 250_000)).toBeCloseTo(6, 10);
+    expect(effectiveCacheRates(m, 250_000).read).toBeCloseTo(0.3, 10);
+  });
 });
 
 // Wiring check against the SHIPPED catalog. Everything here is derived from the artifact rather than
@@ -87,22 +110,35 @@ describe('effective rates + tiers + readUnavailable (C8)', () => {
 describe('shipped registry: above-threshold cliffs are wired to the rate functions', () => {
   const tiered = registrySnapshot.models.filter((m) => m.tiers.length > 0) as unknown as ModelRecord[];
 
-  it('the catalog carries tiers at several distinct thresholds', () => {
-    const thresholds = new Set(tiered.flatMap((m) => m.tiers.map((t) => t.thresholdTokens)));
-    // Discovery is data-driven; a hardcoded list previously found only two and silently priced the rest
-    // flat. Requiring >2 distinct thresholds fails loudly if that regression ever returns.
-    expect(thresholds.size).toBeGreaterThan(2);
-    expect(tiered.length).toBeGreaterThan(60);
+  // No counts or threshold values are asserted. Both were magic numbers pinned to whatever upstream
+  // happened to ship (256k and 512k each come from a single model), and this suite gates the weekly
+  // auto-merged pricing refresh, so an upstream deletion would have turned CI red on a correct registry
+  // and blocked the merge for a non-regression.
+  it('discovery is alive: the catalog still yields tiers, and none is an empty shell', () => {
+    expect(tiered.length).toBeGreaterThan(0); // total discovery failure is the regression worth catching
+    for (const m of tiered) {
+      for (const t of m.tiers) {
+        expect(t.thresholdTokens).toBeGreaterThan(0);
+        const definesSomething =
+          t.inputPrice !== null ||
+          t.outputPrice !== null ||
+          t.cacheReadPerMToken !== undefined ||
+          t.cacheWritePerMToken !== undefined;
+        expect(definesSomething).toBe(true);
+      }
+    }
   });
 
-  it('every tier with an input override reprices the entire request at the tier rate, not marginally', () => {
+  it('crossing a threshold that overrides input reprices the WHOLE request, upward', () => {
     for (const m of tiered) {
       for (const t of m.tiers) {
         if (t.inputPrice === null) continue;
         const below = effectiveInputRate(m, t.thresholdTokens); // exclusive boundary: at == below
         const above = effectiveInputRate(m, t.thresholdTokens + 1);
-        expect(below).toBe(m.inputPrice);
-        expect(above).toBe(t.inputPrice);
+        // Derived from the record, never from a literal, so a price change cannot make this stale. A
+        // second tier on the same model is fine: `below` is then the lower tier's rate, not the base.
+        expect(above).toBe(highestInputAt(m, t.thresholdTokens + 1));
+        expect(above).toBeGreaterThanOrEqual(below); // every real above-threshold rate is a premium
       }
     }
   });
@@ -111,8 +147,26 @@ describe('shipped registry: above-threshold cliffs are wired to the rate functio
     for (const m of tiered) {
       for (const t of m.tiers) {
         if (t.outputPrice === null) continue;
-        expect(effectiveOutputRate(m, t.thresholdTokens + 1)).toBe(t.outputPrice);
+        const above = effectiveOutputRate(m, t.thresholdTokens + 1);
+        expect(above).toBe(highestOutputAt(m, t.thresholdTokens + 1));
+        expect(above).toBeGreaterThanOrEqual(effectiveOutputRate(m, t.thresholdTokens) as number);
       }
     }
   });
 });
+
+// Independent re-derivation of "highest crossed tier that defines this field", so the assertions above
+// check the rate functions rather than restating them.
+function highestInputAt(m: ModelRecord, tokens: number): number {
+  const vals = m.tiers
+    .filter((t) => tokens > t.thresholdTokens && t.inputPrice !== null)
+    .sort((a, b) => b.thresholdTokens - a.thresholdTokens);
+  return vals.length > 0 ? (vals[0]!.inputPrice as number) : m.inputPrice;
+}
+
+function highestOutputAt(m: ModelRecord, tokens: number): number {
+  const vals = m.tiers
+    .filter((t) => tokens > t.thresholdTokens && t.outputPrice !== null)
+    .sort((a, b) => b.thresholdTokens - a.thresholdTokens);
+  return vals.length > 0 ? (vals[0]!.outputPrice as number) : (m.outputPrice as number);
+}

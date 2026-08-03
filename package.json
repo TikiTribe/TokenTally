@@ -75,6 +75,7 @@
     "dompurify": "3.4.13",
     "brace-expansion@1": "1.1.18",
     "brace-expansion@2": "2.1.4",
+    "brace-expansion@3": "3.0.3",
     "brace-expansion@>=4": "5.0.9",
     "postcss": "8.5.18"
   },
