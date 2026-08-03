@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { tierFor, effectiveInputRate, effectiveOutputRate, effectiveCacheRates } from '@/engine/cost/rates';
-import type { ModelRecord, PriceTier, CacheSpec } from '@/types/registry';
+import type { ModelRecord, PriceTier, CacheSpec, RegistrySnapshot } from '@/types/registry';
 import registrySnapshot from '@/config/registry.generated.json';
 
 const model = (over: Partial<ModelRecord> = {}): ModelRecord => ({
@@ -108,7 +108,9 @@ describe('effective rates + tiers + readUnavailable (C8)', () => {
 // request, which is how OpenAI documents >272k ("2x input and 1.5x output for the full request") and how
 // Anthropic/Google document their long-context tiers.
 describe('shipped registry: above-threshold cliffs are wired to the rate functions', () => {
-  const tiered = registrySnapshot.models.filter((m) => m.tiers.length > 0) as unknown as ModelRecord[];
+  // Cast the snapshot once, matching bootstrapRegistry, rather than casting the models array.
+  const snapshot = registrySnapshot as unknown as RegistrySnapshot;
+  const tiered = snapshot.models.filter((m) => m.tiers.length > 0);
 
   // No counts or threshold values are asserted. Both were magic numbers pinned to whatever upstream
   // happened to ship (256k and 512k each come from a single model), and this suite gates the weekly
