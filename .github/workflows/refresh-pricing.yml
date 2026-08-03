@@ -58,15 +58,18 @@ jobs:
           fi
 
       - id: app-token
-        uses: actions/create-github-app-token@v2
+        # SHA-pinned: this step mints a Contents:RW + PullRequests:RW token, and the job that follows can
+        # push to a branch that auto-merges to main and auto-deploys. A repointed tag here is a direct path
+        # to production, so it is the single most important pin in the repo.
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         with:
           app-id: ${{ secrets.REFRESH_BOT_APP_ID }}
           private-key: ${{ secrets.REFRESH_BOT_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           token: ${{ steps.app-token.outputs.token }} # so the branch push is authored by the App
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '22'
           cache: npm
