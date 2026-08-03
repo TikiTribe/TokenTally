@@ -19,8 +19,8 @@ import type { RegistrySnapshot, ModelRecord } from '../../src/types/registry';
 // (source is LiteLLM's canonical pricing file; the same schema tokencost mirrors, but current - the mirror lags.)
 // Refreshed 2026-07-04 from LiteLLM @ 8bb4e624 (2026-07-03): 2932 upstream entries, adds Opus 4.5-4.8,
 // Sonnet 4.5/4.6/5, Haiku 4.5, Fable 5, GPT-5.x, Gemini 2.5, Qwen3, etc. gpt-4o/gpt-4o-mini pricing unchanged.
-export const PINNED_COMMIT = '8bb4e624126bd02dbc5190cdc40e520ba93502c9';
-export const EXPECTED_SNAPSHOT_SHA256 = '9c171fc839cbac7a9ca8ee5f13cc810e8bfa57b10f3bd41b1fa8d77159c3f44b';
+export const PINNED_COMMIT = 'bf1a8fe40329eb018ef420057766ce95a43baaa3';
+export const EXPECTED_SNAPSHOT_SHA256 = 'ba37bb46dc4662f4bfed71db90168644ef917713fa073bd397775376d55a6b1c';
 const VENDORED_SNAPSHOT = new URL(`./vendor/model_prices.${PINNED_COMMIT.slice(0, 8)}.json`, import.meta.url);
 
 // Deterministic, locale-independent ordering by the primary key (canonicalId, deployment) so the
