@@ -7,6 +7,10 @@
 #      snapshot, the generated registry). Any other path -> the PR is left open for a human.
 #   2. The gpt-4o/gpt-4o-mini anchor prices are unchanged. A changed anchor breaks the hand-computed E2E math
 #      oracles, which is a code change, not a data change -> left open for a human.
+#   2b. Every shipped model's price delta is inside the budget in refresh.mjs (no single rate moving >50%, no
+#      rate appearing/vanishing/zeroing, <=25 models changed, <=100 removed), and no tier structure changed.
+#      This is the control that replaces the human review of the refresh PR: the sha256 pin is computed from
+#      the same fetch it verifies, so it cannot detect a hostile upstream edit.
 #   3. The full `ci` check passes on the PR head.
 # Anything else (merge conflict, protection change, CI red) leaves the PR open. Failing closed means a stale
 # catalog for a week, which is loud and recoverable; failing open would publish unverified prices.
@@ -120,10 +124,12 @@ jobs:
             echo "::warning::Anchor price changed. The E2E math oracles need a hand edit. Leaving the PR for a human."
             AUTOMERGE=false
           fi
-          # A tier change is invisible to the anchor fingerprint but reprices long-context forecasts by up
-          # to 2x, so it must never ride the unattended path.
+          # The real supply-chain control. The sha256 pin is derived from the same fetch it verifies, so it
+          # proves reproducibility, not authenticity, and the two gpt-4o anchors cover 2 of 2,386 models.
+          # refresh.mjs holds the PR when any shipped rate moves beyond the delta budget, when too many
+          # models change at once, when a tier structure changes, or when a threshold key is unreadable.
           if [ "$R_TIER_REVIEW" = "true" ]; then
-            echo "::warning::Price-tier structure changed on already-shipped models, or a threshold key became unreadable. Leaving the PR for a human."
+            echo "::warning::Pricing change is outside the auto-merge budget (rate delta, mass edit, tier change, or unreadable threshold key). Leaving the PR for a human."
             AUTOMERGE=false
           fi
 
@@ -133,7 +139,7 @@ jobs:
             TITLE="$TITLE [ANCHOR PRICE CHANGED - update the E2E oracles]"
           fi
           if [ "$R_TIER_REVIEW" = "true" ]; then
-            TITLE="$TITLE [TIER CHANGE - review before merge]"
+            TITLE="$TITLE [OUTSIDE AUTO-MERGE BUDGET - review before merge]"
           fi
           # An App-token PR fires `pull_request` normally, so CI starts on its own (no dispatch needed).
           gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"
