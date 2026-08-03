@@ -12,7 +12,8 @@ const workload: EngineResult = {
   forecast: {
     kind: 'chatbot', monthlyCost: 123.45, arrivalsPerMonth: 1000,
     accuracyNote: 'estimate: heuristic', snapshotVersion: 'abc123def456', formula: 'chatbot: ...',
-    tierStraddle: false, contextTruncated: false, steps: null,
+    tierStraddle: false,
+  tierThresholds: [], contextTruncated: false, steps: null,
     cost: {
       applicable: true, warmth: 0.5, centralTotal: 123.45, conservativeTotal: 200,
       savingsUpTo: { central: 76.55, conservativeReference: 200, qualifier: 'up_to' },

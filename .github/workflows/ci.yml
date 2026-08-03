@@ -20,9 +20,11 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      # D13: SHA-pin these actions as a go-live hardening step (recorded in the runbook); version tags for now.
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # D13 (done): SHA-pinned. A tag is mutable - the action owner can silently repoint v5 at new code, which
+      # is how the trivy-action and kics-github-action compromises landed. Bump these deliberately, never by
+      # drift. Newer majors exist (checkout v7, setup-node v7); moving to them is a separate, tested change.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '22'
           cache: 'npm'

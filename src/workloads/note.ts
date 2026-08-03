@@ -51,6 +51,7 @@ export function disabledForecast(kind: WorkloadKind): WorkloadForecast {
     snapshotVersion: 'unknown',
     formula: 'disabled',
     tierStraddle: false,
+    tierThresholds: [],
     contextTruncated: false,
     steps: null,
   };

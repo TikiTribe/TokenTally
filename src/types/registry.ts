@@ -26,12 +26,16 @@ export interface PriceTier {
   outputPrice: number | null;
   cacheReadPerMToken?: number;
   cacheWritePerMToken?: number;
+  cacheWriteHr1PerMToken?: number; // upstream's real above-threshold 1-hour write rate, when published
 }
 
 export interface CacheSpec {
   archetype: CacheArchetype;
   cacheReadPerMToken?: number;
   cacheWritePerMToken?: number;
+  // Upstream's PUBLISHED 1-hour write rate. Present for the SKUs that ship it, so the engine can use a
+  // real number instead of the WRITE_MULT.hr1 derivation, which policy.ts labels UNVERIFIED.
+  cacheWriteHr1PerMToken?: number;
   rateUnavailable: boolean;           // true when supports_prompt_caching but no rate at all in the data
   readUnavailable: boolean;           // A2: true when a write rate exists but no read rate, so the
                                       // cost core never treats an undefined cache-read rate as free
@@ -62,5 +66,8 @@ export interface RegistrySnapshot {
   snapshotDate: string;               // ISO date passed in at build time
   droppedCount: number;
   conflictCount: number;              // A3: same (canonicalId, deployment) with divergent price; first wins
+  // Threshold-bearing upstream keys whose label shape this parser cannot read. Non-zero means some model
+  // may be priced flat above a real price cliff, which is the silent-understatement failure mode.
+  unparsedTierKeyCount: number;
   models: ModelRecord[];
 }

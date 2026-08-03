@@ -7,7 +7,7 @@
 
 import { writeFileSync, renameSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { normalizeEntry, dedupeRecords, type RawEntry } from '../../src/registry/normalize';
+import { normalizeEntry, dedupeRecords, countUnparsedTierKeys, type RawEntry } from '../../src/registry/normalize';
 import type { RegistrySnapshot, ModelRecord } from '../../src/types/registry';
 
 // A4/P2-A3: pin to a specific upstream commit SHA, never `main`. The raw upstream body is VENDORED into the
@@ -49,8 +49,10 @@ export function buildSnapshot(
   if (!isPlainObject(raw)) throw new Error('registry snapshot root must be a plain object');
   const models: ModelRecord[] = [];
   let droppedCount = 0;
+  let unparsedTierKeyCount = 0;
   for (const [rawKey, entry] of Object.entries(raw)) {
     if (rawKey === 'sample_spec') continue; // A4: meta/example entry, not a model; not counted
+    if (isPlainObject(entry)) unparsedTierKeyCount += countUnparsedTierKeys(entry);
     const rec = isPlainObject(entry) ? normalizeEntry(rawKey, entry) : null;
     if (rec === null) droppedCount++;
     else models.push(rec);
@@ -61,6 +63,7 @@ export function buildSnapshot(
     snapshotDate: date,
     droppedCount,
     conflictCount,
+    unparsedTierKeyCount,
     models: [...deduped].sort(compareRecords),
   };
 }
@@ -97,7 +100,7 @@ async function main(): Promise<void> {
   writeFileSync(tmp, JSON.stringify(snap));
   renameSync(tmp, target);
   console.log(
-    `registry: ${snap.models.length} models, ${snap.droppedCount} dropped, ${snap.conflictCount} conflicts`,
+    `registry: ${snap.models.length} models, ${snap.droppedCount} dropped, ${snap.conflictCount} conflicts, ${snap.unparsedTierKeyCount} unparsed tier keys`,
   );
 }
 

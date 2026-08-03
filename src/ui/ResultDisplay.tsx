@@ -91,6 +91,18 @@ function WorkloadResult({
           <HelpTip tipId="tip-cache" content={CACHE_HELP} />
         </p>
       ) : null}
+      {/* A crossed price cliff is the single largest lever this tool can surface: above the threshold the
+          provider reprices the WHOLE request (OpenAI's >272k is 2x input / 1.5x output), so trimming a few
+          thousand tokens can halve the bill. Showing the corrected number without saying why would hide
+          exactly the optimization the product exists to find. */}
+      {f.tierStraddle && f.tierThresholds.length > 0 ? (
+        <p data-testid="tier-cliff-line" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          Crosses a price cliff at{' '}
+          {f.tierThresholds.map((t) => `${(t / 1000).toLocaleString()}k tokens`).join(' and ')}. Above{' '}
+          {f.tierThresholds.length > 1 ? 'each threshold' : 'that threshold'} the provider reprices the
+          entire request, not just the tokens above it, so staying under it can cut this forecast sharply.
+        </p>
+      ) : null}
       <CostWaterfall waterfall={c.waterfall} />
       <Suspense fallback={null}>
         <StepAccumulationChartLazy steps={f.steps} />

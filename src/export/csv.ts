@@ -21,6 +21,14 @@ export function forecastToCsv(result: EngineResult, mode: string, modelLabel: st
       csvRow(['Confidence high', c.confidence.high.toFixed(2)]),
       csvRow(['Conservative (no warm cache)', c.conservativeTotal.toFixed(2)]),
       csvRow(['Accuracy', f.accuracyNote]),
+      // A crossed cliff reprices the whole request, so the caveat has to travel with the exported number
+      // rather than living only on screen. sanitizeForCSV already runs over every field in csvRow.
+      csvRow([
+        'Price cliff',
+        f.tierStraddle && f.tierThresholds.length > 0
+          ? `crosses ${f.tierThresholds.map((t) => `${t / 1000}k`).join(' and ')} tokens - the provider reprices the entire request above the threshold`
+          : 'none crossed',
+      ]),
       csvRow(['Formula', f.formula]),
       csvRow(['Snapshot version', f.snapshotVersion]),
       '',

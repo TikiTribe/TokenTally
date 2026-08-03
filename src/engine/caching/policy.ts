@@ -30,10 +30,26 @@ export function tEffFor(provider: string): number {
 // C6: only trust a derived 1-hr write rate when the registry 5-min rate conforms to base*1.25.
 const WRITE_RATE_TOLERANCE = 0.02; // relative tolerance on the (5-min == base*1.25) invariant
 
-export function writeRateForTtl(cache: CacheSpec, ttl: CacheTtl, inputPrice: number): number | null {
-  const fiveMin = cache.cacheWritePerMToken;
+// `effectiveFiveMin` is the tier-aware 5-minute write rate. Above a price cliff the CacheSpec's own field
+// is the BASE rate, so reading it here billed every above-cliff write at base: 2x under on min5, and on hr1
+// the base 5-min rate no longer matches base*1.25 against the tier-aware input, so the C6 conformance check
+// returned null and the caller fell back to base again (3.2x under against upstream's real above-cliff
+// 1-hour rate). Callers that know the tier pass it; the parameter is optional so the non-tiered callers and
+// the unit tests keep the plain base-rate behaviour.
+export function writeRateForTtl(
+  cache: CacheSpec,
+  ttl: CacheTtl,
+  inputPrice: number,
+  effectiveFiveMin?: number | null,
+  effectiveHr1?: number | null,
+): number | null {
+  const fiveMin = effectiveFiveMin ?? cache.cacheWritePerMToken;
   if (fiveMin === undefined) return null; // no write cost (Archetype A)
   if (ttl === 'min5') return fiveMin; // the real data
+  // Upstream publishes a real 1-hour write rate for many SKUs. Prefer it over the WRITE_MULT derivation
+  // below, which is an explicitly UNVERIFIED modeling assumption. Real data beats a multiplier.
+  const publishedHr1 = effectiveHr1 ?? cache.cacheWriteHr1PerMToken;
+  if (publishedHr1 !== undefined && publishedHr1 !== null) return publishedHr1;
   // C6: derive the 1-hr rate from the BASE input rate, not by scaling the stored 5-min field - but only
   // when the stored 5-min rate actually equals base*1.25; a non-conforming SKU returns null (unknown),
   // never a fabricated guess.

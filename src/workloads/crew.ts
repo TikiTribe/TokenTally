@@ -70,6 +70,7 @@ export function crewForecast(cfg: CrewConfig): WorkloadForecast {
     snapshotVersion: cfg.snapshotVersion ?? forecasts[0]?.snapshotVersion ?? 'unknown',
     formula: 'crew: Σ member agent forecasts + orchestrator + shared-transcript growth',
     tierStraddle: forecasts.some((f) => f.tierStraddle),
+    tierThresholds: [...new Set(forecasts.flatMap((f) => f.tierThresholds))].sort((a, b) => a - b),
     contextTruncated: forecasts.some((f) => f.contextTruncated),
     steps: forecasts[0]?.steps ?? null,
   };
