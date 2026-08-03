@@ -8,15 +8,18 @@
 #   2. The gpt-4o/gpt-4o-mini anchor prices are unchanged. A changed anchor breaks the hand-computed E2E math
 #      oracles, which is a code change, not a data change -> left open for a human.
 #   3. The full `ci` check passes on the PR head.
-# Anything else (merge conflict, protection change, CI red) leaves the PR open. Failing closed here means a
-# stale catalog for a week, which is loud and recoverable; failing open would publish unverified prices.
+# Anything else (merge conflict, protection change, CI red) leaves the PR open. Failing closed means a stale
+# catalog for a week, which is loud and recoverable; failing open would publish unverified prices.
 #
 # DEPENDABOT IS STRUCTURALLY EXCLUDED: this job only ever merges the one PR number it just created, and the
 # allowlist rejects any diff touching package.json / package-lock.json. Dependency bumps never ride along.
 #
-# CI on the bot PR is triggered explicitly via workflow_dispatch. A PR opened by the built-in GITHUB_TOKEN
-# does NOT fire pull_request, but workflow_dispatch is the documented exception the token IS allowed to
-# trigger, so no PAT or extra secret is needed.
+# IDENTITY: runs as a repo-scoped GitHub App, not the built-in GITHUB_TOKEN. Two reasons. (1) The org and repo
+# both set `can_approve_pull_request_reviews: false`, so GITHUB_TOKEN is forbidden from calling createPullRequest
+# at all - that is what broke run 30820123047. (2) A PR opened with GITHUB_TOKEN does not fire `pull_request`,
+# so CI had to be dispatched by hand; an App token fires it normally. The App is scoped to this one repo with
+# Contents: RW + Pull requests: RW, which is strictly less authority than flipping the org-wide toggle.
+# Required secrets: REFRESH_BOT_APP_ID, REFRESH_BOT_PRIVATE_KEY.
 #
 # SECURITY: every value derived from the upstream API (commit sha, date) is validated in refresh.mjs, then
 # passed to shell steps only via env: and referenced as quoted "$VARS" (no ${{ }} interpolation inside run:),
@@ -28,10 +31,9 @@ on:
     - cron: '0 6 * * 1' # 06:00 UTC every Monday
   workflow_dispatch: {} # manual "run now" button
 
+# Every write goes through the App token below, so the built-in token stays read-only.
 permissions:
-  contents: write
-  pull-requests: write
-  actions: write # to dispatch the ci workflow on the bot PR branch (GITHUB_TOKEN can trigger workflow_dispatch)
+  contents: read
 
 concurrency:
   group: refresh-pricing
@@ -42,7 +44,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60 # generous: the job blocks on a full CI run before merging
     steps:
+      - name: Require the bot credentials (fail loudly, not cryptically)
+        env:
+          APP_ID: ${{ secrets.REFRESH_BOT_APP_ID }}
+          APP_KEY: ${{ secrets.REFRESH_BOT_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APP_ID" ] || [ -z "$APP_KEY" ]; then
+            echo "::error::REFRESH_BOT_APP_ID / REFRESH_BOT_PRIVATE_KEY are not set. Install the repo-scoped" \
+                 "GitHub App (Contents: RW, Pull requests: RW) and add both secrets. Until then this workflow" \
+                 "cannot open or merge its PR."
+            exit 1
+          fi
+
+      - id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.REFRESH_BOT_APP_ID }}
+          private-key: ${{ secrets.REFRESH_BOT_PRIVATE_KEY }}
+
       - uses: actions/checkout@v5
+        with:
+          token: ${{ steps.app-token.outputs.token }} # so the branch push is authored by the App
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
@@ -52,7 +75,7 @@ jobs:
       - id: refresh
         name: Refresh the pinned snapshot from LiteLLM
         env:
-          GITHUB_TOKEN: ${{ github.token }} # raise the GitHub API rate limit for the commit lookup
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }} # raises the API rate limit for the commit lookup
           REFRESH_BODY_PATH: ${{ runner.temp }}/refresh-pr-body.md
         run: node scripts/registry/refresh.mjs
 
@@ -62,9 +85,9 @@ jobs:
 
       - id: pr
         if: steps.refresh.outputs.changed == 'true'
-        name: Open the refresh PR + trigger its CI
+        name: Open the refresh PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           R_SHORT: ${{ steps.refresh.outputs.short }}
           R_DATE: ${{ steps.refresh.outputs.date }}
           R_ANCHOR: ${{ steps.refresh.outputs.anchor_changed }}
@@ -99,12 +122,10 @@ jobs:
           if [ "$R_ANCHOR" = "true" ]; then
             TITLE="$TITLE [ANCHOR PRICE CHANGED - update the E2E oracles]"
           fi
+          # An App-token PR fires `pull_request` normally, so CI starts on its own (no dispatch needed).
           gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_PATH"
-          # A GITHUB_TOKEN-opened PR does not trigger pull_request CI; workflow_dispatch is the exception.
-          gh workflow run ci.yml --ref "$BRANCH"
 
           {
-            echo "branch=$BRANCH"
             echo "number=$(gh pr view "$BRANCH" --json number --jq .number)"
             echo "automerge=$AUTOMERGE"
           } >> "$GITHUB_OUTPUT"
@@ -112,28 +133,18 @@ jobs:
       - if: steps.pr.outputs.automerge == 'true'
         name: Wait for CI, then merge
         env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ steps.pr.outputs.branch }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR: ${{ steps.pr.outputs.number }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
-          # Find the dispatched ci run for this branch (the dispatch takes a few seconds to register).
-          RUN_ID=''
+          # `gh pr checks --watch` errors out if no check has been registered yet, so wait for one to appear.
           for _ in $(seq 1 20); do
-            RUN_ID="$(gh run list --workflow=ci.yml --branch "$BRANCH" --event workflow_dispatch \
-              --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
-            [ -n "$RUN_ID" ] && break
+            if gh pr checks "$PR" >/dev/null 2>&1; then break; fi
             sleep 15
           done
-          if [ -z "$RUN_ID" ]; then
-            echo "::error::No ci run appeared for $BRANCH. PR #$PR is open and needs a human."
-            exit 1
-          fi
-
-          echo "Watching ci run $RUN_ID"
-          gh run watch "$RUN_ID" --exit-status --interval 20
+          gh pr checks "$PR" --watch --required --fail-fast --interval 20
 
           # required_conversation_resolution blocks the merge on any unresolved review thread (an automated
           # reviewer's comments land on bot PRs too). Resolve them on THIS PR only; the protection still
@@ -160,5 +171,5 @@ jobs:
             echo "Merge attempt $i failed; retrying in 30s"
             sleep 30
           done
-          echo "::error::Could not merge PR #$PR automatically. PR #$PR is open for a human to finish."
+          echo "::error::Could not merge PR #$PR automatically. It is open for a human to finish."
           exit 1
