@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { tierFor, effectiveInputRate, effectiveOutputRate, effectiveCacheRates } from '@/engine/cost/rates';
 import type { ModelRecord, PriceTier, CacheSpec } from '@/types/registry';
+import registrySnapshot from '@/config/registry.generated.json';
 
 const model = (over: Partial<ModelRecord> = {}): ModelRecord => ({
   canonicalId: 'm',
@@ -75,5 +76,43 @@ describe('effective rates + tiers + readUnavailable (C8)', () => {
 
   it('no cache -> null read and write', () => {
     expect(effectiveCacheRates(model({ cache: null }), 100)).toEqual({ read: null, write: null });
+  });
+});
+
+// Wiring check against the SHIPPED catalog. Everything here is derived from the artifact rather than
+// hardcoded, so a price change or a provider retiring a threshold cannot make it stale (the pinned-SHA
+// assertion taught us that lesson). What it pins down is the semantics: a cliff reprices the WHOLE
+// request, which is how OpenAI documents >272k ("2x input and 1.5x output for the full request") and how
+// Anthropic/Google document their long-context tiers.
+describe('shipped registry: above-threshold cliffs are wired to the rate functions', () => {
+  const tiered = registrySnapshot.models.filter((m) => m.tiers.length > 0) as unknown as ModelRecord[];
+
+  it('the catalog carries tiers at several distinct thresholds', () => {
+    const thresholds = new Set(tiered.flatMap((m) => m.tiers.map((t) => t.thresholdTokens)));
+    // Discovery is data-driven; a hardcoded list previously found only two and silently priced the rest
+    // flat. Requiring >2 distinct thresholds fails loudly if that regression ever returns.
+    expect(thresholds.size).toBeGreaterThan(2);
+    expect(tiered.length).toBeGreaterThan(60);
+  });
+
+  it('every tier with an input override reprices the entire request at the tier rate, not marginally', () => {
+    for (const m of tiered) {
+      for (const t of m.tiers) {
+        if (t.inputPrice === null) continue;
+        const below = effectiveInputRate(m, t.thresholdTokens); // exclusive boundary: at == below
+        const above = effectiveInputRate(m, t.thresholdTokens + 1);
+        expect(below).toBe(m.inputPrice);
+        expect(above).toBe(t.inputPrice);
+      }
+    }
+  });
+
+  it('an output override above a threshold applies to the whole request too', () => {
+    for (const m of tiered) {
+      for (const t of m.tiers) {
+        if (t.outputPrice === null) continue;
+        expect(effectiveOutputRate(m, t.thresholdTokens + 1)).toBe(t.outputPrice);
+      }
+    }
   });
 });

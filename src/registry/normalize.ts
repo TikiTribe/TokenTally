@@ -115,12 +115,41 @@ export function parseKey(
 // scaled by PER_MILLION only for token/char units; per_second/dbu tiers (none observed) stay raw.
 // Cache tiers (`cache_*_input_token_cost_above_*`) are always token rates, so always ×PER_MILLION.
 // A12: uses the single PER_MILLION constant.
-// The real TokenCost field names use abbreviated thresholds (`_above_128k_tokens`,
-// `_above_200k_tokens`), so `thresholdTokens` stays numeric while the field key uses the label.
-const TIER_THRESHOLDS: ReadonlyArray<readonly [number, string]> = [
-  [128000, '128k'],
-  [200000, '200k'],
-];
+// The real upstream field names use abbreviated thresholds (`_above_128k_tokens`, `_above_272k_tokens`),
+// so `thresholdTokens` stays numeric while the field key uses the label.
+//
+// Thresholds are DISCOVERED from each entry's own keys rather than hardcoded. A fixed list silently
+// under-prices every model whose provider invents a new threshold: OpenAI's 272k cliff shipped and 42
+// models kept pricing flat above it, understating long-context forecasts by up to 2x on input. The
+// upstream snapshot currently carries 128k/200k/256k/272k/512k, and that set changes without notice.
+//
+// Only the bare `_above_<N>k_tokens` suffix counts. The `_flex` / `_priority` / `_batches` variants are
+// different service products, not the standard rate this calculator models, and the `_above_1hr_above_<N>k`
+// long-TTL cache-write variant is not a rate parseTiers reads.
+// Covers all four rate kinds so a cache-only tier (a real shape: threshold with no input override) is still
+// discovered.
+const TIER_KEY =
+  /^(?:(?:input|output)_cost_per_(?:token|character)|cache_(?:read|creation)_input_token_cost)_above_(\d{1,7})k_tokens$/;
+// A4: a threshold is only trusted inside a plausible band. 0k would reprice from the first token; an
+// absurd label is upstream noise. Real thresholds observed span 128k..512k.
+const MIN_THRESHOLD_TOKENS = 1_000;
+const MAX_THRESHOLD_TOKENS = 100_000_000;
+
+// Ascending, deduped thresholds this entry actually prices, as [tokens, label] pairs. Sorted so the
+// generated artifact stays byte-stable across machines (A11) no matter the upstream key order.
+export function discoverTierThresholds(e: RawEntry): ReadonlyArray<readonly [number, string]> {
+  const found = new Map<number, string>();
+  for (const key of Object.keys(e)) {
+    const m = TIER_KEY.exec(key);
+    if (m === null) continue;
+    const label = m[1] as string;
+    const tokens = Number(label) * 1000;
+    if (!Number.isSafeInteger(tokens)) continue;
+    if (tokens < MIN_THRESHOLD_TOKENS || tokens > MAX_THRESHOLD_TOKENS) continue;
+    found.set(tokens, `${label}k`);
+  }
+  return [...found.entries()].sort((a, b) => a[0] - b[0]);
+}
 
 export function parseTiers(e: RawEntry, unit: BillingUnit): PriceTier[] {
   const perUnitScale = unit === 'per_token' || unit === 'per_character' ? PER_MILLION : 1;
@@ -140,7 +169,7 @@ export function parseTiers(e: RawEntry, unit: BillingUnit): PriceTier[] {
     return n !== null && sanePrice(n, u) ? n : null;
   };
   const tiers: PriceTier[] = [];
-  for (const [threshold, label] of TIER_THRESHOLDS) {
+  for (const [threshold, label] of discoverTierThresholds(e)) {
     const inp = saneNum(e[inputField(label)], unit);
     const out = saneNum(e[outputField(label)], unit);
     const cr = saneNum(e[`cache_read_input_token_cost_above_${label}_tokens`], 'per_token');
